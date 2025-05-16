@@ -8,7 +8,8 @@
 #include <SDL3/SDL.h>
 #include <memory>
 
-class PlunksnaWindow
+namespace Plunksna {
+class Window
 {
 private:
     SDL_Point m_size;
@@ -21,13 +22,13 @@ private:
     static constexpr void deleteRenderer(SDL_Renderer* renderer);
 
 public:
-    PlunksnaWindow() = delete;
-    PlunksnaWindow(const std::string& title, SDL_Point size, SDL_WindowFlags flags);
-    ~PlunksnaWindow();
+    Window() = delete;
+    Window(const std::string& title, SDL_Point size, SDL_WindowFlags flags);
+    ~Window();
 
     std::shared_ptr<SDL_Window> getWindow();
     std::shared_ptr<SDL_Renderer> getRenderer();
 };
-
+}
 
 #endif //PLUNKSNAWINDOW_H

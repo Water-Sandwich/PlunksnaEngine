@@ -1,17 +1,17 @@
 #include <iostream>
 
-#include "engine/PlunksnaEngine.h"
-#include "engine/PlunksnaException.h"
+#include "engine/Engine.h"
+#include "engine/Exception.h"
 
 int main()
 {
     try {
-        PlunksnaEngine engine("test", {640, 480}, 0);
+        Plunksna::Engine engine("test", {640, 480}, 0);
         engine.init();
         engine.run();
         engine.clean();
     }
-    catch (const PsnaExcp& e) {
+    catch (const Plunksna::PsnaExcp& e) {
         std::cout << "PSNAERR: " << e.what() << std::endl;
         return -2;
     }

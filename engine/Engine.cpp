@@ -2,14 +2,16 @@
 // Created by d on 5/11/25.
 //
 
-#include "PlunksnaEngine.h"
-#include "PlunksnaLog.h"
+#include "Engine.h"
+#include "Log.h"
 
 #include <iostream>
 
-void PlunksnaEngine::tick(float dt) {}
+using namespace Plunksna;
 
-void PlunksnaEngine::handleEvents()
+void Engine::tick(float dt) {}
+
+void Engine::handleEvents()
 {
     while (SDL_PollEvent(&m_event)) {
         switch (m_event.type) {
@@ -20,11 +22,11 @@ void PlunksnaEngine::handleEvents()
     }
 }
 
-PlunksnaEngine::PlunksnaEngine(const std::string& title, SDL_Point size, SDL_WindowFlags flags) :
+Engine::Engine(const std::string& title, SDL_Point size, SDL_WindowFlags flags) :
     m_window(title, size, flags)
 {}
 
-void PlunksnaEngine::init()
+void Engine::init()
 {
     m_maxFPS = 60;
     m_maxFrameTime = 1000.f / static_cast<float>(m_maxFPS);
@@ -32,7 +34,7 @@ void PlunksnaEngine::init()
     LOG("PsnaEngine: init");
 }
 
-void PlunksnaEngine::run()
+void Engine::run()
 {
     //m_isRunning = false;
     m_lastTime = std::chrono::system_clock::now();
@@ -40,12 +42,10 @@ void PlunksnaEngine::run()
     while (m_isRunning) {
         m_startTime = std::chrono::system_clock::now();
 
-        //work
-        SDL_Delay(17);
-
         //do events
         handleEvents();
         //update
+        SDL_Delay(17);
         //render
 
         m_lastTime = std::chrono::system_clock::now();
@@ -62,12 +62,12 @@ void PlunksnaEngine::run()
     }
 }
 
-void PlunksnaEngine::clean()
+void Engine::clean()
 {
     LOG("PsnaEngine: clean")
 }
 
-PlunksnaEngine::~PlunksnaEngine()
+Engine::~Engine()
 {
     LOG("PsnaEngine: delete")
 }

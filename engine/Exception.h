@@ -8,19 +8,22 @@
 
 #include <exception>
 #include <string>
-#include "PlunksnaLog.h"
+#include "Log.h"
 
-class PlunksnaException : public std::exception
+namespace Plunksna {
+class Exception : public std::exception
 {
 private:
     std::string m_what;
 
 public:
-    PlunksnaException(const std::string& what);
+    Exception(const std::string& what);
     const char* what() const noexcept override;
 };
 
-using PsnaExcp = PlunksnaException;
+using PsnaExcp = Plunksna::Exception;
+
+}
 
 #define THROW_IF_NULL(sptr, msg)   if(!sptr.get()){throw PsnaExcp(msg);}
 #define THROW_IF_NULL_R(ptr, msg)  if(!ptr){throw PsnaExcp(msg);}

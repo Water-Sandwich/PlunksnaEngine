@@ -2,25 +2,27 @@
 // Created by d on 5/11/25.
 //
 
-#include "PlunksnaWindow.h"
+#include "Window.h"
 
 #include <iostream>
 
-#include "PlunksnaException.h"
+#include "Exception.h"
 
-constexpr void PlunksnaWindow::deleteWindow(SDL_Window* window)
+using namespace Plunksna;
+
+constexpr void Window::deleteWindow(SDL_Window* window)
 {
     if (window)
         SDL_DestroyWindow(window);
 }
 
-constexpr void PlunksnaWindow::deleteRenderer(SDL_Renderer* renderer)
+constexpr void Window::deleteRenderer(SDL_Renderer* renderer)
 {
     if (renderer)
         SDL_DestroyRenderer(renderer);
 }
 
-PlunksnaWindow::PlunksnaWindow(const std::string& title, SDL_Point size, SDL_WindowFlags flags) :
+Window::Window(const std::string& title, SDL_Point size, SDL_WindowFlags flags) :
     m_size(size)
 {
     m_title = title;
@@ -39,17 +41,17 @@ PlunksnaWindow::PlunksnaWindow(const std::string& title, SDL_Point size, SDL_Win
     LOG("PsnaWindow made: " << title)
 }
 
-PlunksnaWindow::~PlunksnaWindow()
+Window::~Window()
 {
     LOG("PsnaWindow: deleting")
 }
 
-std::shared_ptr<SDL_Window> PlunksnaWindow::getWindow()
+std::shared_ptr<SDL_Window> Window::getWindow()
 {
     return m_window;
 }
 
-std::shared_ptr<SDL_Renderer> PlunksnaWindow::getRenderer()
+std::shared_ptr<SDL_Renderer> Window::getRenderer()
 {
     return m_renderer;
 }

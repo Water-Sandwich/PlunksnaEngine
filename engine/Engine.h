@@ -9,9 +9,10 @@
 #include <string>
 #include <SDL3/SDL.h>
 
-#include "PlunksnaWindow.h"
-
-class PlunksnaEngine
+#include "Window.h"
+namespace Plunksna
+{
+class Engine
 {
     using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
@@ -20,11 +21,11 @@ private:
     void handleEvents();
 
 public:
-    PlunksnaEngine(const std::string& title, SDL_Point size, SDL_WindowFlags flags);
+    Engine(const std::string& title, SDL_Point size, SDL_WindowFlags flags);
 
-    PlunksnaEngine() = delete;
-    PlunksnaEngine(const PlunksnaEngine& game) = delete;
-    PlunksnaEngine(PlunksnaEngine&& game) = delete;
+    Engine() = delete;
+    Engine(const Engine& game) = delete;
+    Engine(Engine&& game) = delete;
 
     void init();
 
@@ -32,7 +33,7 @@ public:
 
     void clean();
 
-    ~PlunksnaEngine();
+    ~Engine();
 
 private:
     SDL_Event m_event;
@@ -43,9 +44,9 @@ private:
     unsigned int m_maxFrameTime;
 
 public:
-    PlunksnaWindow m_window;
+    Window m_window;
     bool m_isRunning = true;
 };
-
+}
 
 #endif //GAME_H
