@@ -10,6 +10,8 @@
 #include <SDL3/SDL.h>
 
 #include "Window.h"
+#include "../ecs/Registry.h"
+
 namespace Plunksna
 {
 class Engine
@@ -42,6 +44,8 @@ private:
     TimePoint m_lastTime;
     unsigned int m_maxFPS;
     unsigned int m_maxFrameTime;
+
+    Registry m_registry;
 
 public:
     Window m_window;

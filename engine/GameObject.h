@@ -5,8 +5,6 @@
 #ifndef PLUNSKNAGAMEOBJECT_H
 #define PLUNSKNAGAMEOBJECT_H
 
-
-
 class GameObject {
 
 };

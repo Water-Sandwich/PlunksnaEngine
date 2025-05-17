@@ -26,12 +26,29 @@ Engine::Engine(const std::string& title, SDL_Point size, SDL_WindowFlags flags) 
     m_window(title, size, flags)
 {}
 
+struct Pos
+{
+    int x,y,z;
+};
+
 void Engine::init()
 {
     m_maxFPS = 60;
     m_maxFrameTime = 1000.f / static_cast<float>(m_maxFPS);
 
     LOG("PsnaEngine: init");
+
+    Entity e1 = 0;
+    m_registry.add<Pos>(e1, 1 , 1, 1);
+    m_registry.add<int>(e1, 5);
+
+    Entity e2 = 1;
+    m_registry.add<Pos>(e2, 5, 5, 5);
+
+    Entity e3 = 10;
+    m_registry.add<int>(e3, 100);
+
+    LOG("Yipee!");
 }
 
 void Engine::run()
