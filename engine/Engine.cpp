@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-using namespace Plunksna;
+namespace Plunksna {
 
 void Engine::tick(float dt) {}
 
@@ -90,3 +90,5 @@ Engine::~Engine()
 {
     LOG("PsnaEngine: delete")
 }
+
+} //Plunksna

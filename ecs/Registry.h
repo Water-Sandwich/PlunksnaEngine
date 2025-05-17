@@ -15,58 +15,37 @@ namespace Plunksna {
 
 class Registry {
 public:
-    template<typename Component, typename... Args>
-    void add(Entity entity, Args&&... args)
-    {
-        ComponentStore<Component>& store = getOrCreateStore<Component>();
-        store.add(entity, std::forward<Args>(args)...);
-    }
+    //get an entityID
+    Entity makeEntity();
 
+    //add a component to an entity
+    //returns true on success, false on failure
+    template<typename Component, typename... Args>
+    bool add(Entity entity, Args&&... args);
+
+    //remove a component from an entity
     //returns true on success, else false
     template<typename Component>
-    bool remove(Entity entity)
-    {
-        if (m_stores.count(typeid(Component)) == 0)
-            return false;
+    bool remove(Entity entity);
 
-        auto& store = getStore<Component>();
-        return store.remove(entity);
-    }
-
+    //get a pointer to an entity's component
     template<typename Component>
-    Component* get(Entity entity)
-    {
-        if (m_stores.count(typeid(Component)) == 0)
-            return nullptr;
-
-        auto& store = getStore<Component>();
-        return store.get(entity);
-    }
+    Component* get(Entity entity);
 
 private:
     template<typename Component>
-    ComponentStore<Component>& getOrCreateStore()
-    {
-        if (m_stores.count(typeid(Component)) != 0)
-            return getStore<Component>();
-
-        auto* t_storePtr = new ComponentStore<Component>();
-        std::unique_ptr<IComponentStore> t_store(t_storePtr);
-        m_stores[typeid(Component)] = std::move(t_store);
-
-        return *static_cast<ComponentStore<Component>*>(t_storePtr);
-    }
+    ComponentStore<Component>& getOrCreateStore();
 
     template<typename Component>
-    ComponentStore<Component>& getStore()
-    {
-        return *static_cast<ComponentStore<Component>*>(m_stores.at(typeid(Component)).get());
-    }
+    ComponentStore<Component>& getStore();
 
 private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>> m_stores;
+    Entity m_maxEntity = 0;
 };
 
 } // Plunksna
+
+#include "Registry.tpp"
 
 #endif //REGISTRY_H

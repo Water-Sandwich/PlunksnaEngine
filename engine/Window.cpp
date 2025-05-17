@@ -8,7 +8,7 @@
 
 #include "Exception.h"
 
-using namespace Plunksna;
+namespace Plunksna {
 
 constexpr void Window::deleteWindow(SDL_Window* window)
 {
@@ -55,3 +55,5 @@ std::shared_ptr<SDL_Renderer> Window::getRenderer()
 {
     return m_renderer;
 }
+
+} //Plunksna

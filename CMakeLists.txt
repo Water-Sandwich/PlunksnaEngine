@@ -15,11 +15,11 @@ add_executable(Plunksna main.cpp
         engine/Log.h
         engine/GameObject.cpp
         engine/GameObject.h
-        ecs/Registry.cpp
+        ecs/Registry.tpp
         ecs/Registry.h
-        ecs/ComponentStore.cpp
+        ecs/ComponentStore.tpp
         ecs/ComponentStore.h
-        ecs/PaginatedVector.cpp
+        ecs/PaginatedVector.tpp
         ecs/PaginatedVector.h
 )
 

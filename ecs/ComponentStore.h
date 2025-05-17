@@ -30,51 +30,15 @@ class ComponentStore final : public IComponentStore{
 public:
     ComponentStore() noexcept = default;
 
-    Component* get(Entity entity)
-    {
-        if (std::size_t index = m_indexes[entity]; index != NULL_INDEX)
-            return &m_components[index];
-        return nullptr;
-    }
+    //get component from entity
+    Component* get(Entity entity);
 
+    //construct a component for entity
     template<typename... Args>
-    void add(Entity entity, Args&&... args)
-    {
-        if (entity == NULL_ENTITY) {
-            LOG_S(eWARNING, "Max entity number reached")
-            return;
-        }
+    bool add(Entity entity, Args&&... args);
 
-        m_components.emplace_back(std::forward<Args>(args)...);
-        m_owners.emplace_back(entity);
-
-        // if (m_indexes.size() <= entity)
-        //     m_indexes.resize(entity + 1);
-        //
-        // m_indexes[entity] = m_components.size() - 1;
-        m_indexes.insert(entity, m_components.size() - 1);
-    }
-
-    bool remove(Entity entity) override
-    {
-        if (entity == NULL_ENTITY) {
-            LOG_S(eWARNING, "Max entity number reached")
-            return false;
-        }
-
-        auto& index = m_indexes[entity];
-
-        if (index == NULL_INDEX)
-            return false;
-
-        std::swap(m_components[index], m_components.back());
-        std::swap(m_owners[index], m_owners.back());
-
-        m_components.pop_back();
-        m_owners.pop_back();
-        index = NULL_INDEX;
-        return true;
-    }
+    //remove component from entity
+    bool remove(Entity entity) override;
 
 private:
     //TODO: Paginate this
@@ -84,5 +48,7 @@ private:
 };
 
 } // Plunksna
+
+#include "ComponentStore.tpp"
 
 #endif //COMPONENTSTORE_H

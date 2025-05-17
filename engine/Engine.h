@@ -7,8 +7,8 @@
 
 #include <chrono>
 #include <string>
-#include <SDL3/SDL.h>
 #include <glm/vec2.hpp>
+#include <SDL3/SDL.h>
 
 #include "Window.h"
 #include "../ecs/Registry.h"
@@ -19,16 +19,13 @@ class Engine
 {
     using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
-private:
-    void tick(float dt);
-    void handleEvents();
-
 public:
     Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags);
-
     Engine() = delete;
     Engine(const Engine& game) = delete;
     Engine(Engine&& game) = delete;
+
+    ~Engine();
 
     void init();
 
@@ -36,9 +33,12 @@ public:
 
     void clean();
 
-    ~Engine();
+private:
+    void tick(float dt);
+    void handleEvents();
 
 private:
+    Window m_window;
     SDL_Event m_event;
 
     TimePoint m_startTime;
@@ -49,7 +49,6 @@ private:
     Registry m_registry;
 
 public:
-    Window m_window;
     bool m_isRunning = true;
 };
 
