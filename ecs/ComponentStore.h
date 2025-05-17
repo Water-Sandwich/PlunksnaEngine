@@ -14,7 +14,7 @@
 namespace Plunksna {
 
 using Entity = unsigned long int;
-constexpr Entity NULL_COMPONENT = std::numeric_limits<Entity>::max();
+constexpr Entity NULL_ENTITY = std::numeric_limits<Entity>::max();
 constexpr Entity NULL_INDEX = std::numeric_limits<std::size_t>::max();
 
 //Interface
@@ -22,7 +22,7 @@ class IComponentStore
 {
 public:
     virtual ~IComponentStore() = default;
-    virtual void remove(Entity entity) = 0;
+    virtual bool remove(Entity entity) = 0;
 };
 
 template <typename Component>
@@ -32,7 +32,7 @@ public:
 
     Component* get(Entity entity)
     {
-        if (auto index = m_indexes[entity] != NULL_INDEX)
+        if (std::size_t index = m_indexes[entity]; index != NULL_INDEX)
             return &m_components[index];
         return nullptr;
     }
@@ -40,7 +40,7 @@ public:
     template<typename... Args>
     void add(Entity entity, Args&&... args)
     {
-        if (entity == NULL_COMPONENT) {
+        if (entity == NULL_ENTITY) {
             LOG_S(eWARNING, "Max entity number reached")
             return;
         }
@@ -48,24 +48,24 @@ public:
         m_components.emplace_back(std::forward<Args>(args)...);
         m_owners.emplace_back(entity);
 
-        if (m_indexes.size() <= entity)
-            m_indexes.resize(entity + 1);
-
-        m_indexes[entity] = m_components.size() - 1;
-        //m_indexes.insert(entity, m_components.size() - 1);
+        // if (m_indexes.size() <= entity)
+        //     m_indexes.resize(entity + 1);
+        //
+        // m_indexes[entity] = m_components.size() - 1;
+        m_indexes.insert(entity, m_components.size() - 1);
     }
 
-    void remove(Entity entity) override
+    bool remove(Entity entity) override
     {
-        if (entity == NULL_COMPONENT) {
+        if (entity == NULL_ENTITY) {
             LOG_S(eWARNING, "Max entity number reached")
-            return;
+            return false;
         }
 
         auto& index = m_indexes[entity];
 
         if (index == NULL_INDEX)
-            return;
+            return false;
 
         std::swap(m_components[index], m_components.back());
         std::swap(m_owners[index], m_owners.back());
@@ -73,12 +73,12 @@ public:
         m_components.pop_back();
         m_owners.pop_back();
         index = NULL_INDEX;
+        return true;
     }
 
 private:
     //TODO: Paginate this
-    //PaginatedVector<std::size_t, NULL_INDEX> m_indexes; // Sparse
-    std::vector<std::size_t> m_indexes;
+    PaginatedVector<std::size_t, NULL_INDEX> m_indexes; // Sparse
     std::vector<Component> m_components; // Dense
     std::vector<Entity> m_owners; // Dense
 };

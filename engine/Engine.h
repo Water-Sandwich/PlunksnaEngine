@@ -8,12 +8,13 @@
 #include <chrono>
 #include <string>
 #include <SDL3/SDL.h>
+#include <glm/vec2.hpp>
 
 #include "Window.h"
 #include "../ecs/Registry.h"
 
-namespace Plunksna
-{
+namespace Plunksna {
+
 class Engine
 {
     using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
@@ -23,7 +24,7 @@ private:
     void handleEvents();
 
 public:
-    Engine(const std::string& title, SDL_Point size, SDL_WindowFlags flags);
+    Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags);
 
     Engine() = delete;
     Engine(const Engine& game) = delete;
@@ -51,6 +52,7 @@ public:
     Window m_window;
     bool m_isRunning = true;
 };
+
 }
 
 #endif //GAME_H

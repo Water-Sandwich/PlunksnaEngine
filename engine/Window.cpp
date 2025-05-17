@@ -22,7 +22,7 @@ constexpr void Window::deleteRenderer(SDL_Renderer* renderer)
         SDL_DestroyRenderer(renderer);
 }
 
-Window::Window(const std::string& title, SDL_Point size, SDL_WindowFlags flags) :
+Window::Window(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags) :
     m_size(size)
 {
     m_title = title;

@@ -22,7 +22,7 @@ void Engine::handleEvents()
     }
 }
 
-Engine::Engine(const std::string& title, SDL_Point size, SDL_WindowFlags flags) :
+Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags) :
     m_window(title, size, flags)
 {}
 
@@ -38,15 +38,17 @@ void Engine::init()
 
     LOG("PsnaEngine: init");
 
-    Entity e1 = 0;
-    m_registry.add<Pos>(e1, 1 , 1, 1);
-    m_registry.add<int>(e1, 5);
 
-    Entity e2 = 1;
-    m_registry.add<Pos>(e2, 5, 5, 5);
+    m_registry.add<Pos>(0, 55, 55, 55);
+    m_registry.add<Pos>(01, 5, 5, 5);
+    m_registry.add<Pos>(02, 5, 5, 5);
+    m_registry.add<Pos>(3000, 5, 5, 5);
+    m_registry.add<Pos>(04, 5, 5, 5);
+    m_registry.add<Pos>(05, 5, 5, 5);
+    auto* comp = m_registry.get<Pos>(0);
+    comp->x = 6;
+    m_registry.remove<Pos>(0);
 
-    Entity e3 = 10;
-    m_registry.add<int>(e3, 100);
 
     LOG("Yipee!");
 }
