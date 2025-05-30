@@ -17,18 +17,24 @@ using Entity = unsigned long int;
 constexpr Entity NULL_ENTITY = std::numeric_limits<Entity>::max();
 constexpr Entity NULL_INDEX = std::numeric_limits<std::size_t>::max();
 
+constexpr unsigned short MAX_COMPONENTS = 32;
+using ComponentMask = std::bitset<MAX_COMPONENTS>;
+
 //Interface
 class IComponentStore
 {
 public:
     virtual ~IComponentStore() = default;
     virtual bool remove(Entity entity) = 0;
+public:
+    ComponentMask bitmask;
 };
 
 template <typename Component>
 class ComponentStore final : public IComponentStore{
 public:
     ComponentStore() noexcept = default;
+    explicit ComponentStore(std::size_t reserveSize) noexcept;
 
     //get component from entity
     Component* get(Entity entity);

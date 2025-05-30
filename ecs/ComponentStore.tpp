@@ -8,6 +8,13 @@
 namespace Plunksna {
 
 template <typename Component>
+ComponentStore<Component>::ComponentStore(std::size_t reserveSize) noexcept
+{
+    m_components.reserve(reserveSize);
+    m_owners.reserve(reserveSize);
+}
+
+template <typename Component>
 Component* ComponentStore<Component>::get(Entity entity)
 {
     if (std::size_t index = m_indexes[entity]; index != NULL_INDEX)
@@ -20,18 +27,14 @@ template <typename ... Args>
 bool ComponentStore<Component>::add(Entity entity, Args&&... args)
 {
     if (entity == NULL_ENTITY) {
-        LOG_S(eWARNING, "Max entity number reached")
+        LOG_S(eWARNING, "adding to a null entity")
         return false;
     }
 
     m_components.emplace_back(std::forward<Args>(args)...);
     m_owners.emplace_back(entity);
-
-    // if (m_indexes.size() <= entity)
-    //     m_indexes.resize(entity + 1);
-    //
-    // m_indexes[entity] = m_components.size() - 1;
     m_indexes.insert(entity, m_components.size() - 1);
+
     return true;
 }
 
@@ -39,7 +42,7 @@ template <typename Component>
 bool ComponentStore<Component>::remove(Entity entity)
 {
     if (entity == NULL_ENTITY) {
-        LOG_S(eWARNING, "Max entity number reached")
+        LOG_S(eWARNING, "removing from a null entity")
         return false;
     }
 

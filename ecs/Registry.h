@@ -8,15 +8,27 @@
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
+#include <bitset>
 
 #include "ComponentStore.h"
 
 namespace Plunksna {
 
+struct EntityDesc
+{
+    std::vector<Entity> entities;
+    std::vector<ComponentMask> componentMasks;
+};
+
 class Registry {
 public:
+    explicit Registry(std::size_t reserveSize = 512) noexcept;
+
     //get an entityID
     Entity makeEntity();
+
+    //remove an entity and its components
+    bool removeEntity(Entity entity);
 
     //add a component to an entity
     //returns true on success, false on failure
@@ -39,8 +51,19 @@ private:
     template<typename Component>
     ComponentStore<Component>& getStore();
 
+    IComponentStore* getStore(std::type_index type);
+
+    std::size_t findIndexOfEntity(Entity entity);
+
+    template<typename Component>
+    void setMaskBit(Entity entity, bool value);
+
 private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>> m_stores;
+    //maps index -> type
+    std::vector<std::type_index> m_componentTypes;
+
+    EntityDesc m_entities;
     Entity m_maxEntity = 0;
 };
 

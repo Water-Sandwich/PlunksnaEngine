@@ -38,17 +38,18 @@ void Engine::init()
 
     LOG("PsnaEngine: init");
 
+    auto e = m_registry.makeEntity();
+    m_registry.add<Pos>(e, 5,5,5);
+    m_registry.add<int>(e, 1);
+    m_registry.removeEntity(e);
 
-    m_registry.add<Pos>(0, 55, 55, 55);
-    m_registry.add<Pos>(01, 5, 5, 5);
-    m_registry.add<Pos>(02, 5, 5, 5);
-    m_registry.add<Pos>(3000, 5, 5, 5);
-    m_registry.add<Pos>(04, 5, 5, 5);
-    m_registry.add<Pos>(05, 5, 5, 5);
-    auto* comp = m_registry.get<Pos>(0);
-    comp->x = 6;
-    m_registry.remove<Pos>(0);
+    e = m_registry.makeEntity();
+    m_registry.add<double>(e, -1.5);
+    m_registry.add<Pos>(e, 1,1,1);
+    m_registry.add<float>(e, 1.2f);
 
+    m_registry.remove<Pos>(e);
+    m_registry.removeEntity(e);
 
     LOG("Yipee!");
 }
@@ -75,9 +76,9 @@ void Engine::run()
             auto val = m_maxFrameTime - deltaTime;
             SDL_Delay(val);
         }
-        else {
-            //LOG_S(Logs::eLETHAL, "High frame time: " << deltaTime << "ms");
-        }
+        // else {
+        //     LOG_S(eLETHAL, "High frame time: " << deltaTime << "ms");
+        // }
     }
 }
 
