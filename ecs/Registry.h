@@ -18,6 +18,7 @@ struct EntityDesc
 {
     std::vector<Entity> entities;
     std::vector<ComponentMask> componentMasks;
+    std::vector<std::size_t> fragmentIndexes;
 };
 
 class Registry {
@@ -51,7 +52,7 @@ private:
     template<typename Component>
     ComponentStore<Component>& getStore();
 
-    IComponentStore* getStore(std::type_index type);
+    IComponentStore* getStore(std::type_index type) const;
 
     std::size_t findIndexOfEntity(Entity entity);
 

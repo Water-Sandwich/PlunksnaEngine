@@ -72,9 +72,9 @@ ComponentStore<Component>& Registry::getStore()
 template <typename Component>
 void Registry::setMaskBit(Entity entity, bool value)
 {
-    auto index = findIndexOfEntity(entity);
-    auto typeIt = std::find(m_componentTypes.begin(), m_componentTypes.end(), typeid(Component)); //TODO: Make a map for type -> index?
-    auto typeIndex = std::distance(m_componentTypes.begin(), typeIt);
+    const auto index = findIndexOfEntity(entity);
+    const auto typeIt = std::find(m_componentTypes.begin(), m_componentTypes.end(), typeid(Component)); //TODO: Make a map for type -> index?
+    const auto typeIndex = std::distance(m_componentTypes.begin(), typeIt);
     m_entities.componentMasks[index].set(typeIndex, value);
 }
 
@@ -83,40 +83,44 @@ inline Registry::Registry(std::size_t reserveSize) noexcept
     m_componentTypes.reserve(MAX_COMPONENTS);
     m_entities.entities.reserve(reserveSize);
     m_entities.componentMasks.reserve(reserveSize);
+    m_entities.fragmentIndexes.reserve(reserveSize);
 }
 
 inline Entity Registry::makeEntity()
 {
-    m_entities.entities.emplace_back(m_maxEntity++);
-    m_entities.componentMasks.emplace_back();
-    return m_entities.entities.back();
+    if (m_entities.fragmentIndexes.empty()) {
+        m_entities.entities.emplace_back(m_maxEntity++);
+        m_entities.componentMasks.emplace_back();
+        return m_entities.entities.back();
+    }
+
+    const auto index = m_entities.fragmentIndexes.back();
+    m_entities.fragmentIndexes.pop_back();
+    return m_entities.entities[index];
 }
 
 inline bool Registry::removeEntity(Entity entity)
 {
-    auto index = findIndexOfEntity(entity);
+    const auto index = findIndexOfEntity(entity);
 
     if (index == NULL_INDEX)
         return false;
 
-    std::swap(m_entities.entities[index], m_entities.entities.back());
-    std::swap(m_entities.componentMasks[index], m_entities.componentMasks.back());
-
     //TODO: Remove components of entity
     for (int i = 0; i < m_componentTypes.size(); i++) {
-        if (m_entities.componentMasks.back()[i] == 0)
+        if (m_entities.componentMasks[index][i] == 0)
             continue;
 
-        getStore(m_componentTypes[i])->remove(m_entities.entities.back());
+        getStore(m_componentTypes[i])->remove(m_entities.entities[index]);
     }
 
-    m_entities.entities.pop_back();
-    m_entities.componentMasks.pop_back();
+    m_entities.fragmentIndexes.push_back(index);
+    m_entities.componentMasks[index].reset();
 
     return true;
 }
 
-inline IComponentStore* Registry::getStore(std::type_index type)
+inline IComponentStore* Registry::getStore(std::type_index type) const
 {
     return m_stores.at(type).get();
 }
@@ -124,7 +128,7 @@ inline IComponentStore* Registry::getStore(std::type_index type)
 inline std::size_t Registry::findIndexOfEntity(Entity entity)
 {
     static constexpr auto comp = [](const Entity& a, const Entity& b){return a < b;};
-    auto it = std::lower_bound(m_entities.entities.begin(), m_entities.entities.end(), entity, comp);
+    const auto it = std::lower_bound(m_entities.entities.begin(), m_entities.entities.end(), entity, comp);
 
     if(it == m_entities.entities.end())
         return NULL_INDEX;

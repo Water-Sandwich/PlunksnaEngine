@@ -44,7 +44,7 @@ private:
     TimePoint m_startTime;
     TimePoint m_lastTime;
     unsigned int m_maxFPS;
-    unsigned int m_maxFrameTime;
+    unsigned int m_maxFrameTime_ms;
 
     Registry m_registry;
 

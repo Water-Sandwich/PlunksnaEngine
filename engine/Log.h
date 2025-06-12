@@ -39,8 +39,16 @@ inline std::string getStr(Severity severity)
     }
 }
 
-#define LOG(msg)        std::cout << Plunksna::getStr(Plunksna::Severity::eINFO) << msg << Plunksna::RESET << std::endl;
-#define LOG_S(sev, msg) std::cout << Plunksna::getStr(sev)                       << msg << Plunksna::RESET << std::endl;
+#define LOG_FILE __FILE__ << "." << __LINE__ << ": "
+
+#ifdef __GNUC__
+#define LOG_SIG __PRETTY_FUNCTION__ << ' '
+#else
+#define LOG_SIG typeid(*this).name() << "::" << __func__ << "() "
+#endif
+
+#define LOG(msg)        std::cout << Plunksna::getStr(Plunksna::Severity::eINFO) << LOG_SIG << msg << Plunksna::RESET << std::endl;
+#define LOG_S(sev, msg) std::cout << Plunksna::getStr(sev)                       << LOG_SIG << msg << Plunksna::RESET << std::endl;
 }
 
 #endif //PLUNKSNALOG_H

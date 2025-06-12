@@ -15,7 +15,7 @@ ComponentStore<Component>::ComponentStore(std::size_t reserveSize) noexcept
 }
 
 template <typename Component>
-Component* ComponentStore<Component>::get(Entity entity)
+Component* ComponentStore<Component>::get(Entity entity) const
 {
     if (std::size_t index = m_indexes[entity]; index != NULL_INDEX)
         return &m_components[index];
@@ -42,7 +42,7 @@ template <typename Component>
 bool ComponentStore<Component>::remove(Entity entity)
 {
     if (entity == NULL_ENTITY) {
-        LOG_S(eWARNING, "removing from a null entity")
+        LOG_S(eWARNING, "removing a null entity")
         return false;
     }
 
@@ -57,6 +57,7 @@ bool ComponentStore<Component>::remove(Entity entity)
     m_components.pop_back();
     m_owners.pop_back();
     index = NULL_INDEX;
+
     return true;
 }
 

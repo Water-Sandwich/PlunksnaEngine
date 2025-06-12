@@ -37,7 +37,7 @@ public:
     explicit ComponentStore(std::size_t reserveSize) noexcept;
 
     //get component from entity
-    Component* get(Entity entity);
+    Component* get(Entity entity) const;
 
     //construct a component for entity
     template<typename... Args>

@@ -24,7 +24,10 @@ void Engine::handleEvents()
 
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags) :
     m_window(title, size, flags)
-{}
+{
+    m_maxFPS = 60;
+    m_maxFrameTime_ms = 1000.f / static_cast<float>(m_maxFPS);
+}
 
 struct Pos
 {
@@ -33,23 +36,23 @@ struct Pos
 
 void Engine::init()
 {
-    m_maxFPS = 60;
-    m_maxFrameTime = 1000.f / static_cast<float>(m_maxFPS);
-
-    LOG("PsnaEngine: init");
+    LOG("init");
 
     auto e = m_registry.makeEntity();
     m_registry.add<Pos>(e, 5,5,5);
     m_registry.add<int>(e, 1);
+    //m_registry.removeEntity(e);
+
+    auto e1 = m_registry.makeEntity();
+    m_registry.add<double>(e1, -1.5);
+    m_registry.add<Pos>(e1, 1,1,1);
+    m_registry.add<float>(e1, 1.2f);
+
+    //m_registry.remove<Pos>(e1);
     m_registry.removeEntity(e);
 
-    e = m_registry.makeEntity();
-    m_registry.add<double>(e, -1.5);
-    m_registry.add<Pos>(e, 1,1,1);
-    m_registry.add<float>(e, 1.2f);
-
-    m_registry.remove<Pos>(e);
-    m_registry.removeEntity(e);
+    auto e2 = m_registry.makeEntity();
+    m_registry.add<Pos>(e2, 0,0,0);
 
     LOG("Yipee!");
 }
@@ -69,11 +72,11 @@ void Engine::run()
         //render
 
         m_lastTime = std::chrono::system_clock::now();
-        unsigned int deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(m_lastTime - m_startTime).
+        unsigned int deltaTime_ms = std::chrono::duration_cast<std::chrono::milliseconds>(m_lastTime - m_startTime).
             count();
 
-        if (deltaTime < m_maxFrameTime) {
-            auto val = m_maxFrameTime - deltaTime;
+        if (deltaTime_ms < m_maxFrameTime_ms) {
+            auto val = m_maxFrameTime_ms - deltaTime_ms;
             SDL_Delay(val);
         }
         // else {
@@ -84,12 +87,12 @@ void Engine::run()
 
 void Engine::clean()
 {
-    LOG("PsnaEngine: clean")
+    LOG("clean")
 }
 
 Engine::~Engine()
 {
-    LOG("PsnaEngine: delete")
+    LOG("delete")
 }
 
 } //Plunksna

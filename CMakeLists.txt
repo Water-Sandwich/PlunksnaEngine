@@ -23,4 +23,4 @@ add_executable(Plunksna main.cpp
         ecs/PaginatedVector.h
 )
 
-TARGET_LINK_LIBRARIES(Plunksna PRIVATE SDL3)
+TARGET_LINK_LIBRARIES(Plunksna PRIVATE SDL3 glm)
