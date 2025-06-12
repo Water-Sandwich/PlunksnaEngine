@@ -6,10 +6,14 @@
 #include "Log.h"
 
 #include <iostream>
+#include <thread>
 
 namespace Plunksna {
 
-void Engine::tick(float dt) {}
+void Engine::tick(float dt)
+{
+    SDL_Delay(17);
+}
 
 void Engine::handleEvents()
 {
@@ -25,8 +29,8 @@ void Engine::handleEvents()
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags) :
     m_window(title, size, flags)
 {
-    m_maxFPS = 60;
-    m_maxFrameTime_ms = 1000.f / static_cast<float>(m_maxFPS);
+    m_maxFPS = 60.f;
+    m_maxFrameTime_ms = 1000.f / m_maxFPS;
 }
 
 struct Pos
@@ -68,16 +72,15 @@ void Engine::run()
         //do events
         handleEvents();
         //update
-        SDL_Delay(17);
+        tick(m_deltaTime_ms);
         //render
 
         m_lastTime = std::chrono::system_clock::now();
-        unsigned int deltaTime_ms = std::chrono::duration_cast<std::chrono::milliseconds>(m_lastTime - m_startTime).
-            count();
+        m_deltaTime_ms = std::chrono::duration<float, std::milli>(m_lastTime - m_startTime).count();
 
-        if (deltaTime_ms < m_maxFrameTime_ms) {
-            auto val = m_maxFrameTime_ms - deltaTime_ms;
-            SDL_Delay(val);
+        if (m_deltaTime_ms < m_maxFrameTime_ms) {
+            const std::chrono::duration<float, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
+            std::this_thread::sleep_for(waitTime_ms);
         }
         // else {
         //     LOG_S(eLETHAL, "High frame time: " << deltaTime << "ms");

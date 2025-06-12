@@ -16,26 +16,26 @@ enum Severity : unsigned char
     eLETHAL
 };
 
-static constexpr std::string RED = "\033[49;31m";
-static constexpr std::string YELLOW = "\033[49;33m";
-static constexpr std::string WHITE = "\033[49;39m";
-static constexpr std::string RESET = "\033[0m";
+#define RED "\033[49;31m"
+#define YELLOW "\033[49;33m"
+#define WHITE "\033[49;39m"
+#define RESET "\033[0m"
 
-static constexpr std::string INFO = "[INFO]: ";
-static constexpr std::string WARNING = "[WARNING]: ";
-static constexpr std::string LETHAL = "[LETHAL]: ";
+#define INFO "[INFO]: "
+#define WARNING "[WARNING]: "
+#define LETHAL "[LETHAL]: "
 
-inline std::string getStr(Severity severity)
+consteval const char* getStr(Severity severity)
 {
     switch (severity) {
     case Severity::eINFO:
-        return WHITE + INFO;
+        return WHITE INFO;
     case Severity::eWARNING:
-        return YELLOW + WARNING;
+        return YELLOW WARNING;
     case Severity::eLETHAL:
-        return RED + LETHAL;
+        return RED LETHAL;
     default:
-        return RESET + INFO;
+        return RESET INFO;
     }
 }
 
@@ -47,8 +47,8 @@ inline std::string getStr(Severity severity)
 #define LOG_SIG typeid(*this).name() << "::" << __func__ << "() "
 #endif
 
-#define LOG(msg)        std::cout << Plunksna::getStr(Plunksna::Severity::eINFO) << LOG_SIG << msg << Plunksna::RESET << std::endl;
-#define LOG_S(sev, msg) std::cout << Plunksna::getStr(sev)                       << LOG_SIG << msg << Plunksna::RESET << std::endl;
+#define LOG(msg)        std::cout << Plunksna::getStr(Plunksna::Severity::eINFO) << LOG_SIG << msg << RESET << std::endl;
+#define LOG_S(sev, msg) std::cout << Plunksna::getStr(sev)                       << LOG_SIG << msg << RESET << std::endl;
 }
 
 #endif //PLUNKSNALOG_H
