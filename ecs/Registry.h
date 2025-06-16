@@ -8,9 +8,9 @@
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
-#include <bitset>
 
 #include "ComponentStore.h"
+#include "Filter.h"
 
 namespace Plunksna {
 
@@ -21,7 +21,7 @@ struct EntityDesc
     std::vector<std::size_t> fragmentIndexes;
 };
 
-class Registry {
+class Registry final {
 public:
     explicit Registry(std::size_t reserveSize = 512) noexcept;
 
@@ -66,6 +66,8 @@ private:
 
     EntityDesc m_entities;
     Entity m_maxEntity = 0;
+
+    //Filter<int,int,float> filter;
 };
 
 } // Plunksna

@@ -43,7 +43,7 @@ Window::Window(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
 
 Window::~Window()
 {
-    LOG("PsnaWindow: deleting")
+    LOG("deleting")
 }
 
 std::shared_ptr<SDL_Window> Window::getWindow()

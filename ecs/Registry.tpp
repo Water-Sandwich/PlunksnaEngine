@@ -1,7 +1,8 @@
 //
 // Created by d on 5/16/25.
 //
-#pragma once
+#ifndef REGISTRY_TPP
+#define REGISTRY_TPP
 
 #include "Registry.h"
 #include "../engine/Exception.h"
@@ -111,6 +112,8 @@ inline bool Registry::removeEntity(Entity entity)
         if (m_entities.componentMasks[index][i] == 0)
             continue;
 
+        //make remove return the index of the moved object
+        //update each filter with this component and other entity accordingly
         getStore(m_componentTypes[i])->remove(m_entities.entities[index]);
     }
 
@@ -137,3 +140,4 @@ inline std::size_t Registry::findIndexOfEntity(Entity entity)
 }
 
 } // Plunksna
+#endif // REGISTRY_TPP

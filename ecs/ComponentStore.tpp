@@ -1,7 +1,8 @@
 //
 // Created by d on 5/16/25.
 //
-#pragma once
+#ifndef COMPONENTSTORE_TPP
+#define COMPONENTSTORE_TPP
 
 #include "ComponentStore.h"
 
@@ -11,7 +12,7 @@ template <typename Component>
 ComponentStore<Component>::ComponentStore(std::size_t reserveSize) noexcept
 {
     m_components.reserve(reserveSize);
-    m_owners.reserve(reserveSize);
+    m_entities.reserve(reserveSize);
 }
 
 template <typename Component>
@@ -27,38 +28,50 @@ template <typename ... Args>
 bool ComponentStore<Component>::add(Entity entity, Args&&... args)
 {
     if (entity == NULL_ENTITY) {
-        LOG_S(eWARNING, "adding to a null entity")
+        LOG_S(eWARNING, "adding a null entity")
         return false;
     }
 
     m_components.emplace_back(std::forward<Args>(args)...);
-    m_owners.emplace_back(entity);
+    m_entities.emplace_back(entity);
     m_indexes.insert(entity, m_components.size() - 1);
 
     return true;
 }
 
 template <typename Component>
-bool ComponentStore<Component>::remove(Entity entity)
+std::pair<Entity, void*> ComponentStore<Component>::remove(Entity entity)
 {
     if (entity == NULL_ENTITY) {
         LOG_S(eWARNING, "removing a null entity")
-        return false;
+        return {NULL_ENTITY, nullptr};
     }
 
-    auto& index = m_indexes[entity];
+    const auto index = m_indexes[entity];
 
     if (index == NULL_INDEX)
-        return false;
+        return {NULL_ENTITY, nullptr};
 
-    std::swap(m_components[index], m_components.back());
-    std::swap(m_owners[index], m_owners.back());
+    const auto otherIndex = m_indexes[m_entities.back()];
+    const auto otherEntity = m_entities[otherIndex];
+
+    std::swap(m_components[m_indexes[entity]], m_components.back());
+    std::swap(m_entities[m_indexes[entity]], m_entities.back());
 
     m_components.pop_back();
-    m_owners.pop_back();
-    index = NULL_INDEX;
+    m_entities.pop_back();
 
-    return true;
+    m_indexes[otherEntity] = m_indexes[entity];
+    m_indexes[entity] = NULL_ENTITY;
+
+    if (m_entities.empty()) {
+        LOG("No more components of this type")
+        return {NULL_ENTITY, nullptr};
+    }
+
+    return {m_entities[m_indexes[otherIndex]],
+            &m_components[m_indexes[otherIndex]]};
 }
 
 } // Plunksna
+#endif // COMPONENTSTORE_TPP

@@ -34,7 +34,7 @@ public:
     void clean();
 
 private:
-    void tick(float dt);
+    void tick(float delta_ms);
     void handleEvents();
 
 private:

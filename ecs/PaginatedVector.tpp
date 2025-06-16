@@ -1,9 +1,10 @@
 //
 // Created by d on 5/17/25.
 //
+#ifndef PAGINATEDVECTOR_TPP
+#define PAGINATEDVECTOR_TPP
 
-#pragma once
-
+#include "../engine/Log.h"
 #include "PaginatedVector.h"
 
 namespace Plunksna {
@@ -57,3 +58,4 @@ constexpr std::vector<T>& PaginatedVector<T, defaultValue, pageSize>::initPage(s
 }
 
 } // Plunksna
+#endif // PAGINATEDVECTOR_TPP

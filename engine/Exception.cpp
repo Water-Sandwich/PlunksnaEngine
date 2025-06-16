@@ -7,7 +7,7 @@
 namespace Plunksna {
 
 Exception::Exception(const std::string& what) :
-    m_what(Plunksna::getStr(Plunksna::Severity::eLETHAL) + what) {}
+    m_what(std::string(Plunksna::getStr(Plunksna::Severity::eLETHAL)) + what) {}
 
 const char* Exception::what() const noexcept
 {

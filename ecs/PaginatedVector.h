@@ -14,7 +14,7 @@ template <
     T defaultValue = T{},
     std::size_t pageSize = 512
 >
-class PaginatedVector {
+class PaginatedVector final {
 public:
     constexpr T& operator[](std::size_t index);
 

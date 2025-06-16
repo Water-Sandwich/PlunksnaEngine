@@ -11,7 +11,7 @@ int main()
         engine.run();
         engine.clean();
     }
-    catch (const Plunksna::PsnaExcp& e) {
+    catch (const Plunksna::Exception& e) {
         std::cout << "PSNAERR: " << e.what() << std::endl;
         return -2;
     }

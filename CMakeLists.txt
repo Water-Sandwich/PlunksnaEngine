@@ -2,25 +2,48 @@ cmake_minimum_required(VERSION 3.29)
 project(Plunksna)
 set(CMAKE_CXX_STANDARD 26)
 
-find_package(SDL3 REQUIRED)
-find_package(glm REQUIRED)
+function(find_or_fetch package_name repo_url tag target_name)
+    find_package(${package_name} QUIET)
 
-add_executable(Plunksna main.cpp
-        engine/Engine.cpp
-        engine/Engine.h
-        engine/Window.cpp
-        engine/Window.h
-        engine/Exception.cpp
-        engine/Exception.h
-        engine/Log.h
-        engine/GameObject.cpp
-        engine/GameObject.h
-        ecs/Registry.tpp
-        ecs/Registry.h
-        ecs/ComponentStore.tpp
-        ecs/ComponentStore.h
-        ecs/PaginatedVector.tpp
-        ecs/PaginatedVector.h
+    if (NOT ${package_name}_FOUND)
+        message(STATUS "${package_name} not found, fetching from ${repo_url}...")
+
+        include(FetchContent)
+        FetchContent_Declare(
+                ${package_name}
+                GIT_REPOSITORY ${repo_url}
+                GIT_TAG ${tag}
+        )
+        FetchContent_MakeAvailable(${package_name})
+
+        # Optionally set ${package_name}_FOUND to TRUE
+        set(${package_name}_FOUND TRUE PARENT_SCOPE)
+    endif()
+endfunction()
+
+find_or_fetch(
+        SDL3
+        https://github.com/libsdl-org/SDL.git
+        release-3.2.14
+        SDL3::SDL3
 )
+
+find_or_fetch(
+        glm
+        https://github.com/g-truc/glm.git
+        1.0.1
+        glm
+)
+
+file(GLOB_RECURSE ENGINE_SRC CONFIGURE_DEPENDS engine/*.cpp engine/*.h)
+file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS ecs/*.cpp ecs/*.h ecs/*.tpp)
+
+set(SOURCE_FILES
+        main.cpp
+        ${ENGINE_SRC}
+        ${ECS_SRC}
+)
+
+add_executable(Plunksna ${SOURCE_FILES})
 
 TARGET_LINK_LIBRARIES(Plunksna PRIVATE SDL3 glm)
