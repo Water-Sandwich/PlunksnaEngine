@@ -9,15 +9,15 @@
 namespace Plunksna {
 
 template <typename ... Components>
-Filter<Components...>::Filter(FilterFunction function)
+Filter<Components...>::Filter(FilterFunction function, std::size_t reserveSize)
     : m_function(function)
 {
     if (s_offsetsPerType.empty()) {
         calculateOffsets();
     }
 
-    m_entities.reserve(RESERVE_SIZE);
-    m_components.reserve(RESERVE_SIZE);
+    m_entities.reserve(reserveSize);
+    m_components.reserve(reserveSize);
 }
 
 template <typename ... Components>
@@ -37,6 +37,15 @@ bool Filter<Components...>::foreach(FilterFunction function)
 }
 
 template <typename ... Components>
+bool Filter<Components...>::has(Entity entity)
+{
+    if (!m_indexes.valid(entity))
+        return false;
+
+    return m_indexes[entity] != NULL_INDEX;
+}
+
+template <typename ... Components>
 bool Filter<Components...>::add(Entity entity, Components*... components)
 {
     if (entity == NULL_ENTITY)
@@ -53,6 +62,21 @@ bool Filter<Components...>::add(Entity entity, Components*... components)
 }
 
 template <typename ... Components>
+bool Filter<Components...>::add(Entity entity, void* tuple)
+{
+    if (entity == NULL_ENTITY || tuple == nullptr)
+        return false;
+
+    auto tup = *static_cast<std::tuple<Components*...>*>(tuple);
+
+    m_entities.push_back(entity);
+    m_components.push_back(tup);
+    m_indexes.insert(entity, m_entities.size() - 1);
+
+    return true;
+}
+
+template <typename ... Components>
 std::pair<Entity, void*> Filter<Components...>::remove(Entity entity)
 {
     if (entity == NULL_ENTITY) {
@@ -60,7 +84,7 @@ std::pair<Entity, void*> Filter<Components...>::remove(Entity entity)
         return {NULL_ENTITY, nullptr};
     }
 
-    const auto index = m_indexes[entity];
+    auto index = m_indexes[entity];
 
     if (index == NULL_INDEX)
         return {NULL_ENTITY, nullptr};
@@ -76,6 +100,11 @@ std::pair<Entity, void*> Filter<Components...>::remove(Entity entity)
 
     m_indexes[otherEntity] = m_indexes[entity];
     m_indexes[entity] = NULL_ENTITY;
+
+    index = m_indexes[otherIndex];
+
+    if (index == NULL_INDEX)
+        return {NULL_ENTITY, nullptr};
 
     if (m_entities.empty()) {
         LOG("No more components of this type")
@@ -138,7 +167,47 @@ bool Filter<Components...>::updateComponentAddressFast(Entity entity, Component*
 }
 
 template <typename ... Components>
-bool Filter<Components...>::callForeach()
+std::size_t Filter<Components...>::count() const
+{
+    return m_components.size();
+}
+
+template <typename ... Components>
+std::unique_ptr<void, IFilter::FilterDeleter> Filter<Components...>::makeTupleImpl(const std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>>& registryStores, Entity entity)
+{
+    auto* tup = new std::tuple<Components*...>(std::make_tuple(getAddressFromStore<Components>(registryStores, entity)...));
+    std::unique_ptr<void, FilterDeleter> ret(tup, s_deleter);
+    return ret;
+}
+
+template <typename ... Components>
+bool Filter<Components...>::updateAllComponentAddressesImpl(std::size_t offset, std::type_index type)
+{
+    if (!s_offsetsPerType.contains(type))
+        return false;
+
+    for (std::size_t i = 0; i < m_components.size(); i++) {
+        auto* start = reinterpret_cast<std::byte*>(&m_components[i]);
+        const auto componentOffset = s_offsetsPerType.at(type);
+        auto** component = reinterpret_cast<void**>(start + componentOffset);
+
+        std::size_t newAddr = reinterpret_cast<std::size_t>(*component) + offset;
+        *component = reinterpret_cast<void*>(newAddr);
+    }
+
+    return true;
+}
+
+template <typename ... Components>
+template <typename Component>
+Component* Filter<Components...>::getAddressFromStore(const std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>>& registryStores, Entity entity)
+{
+    ComponentStore<Component>* store = static_cast<ComponentStore<Component>*>(registryStores.at(typeid(Component)).get());
+    return store->get(entity);
+}
+
+template <typename ... Components>
+bool Filter<Components...>::foreachImpl()
 {
     if (!m_function)
         return false;
@@ -184,9 +253,18 @@ constexpr void Filter<Components...>::calculateOffsetsFold(std::index_sequence<C
 
 inline bool IFilter::foreachDefault()
 {
-    return callForeach();
+    return foreachImpl();
 }
 
+inline std::unique_ptr<void, IFilter::FilterDeleter> IFilter::makeTuple(const std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>>& registryStores, Entity entity)
+{
+    return makeTupleImpl(registryStores, entity);
+}
+
+inline bool IFilter::updateAllComponentAddresses(std::size_t offset, std::type_index type)
+{
+    return updateAllComponentAddressesImpl(offset, type);
+}
 } // Plunksna
 
 #endif // FILTER_TPP

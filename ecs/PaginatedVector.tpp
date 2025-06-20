@@ -38,6 +38,13 @@ constexpr void PaginatedVector<T, defaultValue, pageSize>::insert(std::size_t in
 }
 
 template <typename T, T defaultValue, std::size_t pageSize>
+bool PaginatedVector<T, defaultValue, pageSize>::valid(std::size_t index) const
+{
+    auto pageIndex = index / pageSize;
+    return pageIndex < pages.size();
+}
+
+template <typename T, T defaultValue, std::size_t pageSize>
 constexpr std::vector<T>& PaginatedVector<T, defaultValue, pageSize>::getOrCreatePage(std::size_t index)
 {
     auto pageIndex = index / pageSize;

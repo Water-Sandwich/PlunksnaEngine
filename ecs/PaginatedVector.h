@@ -25,6 +25,8 @@ public:
 
     constexpr void insert(std::size_t index, const T& value);
 
+    bool valid(std::size_t index) const;
+
 private:
     constexpr std::vector<T>& getOrCreatePage(std::size_t index);
 

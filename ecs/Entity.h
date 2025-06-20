@@ -17,6 +17,8 @@ constexpr Entity NULL_INDEX = std::numeric_limits<std::size_t>::max();
 constexpr unsigned short MAX_COMPONENTS = 32;
 using ComponentMask = std::bitset<MAX_COMPONENTS>;
 
+constexpr static std::size_t FILTER_RESERVE_SIZE = 1024;
+
 }
 
 #endif //ENTITY_H

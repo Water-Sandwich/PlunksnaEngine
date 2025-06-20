@@ -45,6 +45,15 @@ public:
     template<typename Component>
     Component* get(Entity entity);
 
+    //create a filter, pre-existing components will not be included in the filter
+    template<typename... Components>
+    Filter<Components...>* makeFilter(typename Filter<Components...>::FilterFunction func = nullptr, std::size_t reserveSize = FILTER_RESERVE_SIZE);
+
+    std::size_t totalCount() const;
+
+    template<typename Component>
+    std::size_t count();
+
 private:
     template<typename Component>
     ComponentStore<Component>& getOrCreateStore();
@@ -57,17 +66,17 @@ private:
     std::size_t findIndexOfEntity(Entity entity);
 
     template<typename Component>
-    void setMaskBit(Entity entity, bool value);
+    const ComponentMask& setMaskBit(Entity entity, bool value);
+
+    void updateAllFilterAddresses(std::size_t offset, ComponentMask mask, std::type_index type) const;
 
 private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>> m_stores;
-    //maps index -> type
-    std::vector<std::type_index> m_componentTypes;
+    std::vector<std::type_index> m_componentTypes; //maps index -> type
+    std::vector<std::unique_ptr<IFilter>> m_filters;
 
     EntityDesc m_entities;
     Entity m_maxEntity = 0;
-
-    //Filter<int,int,float> filter;
 };
 
 } // Plunksna

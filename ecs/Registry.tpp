@@ -13,10 +13,29 @@ template <typename Component, typename ... Args>
 bool Registry::add(Entity entity, Args&&... args)
 {
     //if unsuccessful, return out
-    if (!getOrCreateStore<Component>().add(entity, std::forward<Args>(args)...))
+    ComponentStore<Component>& store = getOrCreateStore<Component>();
+
+    if (bool ret = store.add(entity, std::forward<Args>(args)...); !ret)
         return false;
 
-    setMaskBit<Component>(entity, true);
+    //check if resize operation occured, if so, update filter pointers
+    auto distance = store.offsetAfterMove();
+    if (distance != 0)
+        updateAllFilterAddresses(distance, store.m_bitmask, typeid(Component));
+
+    auto bitmask = setMaskBit<Component>(entity, true);
+    for (auto& filterPtr : m_filters) {
+        auto& filter = *filterPtr;
+
+        if ((filter.m_bitmask & bitmask) != filter.m_bitmask)
+            continue;
+        if (filterPtr->has(entity))
+            continue;
+
+        //retrieve all pointers of all components associated with this entity
+        auto tup = filter.makeTuple(m_stores, entity);
+        filter.add(entity, tup.get());
+    }
 
     return true;
 }
@@ -27,11 +46,37 @@ bool Registry::remove(Entity entity)
     if (!m_stores.contains(typeid(Component)))
         return false;
 
-    //if unsuccessful, return out
-    if (!getStore<Component>().remove(entity))
+    auto& store = getStore<Component>();
+    std::pair<Entity, void*> ret = store.remove(entity);
+    auto bitmask = setMaskBit<Component>(entity, false);
+
+    //remove entity from filters
+    for (int i = 0; i < m_filters.size(); i++) {
+        auto& filter = *m_filters[i].get();
+
+        if ((filter.m_bitmask & bitmask) == filter.m_bitmask)
+            continue;
+        if (!filter.has(entity))
+            continue;
+
+        //retrieve all pointers of all components associated with this entity
+        filter.remove(entity);
+    }
+
+    if (!ret.second)
         return false;
 
-    setMaskBit<Component>(entity, false);
+    //update moved components from removal
+    for (int i = 0; i < m_filters.size(); i++) {
+        auto& filter = *m_filters[i].get();
+
+        if ((filter.m_bitmask & bitmask) != filter.m_bitmask)
+            continue;
+        if (filter.has(entity))
+            continue;
+
+        filter.updateComponentAddress(ret.first, typeid(Component), ret.second);
+    }
 
     return true;
 }
@@ -46,6 +91,28 @@ Component* Registry::get(Entity entity)
     return store.get(entity);
 }
 
+template <typename ... Components>
+Filter<Components...>* Registry::makeFilter(typename Filter<Components...>::FilterFunction func, std::size_t reserveSize)
+{
+    auto filter = std::make_unique<Filter<Components...>>(func);
+    auto filterPtr = filter.get();
+
+    std::tuple<ComponentStore<Components>...> stores = std::make_tuple(getOrCreateStore<Components>()...);
+    std::apply([&](ComponentStore<Components>... store)
+    {
+        (filterPtr->m_bitmask |= ... |= store.m_bitmask);
+    }, stores);
+
+    m_filters.push_back(std::move(filter));
+    return filterPtr;
+}
+
+// template <typename Component>
+// std::size_t Registry::count()
+// {
+//     return getStore<Component>().count();
+// }
+
 template <typename Component>
 ComponentStore<Component>& Registry::getOrCreateStore()
 {
@@ -53,7 +120,7 @@ ComponentStore<Component>& Registry::getOrCreateStore()
         return getStore<Component>();
 
     auto* storePtr = new ComponentStore<Component>();
-    storePtr->bitmask.set(m_stores.size(), true);
+    storePtr->m_bitmask.set(m_stores.size(), true);
 
     std::unique_ptr<IComponentStore> store(storePtr);
     m_stores[typeid(Component)] = std::move(store);
@@ -71,12 +138,13 @@ ComponentStore<Component>& Registry::getStore()
 }
 
 template <typename Component>
-void Registry::setMaskBit(Entity entity, bool value)
+const ComponentMask& Registry::setMaskBit(Entity entity, bool value)
 {
     const auto index = findIndexOfEntity(entity);
     const auto typeIt = std::find(m_componentTypes.begin(), m_componentTypes.end(), typeid(Component)); //TODO: Make a map for type -> index?
     const auto typeIndex = std::distance(m_componentTypes.begin(), typeIt);
     m_entities.componentMasks[index].set(typeIndex, value);
+    return m_entities.componentMasks[index];
 }
 
 inline Registry::Registry(std::size_t reserveSize) noexcept
@@ -123,6 +191,11 @@ inline bool Registry::removeEntity(Entity entity)
     return true;
 }
 
+inline std::size_t Registry::totalCount() const
+{
+    return m_entities.entities.size();
+}
+
 inline IComponentStore* Registry::getStore(std::type_index type) const
 {
     return m_stores.at(type).get();
@@ -137,6 +210,17 @@ inline std::size_t Registry::findIndexOfEntity(Entity entity)
         return NULL_INDEX;
 
     return std::distance(m_entities.entities.begin(), it);
+}
+
+inline void Registry::updateAllFilterAddresses(std::size_t offset, ComponentMask mask, std::type_index type) const
+{
+    for (auto& filterPtr : m_filters) {
+        auto& filter = *filterPtr;
+        if ((filter.m_bitmask & mask) != filter.m_bitmask)
+            continue;
+
+        filter.updateAllComponentAddresses(offset, type);
+    }
 }
 
 } // Plunksna

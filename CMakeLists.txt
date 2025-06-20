@@ -42,6 +42,7 @@ set(SOURCE_FILES
         main.cpp
         ${ENGINE_SRC}
         ${ECS_SRC}
+        Tests.cpp
 )
 
 add_executable(Plunksna ${SOURCE_FILES})

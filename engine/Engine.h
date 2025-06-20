@@ -49,6 +49,11 @@ private:
     float m_deltaTime_ms;
 
     Registry m_registry;
+    struct Pos
+    {
+        int x,y,z;
+    };
+    Filter<Pos>* m_filter;
 
 public:
     bool m_isRunning = true;
