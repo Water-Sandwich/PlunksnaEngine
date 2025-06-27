@@ -52,6 +52,7 @@ protected:
 
 public:
     ComponentMask m_bitmask;
+    int m_priority = 0;
 
 protected:
     inline static std::unordered_map<std::type_index, std::size_t> s_offsetsPerType;
@@ -78,7 +79,7 @@ public:
     static_assert(are_unique<Components...>::value, "Filter components must be unique");
 
 public:
-    explicit Filter(FilterFunction function = nullptr, std::size_t reserveSize = FILTER_RESERVE_SIZE);
+    explicit Filter(FilterFunction function = nullptr, int priority = 0, std::size_t reserveSize = FILTER_RESERVE_SIZE);
     Filter() = delete;
 
     //run a function on every entity in the filter

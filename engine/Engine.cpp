@@ -4,6 +4,7 @@
 
 #include "Engine.h"
 #include "Log.h"
+#include "Random.h"
 
 #include <iostream>
 #include <thread>
@@ -17,15 +18,17 @@ void Engine::tick(float delta_ms)
     //     ++a.x;
     // });
 
-    Entity num = rand() % m_registry.totalCount();
+    //Entity num = rand() % m_registry.totalCount();
+    Entity num = g_Random.randomInt(0, m_registry.totalCount());
     m_registry.removeEntity(num);
     LOG(num)
 }
 
 void Engine::handleEvents()
 {
-    while (SDL_PollEvent(&m_event)) {
-        switch (m_event.type) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
         case SDL_EVENT_QUIT: {
             m_isRunning = false;
         }
@@ -52,6 +55,7 @@ void Engine::init()
     };
 
     m_filter = m_registry.makeFilter<Pos>(def);
+    m_registry.makeFilter<int>(nullptr, -1);
 
     for (int i = 0; i < 262144; i++) {
         auto e = m_registry.makeEntity();
@@ -86,7 +90,7 @@ void Engine::run()
             LOG(waitTime_ms);
         }
         else {
-            LOG_S(eLETHAL, "High frame time: " << m_deltaTime_ms << "ms");
+            LOG_S(eWARNING, "High frame time: " << m_deltaTime_ms << "ms");
         }
     }
 }

@@ -25,6 +25,7 @@ constexpr void Window::deleteRenderer(SDL_Renderer* renderer)
 Window::Window(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags) :
     m_size(size)
 {
+    SDL_Init(SDL_INIT_VIDEO);
     m_title = title;
 
     SDL_Window* window;

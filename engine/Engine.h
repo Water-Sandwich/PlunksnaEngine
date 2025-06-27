@@ -39,7 +39,6 @@ private:
 
 private:
     Window m_window;
-    SDL_Event m_event;
 
     TimePoint m_startTime;
     TimePoint m_lastTime;

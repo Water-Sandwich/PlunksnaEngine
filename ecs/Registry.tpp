@@ -92,9 +92,9 @@ Component* Registry::get(Entity entity)
 }
 
 template <typename ... Components>
-Filter<Components...>* Registry::makeFilter(typename Filter<Components...>::FilterFunction func, std::size_t reserveSize)
+Filter<Components...>* Registry::makeFilter(typename Filter<Components...>::FilterFunction func, int priority, std::size_t reserveSize)
 {
-    auto filter = std::make_unique<Filter<Components...>>(func);
+    auto filter = std::make_unique<Filter<Components...>>(func, priority, reserveSize);
     auto filterPtr = filter.get();
 
     std::tuple<ComponentStore<Components>...> stores = std::make_tuple(getOrCreateStore<Components>()...);
@@ -103,15 +103,22 @@ Filter<Components...>* Registry::makeFilter(typename Filter<Components...>::Filt
         (filterPtr->m_bitmask |= ... |= store.m_bitmask);
     }, stores);
 
-    m_filters.push_back(std::move(filter));
+    auto it = std::lower_bound(m_filters.begin(), m_filters.end(), filterPtr, [](const std::unique_ptr<IFilter>& fil, const IFilter* const value)
+    {
+        return fil->m_priority < value->m_priority;
+    });
+
+    m_filters.insert(it, std::move(filter));
+
+    //m_filters.push_back(std::move(filter));
     return filterPtr;
 }
 
-// template <typename Component>
-// std::size_t Registry::count()
-// {
-//     return getStore<Component>().count();
-// }
+template <typename Component>
+std::size_t Registry::count() const
+{
+    return getStore<Component>().count();
+}
 
 template <typename Component>
 ComponentStore<Component>& Registry::getOrCreateStore()

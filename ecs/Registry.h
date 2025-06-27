@@ -47,12 +47,12 @@ public:
 
     //create a filter, pre-existing components will not be included in the filter
     template<typename... Components>
-    Filter<Components...>* makeFilter(typename Filter<Components...>::FilterFunction func = nullptr, std::size_t reserveSize = FILTER_RESERVE_SIZE);
+    Filter<Components...>* makeFilter(typename Filter<Components...>::FilterFunction func = nullptr, int priority = 0, std::size_t reserveSize = FILTER_RESERVE_SIZE);
 
     std::size_t totalCount() const;
 
     template<typename Component>
-    std::size_t count();
+    std::size_t count() const;
 
 private:
     template<typename Component>

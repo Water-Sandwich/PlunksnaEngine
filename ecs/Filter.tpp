@@ -9,7 +9,7 @@
 namespace Plunksna {
 
 template <typename ... Components>
-Filter<Components...>::Filter(FilterFunction function, std::size_t reserveSize)
+Filter<Components...>::Filter(FilterFunction function, int priority, std::size_t reserveSize)
     : m_function(function)
 {
     if (s_offsetsPerType.empty()) {
@@ -18,6 +18,7 @@ Filter<Components...>::Filter(FilterFunction function, std::size_t reserveSize)
 
     m_entities.reserve(reserveSize);
     m_components.reserve(reserveSize);
+    m_priority = priority;
 }
 
 template <typename ... Components>
