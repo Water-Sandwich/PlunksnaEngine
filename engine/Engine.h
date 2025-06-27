@@ -10,6 +10,7 @@
 #include <glm/vec2.hpp>
 #include <SDL3/SDL.h>
 
+#include "Components.h"
 #include "Window.h"
 #include "../ecs/Registry.h"
 
@@ -35,6 +36,7 @@ public:
 
 private:
     void tick(float delta_ms);
+    void render();
     void handleEvents();
 
 private:
@@ -48,11 +50,7 @@ private:
     float m_deltaTime_ms;
 
     Registry m_registry;
-    struct Pos
-    {
-        int x,y,z;
-    };
-    Filter<Pos>* m_filter;
+    Filter<Transform2, RColorRGBA>* m_renderFilter;
 
 public:
     bool m_isRunning = true;

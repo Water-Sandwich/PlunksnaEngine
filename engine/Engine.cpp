@@ -9,19 +9,43 @@
 #include <iostream>
 #include <thread>
 
+#include "Components.h"
+
 namespace Plunksna {
+
+void RenderSolidRect(SDL_Renderer* renderer, const Transform2& transform, const RColorRGBA& color)
+{
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    glm::vec2 offset = transform.scale / 2.f;
+
+    SDL_FRect r{
+        transform.position.x - offset.x, transform.position.y - offset.y,
+        transform.scale.x, transform.scale.y
+    };
+
+    SDL_RenderFillRect(renderer, &r);
+    //SDL_RenderRect()
+}
 
 void Engine::tick(float delta_ms)
 {
-    // m_filter->foreach([](auto& a)
-    // {
-    //     ++a.x;
-    // });
+    auto* p = m_registry.get<Transform2>(0);
+    p->scale.x = g_Random.randomReal(0.f,500.f);
+}
 
-    //Entity num = rand() % m_registry.totalCount();
-    Entity num = g_Random.randomInt(0, m_registry.totalCount());
-    m_registry.removeEntity(num);
-    LOG(num)
+void Engine::render()
+{
+    SDL_Renderer* renderer = m_window.getRenderer().get();
+
+    SDL_SetRenderDrawColor(renderer, 0,10,10,255);
+    SDL_RenderClear(renderer);
+
+    m_renderFilter->foreach([&](const Transform2& a, const RColorRGBA& b)
+    {
+        RenderSolidRect(renderer, a, b);
+    });
+
+    SDL_RenderPresent(renderer);
 }
 
 void Engine::handleEvents()
@@ -42,29 +66,17 @@ Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
     m_maxFPS = 60.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
-    srand(time(0));
 }
 
 void Engine::init()
 {
     LOG("init");
 
-    auto def = [](Pos& a)
-    {
-        std::cout << a.x << "," << a.y << "," << a.z << std::endl;
-    };
+    auto e = m_registry.makeEntity();
+    m_renderFilter = m_registry.makeFilter<Transform2, RColorRGBA>();
 
-    m_filter = m_registry.makeFilter<Pos>(def);
-    m_registry.makeFilter<int>(nullptr, -1);
-
-    for (int i = 0; i < 262144; i++) {
-        auto e = m_registry.makeEntity();
-        m_registry.add<Pos>(e, i, i, i);
-    }
-
-    m_filter->foreachDefault();
-
-    LOG("Yipee!");
+    m_registry.add<Transform2>(e, glm::vec2(350,50), glm::vec2(10,10));
+    m_registry.add<RColorRGBA>(e, 255,255,255,255);
 }
 
 void Engine::run()
@@ -75,11 +87,9 @@ void Engine::run()
     while (m_isRunning) {
         m_startTime = std::chrono::system_clock::now();
 
-        //do events
         handleEvents();
-        //update
         tick(m_deltaTime_ms);
-        //render
+        render();
 
         m_lastTime = std::chrono::system_clock::now();
         m_deltaTime_ms = std::chrono::duration<float, std::milli>(m_lastTime - m_startTime).count();
@@ -87,7 +97,7 @@ void Engine::run()
         if (m_deltaTime_ms < m_maxFrameTime_ms) {
             const std::chrono::duration<float, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
             std::this_thread::sleep_for(waitTime_ms);
-            LOG(waitTime_ms);
+            //LOG(waitTime_ms);
         }
         else {
             LOG_S(eWARNING, "High frame time: " << m_deltaTime_ms << "ms");

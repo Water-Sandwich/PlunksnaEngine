@@ -85,6 +85,9 @@ public:
     //run a function on every entity in the filter
     bool foreach(FilterFunction function);
 
+    template <typename TCallable>
+    bool foreach(TCallable&& function);
+
     //returns if an entity exists in the filter
     bool has(Entity entity) override;
 

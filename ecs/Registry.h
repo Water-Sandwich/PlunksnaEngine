@@ -16,7 +16,7 @@ namespace Plunksna {
 
 struct EntityDesc
 {
-    std::vector<Entity> entities;
+    std::vector<Entity> entities; //sorted
     std::vector<ComponentMask> componentMasks;
     std::vector<std::size_t> fragmentIndexes;
 };

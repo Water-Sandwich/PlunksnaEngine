@@ -22,6 +22,20 @@ Filter<Components...>::Filter(FilterFunction function, int priority, std::size_t
 }
 
 template <typename ... Components>
+template <typename TCallable>
+bool Filter<Components...>::foreach(TCallable&& function)
+{
+    for (const std::tuple<Components*...>& componentTuple : m_components) {
+        std::apply([&](Components*... ptrs)
+        {
+            function(*ptrs...);
+        }, componentTuple);
+    }
+
+    return true;
+}
+
+template <typename ... Components>
 bool Filter<Components...>::foreach(FilterFunction function)
 {
     if (!function)
