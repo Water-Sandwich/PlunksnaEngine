@@ -4,7 +4,7 @@
 
 #ifndef PAGINATEDVECTOR_H
 #define PAGINATEDVECTOR_H
-#include <optional>
+
 #include <vector>
 
 namespace Plunksna {
@@ -19,6 +19,9 @@ public:
     constexpr T& operator[](std::size_t index);
 
     constexpr T operator[](std::size_t index) const;
+
+    constexpr T at(std::size_t index);
+    constexpr T& at(std::size_t index) const;
 
     template <typename... Args>
     constexpr void emplace(std::size_t index, Args&&... args);

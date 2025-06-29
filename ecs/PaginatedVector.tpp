@@ -4,10 +4,11 @@
 #ifndef PAGINATEDVECTOR_TPP
 #define PAGINATEDVECTOR_TPP
 
-#include "../engine/Log.h"
 #include "PaginatedVector.h"
+#include "../engine/Log.h"
 
 namespace Plunksna {
+
 template <typename T, T defaultValue, std::size_t pageSize>
 constexpr T& PaginatedVector<T, defaultValue, pageSize>::operator[](std::size_t index)
 {
@@ -19,6 +20,20 @@ template <typename T, T defaultValue, std::size_t pageSize>
 constexpr T PaginatedVector<T, defaultValue, pageSize>::operator[](std::size_t index) const
 {
     auto& page = pages[index / pageSize];
+    return page[index % pageSize];
+}
+
+template <typename T, T defaultValue, std::size_t pageSize>
+constexpr T PaginatedVector<T, defaultValue, pageSize>::at(std::size_t index)
+{
+    auto& page = getOrCreatePage(index);
+    return page[index % pageSize];
+}
+
+template <typename T, T defaultValue, std::size_t pageSize>
+constexpr T& PaginatedVector<T, defaultValue, pageSize>::at(std::size_t index) const
+{
+    auto& page = getOrCreatePage(index);
     return page[index % pageSize];
 }
 
