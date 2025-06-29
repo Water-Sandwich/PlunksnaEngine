@@ -27,6 +27,8 @@ public:
 
     bool valid(std::size_t index) const;
 
+    ~PaginatedVector();
+
 private:
     constexpr std::vector<T>& getOrCreatePage(std::size_t index);
 

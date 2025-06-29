@@ -51,6 +51,7 @@ private:
 
     Registry m_registry;
     Filter<Transform2, RColorRGBA>* m_renderFilter;
+    Filter<Transform2, Player>* m_player;
 
 public:
     bool m_isRunning = true;

@@ -33,6 +33,11 @@ struct RTexture
     SDL_Texture* texture;
 };
 
+struct Player
+{
+    unsigned char id;
+};
+
 }
 
 #endif //COMPONENTS_H
