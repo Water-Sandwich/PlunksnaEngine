@@ -145,7 +145,6 @@ void Engine::run()
 void Engine::clean()
 {
     LOG("clean")
-    SDL_Quit();
 }
 
 Engine::~Engine()

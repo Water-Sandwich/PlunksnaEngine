@@ -49,12 +49,12 @@ std::pair<Entity, void*> ComponentStore<Component>::remove(Entity entity)
         return {NULL_ENTITY, nullptr};
     }
 
-    auto index = m_indexes[entity];
+    auto index = m_indexes.at(entity);
 
     if (index == NULL_INDEX)
         return {NULL_ENTITY, nullptr};
 
-    const auto otherIndex = m_indexes[m_entities.back()];
+    const auto otherIndex = m_indexes.at(m_entities.back());
     const auto otherEntity = m_entities[otherIndex];
 
     std::swap(m_components[m_indexes[entity]], m_components.back());
