@@ -223,7 +223,6 @@ inline void Registry::updateAllFilterAddresses(std::ptrdiff_t offset, ComponentM
 {
     for (auto& filterPtr : m_filters) {
         auto& filter = *filterPtr;
-        auto tmask = filter.m_bitmask & mask;
         if ((filter.m_bitmask & mask) != mask)
             continue;
 

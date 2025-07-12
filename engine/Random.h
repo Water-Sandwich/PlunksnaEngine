@@ -38,7 +38,7 @@ private:
     std::mt19937 m_gen;
 };
 
-inline static Random g_Random{};
+inline static Random g_random{};
 
 } // Plunksna
 

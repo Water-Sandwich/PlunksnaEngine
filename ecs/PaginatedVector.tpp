@@ -61,7 +61,7 @@ bool PaginatedVector<T, defaultValue, pageSize>::valid(std::size_t index) const
 template <typename T, T defaultValue, std::size_t pageSize>
 PaginatedVector<T, defaultValue, pageSize>::~PaginatedVector()
 {
-    LOG("yipee")
+    //LOG("yipee")
 }
 
 template <typename T, T defaultValue, std::size_t pageSize>

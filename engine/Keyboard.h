@@ -10,6 +10,7 @@
 
 namespace Plunksna {
 
+//dual buffered keyboard helper
 class Keyboard {
 public:
     Keyboard() noexcept;
@@ -43,7 +44,7 @@ private:
     const std::bitset<512>& getKeys() const;
 
 private:
-    std::bitset<512> m_keyBuffer[2]; //internal keyboard state buffer
+    std::bitset<512> m_keyBuffer[2]; //internal keyboard state buffers
 
     SDL_Keymod m_modBuffer[2];
 

@@ -29,7 +29,7 @@ void renderSolidRect(SDL_Renderer* renderer, const Transform2& transform, const 
 
 void updatePlayer(float delta_ms, Transform2& transform)
 {
-    LOG(delta_ms)
+    //LOG(delta_ms)
 
     if (g_keyboard.get(SDL_SCANCODE_W))
         transform.position.y -= (1 * delta_ms);
@@ -43,9 +43,18 @@ void updatePlayer(float delta_ms, Transform2& transform)
 
 void Engine::tick(float delta_ms)
 {
-    m_player->foreach([&](Transform2& transform2, Player& p)
-    {
-        updatePlayer(delta_ms, transform2);
+    // m_player->foreach([&](Transform2& transform2, Player& p)
+    // {
+    //     updatePlayer(delta_ms, transform2);
+    // });
+
+    m_renderFilter->foreach([&](Transform2& transform2, RColorRGBA& color) {
+        color.r = g_random.randomInt(0, 255);
+        color.g = g_random.randomInt(0, 255);
+        color.b = g_random.randomInt(0, 255);
+
+        transform2.position.x = g_random.randomInt(0, 640);
+        transform2.position.y = g_random.randomInt(0, 480);
     });
 }
 
@@ -110,14 +119,12 @@ void Engine::init()
     m_renderFilter = m_registry.makeFilter<Transform2, RColorRGBA>();
     m_player = m_registry.makeFilter<Transform2, Player>();
 
-    for (int i = 0 ; i < 1025; i++) {
-        if (i == 512) {
-            LOG("lausad");
-        }
+    for (int i = 0 ; i < 4096*8; i++) {
         auto e = m_registry.makeEntity();
-        m_registry.add<Transform2>(e, glm::vec2(350,50), glm::vec2(10,10));
+        glm::vec2 pos = {g_random.randomInt(0, 640), g_random.randomInt(0, 480)};
+        m_registry.add<Transform2>(e, pos, glm::vec2(10,10));
         m_registry.add<RColorRGBA>(e, 255,255,255,255);
-        m_registry.add<Player>(e);
+        //m_registry.add<Player>(e);
     }
 
 }
@@ -135,7 +142,7 @@ void Engine::run()
         m_deltaTime_ms = std::chrono::duration<float, std::milli>(m_lastTime - m_startTime).count();
 
         if (m_deltaTime_ms < m_maxFrameTime_ms) {
-            const std::chrono::duration<float, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
+            std::chrono::duration<float, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
             std::this_thread::sleep_for(waitTime_ms);
             m_deltaTime_ms += waitTime_ms.count();
         }
