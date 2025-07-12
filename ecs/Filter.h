@@ -35,7 +35,7 @@ public:
     virtual bool updateComponentAddress(Entity entity, std::type_index type, void* address) = 0;
 
     //update locations of all component pointers after a move operation from registry
-    bool updateAllComponentAddresses(std::size_t offset, std::type_index type);
+    bool updateAllComponentAddresses(std::ptrdiff_t offset, std::type_index type);
 
     //return the amount of components this filter has
     virtual std::size_t count() const = 0;
@@ -46,7 +46,7 @@ protected:
     //implementation for foreachDefault
     virtual bool foreachImpl() = 0;
 
-    virtual bool updateAllComponentAddressesImpl(std::size_t offset, std::type_index type) = 0;
+    virtual bool updateAllComponentAddressesImpl(std::ptrdiff_t offset, std::type_index type) = 0;
 
     virtual std::unique_ptr<void, FilterDeleter> makeTupleImpl(const std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>>& registryStores, Entity entity) = 0;
 
@@ -122,7 +122,7 @@ private:
     template <std::size_t... Count>
     constexpr static void calculateOffsetsFold(std::index_sequence<Count...>, std::tuple<Components*...>& tup, std::byte* base);
 
-    bool updateAllComponentAddressesImpl(std::size_t offset, std::type_index type) override;
+    bool updateAllComponentAddressesImpl(std::ptrdiff_t offset, std::type_index type) override;
 
     template <typename Component>
     Component* getAddressFromStore(const std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>>& registryStores, Entity entity);

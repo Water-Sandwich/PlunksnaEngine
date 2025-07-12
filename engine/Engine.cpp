@@ -110,7 +110,10 @@ void Engine::init()
     m_renderFilter = m_registry.makeFilter<Transform2, RColorRGBA>();
     m_player = m_registry.makeFilter<Transform2, Player>();
 
-    for (int i = 0 ; i < 513; i++) {
+    for (int i = 0 ; i < 1025; i++) {
+        if (i == 512) {
+            LOG("lausad");
+        }
         auto e = m_registry.makeEntity();
         m_registry.add<Transform2>(e, glm::vec2(350,50), glm::vec2(10,10));
         m_registry.add<RColorRGBA>(e, 255,255,255,255);

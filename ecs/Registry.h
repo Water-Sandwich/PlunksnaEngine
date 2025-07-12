@@ -68,7 +68,7 @@ private:
     template<typename Component>
     const ComponentMask& setMaskBit(Entity entity, bool value);
 
-    void updateAllFilterAddresses(std::size_t offset, ComponentMask mask, std::type_index type) const;
+    void updateAllFilterAddresses(std::ptrdiff_t offset, ComponentMask mask, std::type_index type) const;
 
 private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>> m_stores;

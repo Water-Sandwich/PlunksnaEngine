@@ -99,16 +99,16 @@ std::pair<Entity, void*> Filter<Components...>::remove(Entity entity)
         return {NULL_ENTITY, nullptr};
     }
 
-    auto index = m_indexes[entity];
+    auto index = m_indexes.at(entity);
 
     if (index == NULL_INDEX)
         return {NULL_ENTITY, nullptr};
 
-    const auto otherIndex = m_indexes[m_entities.back()];
+    const auto otherIndex = m_indexes.at(m_entities.back());
     const auto otherEntity = m_entities[otherIndex];
 
-    std::swap(m_components[m_indexes[entity]], m_components.back());
-    std::swap(m_entities[m_indexes[entity]], m_entities.back());
+    std::swap(m_components[index], m_components.back());
+    std::swap(m_entities[index], m_entities.back());
 
     m_components.pop_back();
     m_entities.pop_back();
@@ -137,7 +137,7 @@ bool Filter<Components...>::updateComponentAddress(Entity entity, Component* add
     if (!s_offsetsPerType.contains(typeid(Component)) || !address)
         return false;
 
-    if (m_indexes[entity] == NULL_INDEX)
+    if (m_indexes.at(entity) == NULL_INDEX)
         return false;
 
     auto* start = reinterpret_cast<std::byte*>(&m_components[m_indexes[entity]]);
@@ -155,7 +155,7 @@ bool Filter<Components...>::updateComponentAddress(Entity entity, std::type_inde
     if (!s_offsetsPerType.contains(type) || !address)
         return false;
 
-    if (m_indexes[entity] == NULL_INDEX)
+    if (m_indexes.at(entity) == NULL_INDEX)
         return false;
 
     auto* start = reinterpret_cast<std::byte*>(&m_components[m_indexes[entity]]);
@@ -171,7 +171,7 @@ template <typename ... Components>
 template <typename Component>
 bool Filter<Components...>::updateComponentAddressFast(Entity entity, Component* address)
 {
-    if (m_indexes[entity] == NULL_INDEX)
+    if (m_indexes.at(entity) == NULL_INDEX)
         return false;
 
     auto& tuple = m_components[m_indexes[entity]];
@@ -196,7 +196,7 @@ std::unique_ptr<void, IFilter::FilterDeleter> Filter<Components...>::makeTupleIm
 }
 
 template <typename ... Components>
-bool Filter<Components...>::updateAllComponentAddressesImpl(std::size_t offset, std::type_index type)
+bool Filter<Components...>::updateAllComponentAddressesImpl(std::ptrdiff_t offset, std::type_index type)
 {
     if (!s_offsetsPerType.contains(type))
         return false;
@@ -276,7 +276,7 @@ inline std::unique_ptr<void, IFilter::FilterDeleter> IFilter::makeTuple(const st
     return makeTupleImpl(registryStores, entity);
 }
 
-inline bool IFilter::updateAllComponentAddresses(std::size_t offset, std::type_index type)
+inline bool IFilter::updateAllComponentAddresses(std::ptrdiff_t offset, std::type_index type)
 {
     return updateAllComponentAddressesImpl(offset, type);
 }

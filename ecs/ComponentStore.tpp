@@ -13,13 +13,13 @@ ComponentStore<Component>::ComponentStore(std::size_t reserveSize) noexcept
 {
     m_components.reserve(reserveSize);
     m_entities.reserve(reserveSize);
-    m_address = &*m_components.begin();
+    m_data = &*m_components.begin();
 }
 
 template <typename Component>
 Component* ComponentStore<Component>::get(Entity entity) const
 {
-    if (std::size_t index = m_indexes[entity]; index != NULL_INDEX)
+    if (std::size_t index = m_indexes[entity]; index != NULL_INDEX) //TODO Issue here?
         //const cast required due to filter makeTuple
         return const_cast<Component*>(&m_components[index]);
     return nullptr;
@@ -57,8 +57,8 @@ std::pair<Entity, void*> ComponentStore<Component>::remove(Entity entity)
     const auto otherIndex = m_indexes.at(m_entities.back());
     const auto otherEntity = m_entities[otherIndex];
 
-    std::swap(m_components[m_indexes[entity]], m_components.back());
-    std::swap(m_entities[m_indexes[entity]], m_entities.back());
+    std::swap(m_components[index], m_components.back());
+    std::swap(m_entities[index], m_entities.back());
 
     m_components.pop_back();
     m_entities.pop_back();
@@ -66,7 +66,7 @@ std::pair<Entity, void*> ComponentStore<Component>::remove(Entity entity)
     m_indexes[otherEntity] = m_indexes[entity];
     m_indexes[entity] = NULL_ENTITY;
 
-    index = m_indexes[otherIndex];
+    index = m_indexes.at(otherIndex);
 
     if (index == NULL_INDEX)
         return {NULL_ENTITY, nullptr};
@@ -81,12 +81,16 @@ std::pair<Entity, void*> ComponentStore<Component>::remove(Entity entity)
 }
 
 template <typename Component>
-std::size_t ComponentStore<Component>::offsetAfterMove()
+std::ptrdiff_t ComponentStore<Component>::offsetAfterMove()
 {
-    void* startPtr = &*m_components.begin();
-    const std::size_t distance = reinterpret_cast<std::size_t>(startPtr) - reinterpret_cast<std::size_t>(m_address);
-    m_address = startPtr;
-    return distance;
+    void* newData = m_components.data();
+    if (newData == m_data)
+        return 0;
+
+    std::ptrdiff_t dist = static_cast<std::byte*>(newData) - static_cast<std::byte*>(m_data);
+
+    m_data = newData;
+    return dist;
 }
 
 template <typename Component>
@@ -98,7 +102,7 @@ std::size_t ComponentStore<Component>::count() const
 template <typename Component>
 void* ComponentStore<Component>::atImpl(Entity entity)
 {
-    auto index = m_indexes[entity];
+    auto index = m_indexes.at(entity);
 
     if (index == NULL_INDEX)
         return nullptr;

@@ -21,7 +21,7 @@ public:
     constexpr T operator[](std::size_t index) const;
 
     constexpr T at(std::size_t index);
-    constexpr T& at(std::size_t index) const;
+    constexpr void set(std::size_t index, T value);
 
     template <typename... Args>
     constexpr void emplace(std::size_t index, Args&&... args);

@@ -219,11 +219,12 @@ inline std::size_t Registry::findIndexOfEntity(Entity entity)
     return std::distance(m_entities.entities.begin(), it);
 }
 
-inline void Registry::updateAllFilterAddresses(std::size_t offset, ComponentMask mask, std::type_index type) const
+inline void Registry::updateAllFilterAddresses(std::ptrdiff_t offset, ComponentMask mask, std::type_index type) const
 {
     for (auto& filterPtr : m_filters) {
         auto& filter = *filterPtr;
-        if ((filter.m_bitmask & mask) != filter.m_bitmask)
+        auto tmask = filter.m_bitmask & mask;
+        if ((filter.m_bitmask & mask) != mask)
             continue;
 
         filter.updateAllComponentAddresses(offset, type);

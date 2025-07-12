@@ -22,7 +22,7 @@ public:
     virtual std::pair<Entity, void*> remove(Entity entity) = 0;
 
     //get offset of component vector after a potential whole vector move operation
-    virtual std::size_t offsetAfterMove() = 0;
+    virtual std::ptrdiff_t offsetAfterMove() = 0;
 
     //get address of component from entity
     void* at(Entity entity);
@@ -31,7 +31,6 @@ public:
 
 protected:
     virtual void* atImpl(Entity entity) = 0;
-    void* m_address = nullptr;
 
 public:
     ComponentMask m_bitmask;
@@ -53,7 +52,7 @@ public:
     std::pair<Entity, void*> remove(Entity entity) override;
 
     //calculate how far the vector has moved due to a resize
-    std::size_t offsetAfterMove() override;
+    std::ptrdiff_t offsetAfterMove() override;
 
     //return the amount of components in this store
     std::size_t count() const override;
@@ -66,6 +65,8 @@ private:
     PaginatedVector<std::size_t, NULL_INDEX> m_indexes; // Sparse
     std::vector<Component> m_components; // Dense
     std::vector<Entity> m_entities; // Dense
+    void* m_data = nullptr;
+    void* m_first = nullptr;
 };
 
 } // Plunksna

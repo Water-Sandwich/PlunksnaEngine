@@ -30,11 +30,10 @@ constexpr T PaginatedVector<T, defaultValue, pageSize>::at(std::size_t index)
     return page[index % pageSize];
 }
 
-template <typename T, T defaultValue, std::size_t pageSize>
-constexpr T& PaginatedVector<T, defaultValue, pageSize>::at(std::size_t index) const
-{
+template<typename T, T defaultValue, std::size_t pageSize>
+constexpr void PaginatedVector<T, defaultValue, pageSize>::set(std::size_t index, T value) {
     auto& page = getOrCreatePage(index);
-    return page[index % pageSize];
+    page[index % pageSize] = value;
 }
 
 template <typename T, T defaultValue, std::size_t pageSize>
