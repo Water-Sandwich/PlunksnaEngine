@@ -82,10 +82,8 @@ bool Filter<Components...>::add(Entity entity, void* tuple)
     if (entity == NULL_ENTITY || tuple == nullptr)
         return false;
 
-    auto tup = *static_cast<std::tuple<Components*...>*>(tuple);
-
     m_entities.push_back(entity);
-    m_components.push_back(tup);
+    m_components.push_back(*static_cast<std::tuple<Components*...>*>(tuple));
     m_indexes.insert(entity, m_entities.size() - 1);
 
     return true;

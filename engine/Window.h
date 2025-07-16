@@ -12,23 +12,23 @@
 namespace Plunksna {
 class Window
 {
-private:
-    static constexpr void deleteWindow(SDL_Window* window);
-    static constexpr void deleteRenderer(SDL_Renderer* renderer);
-
 public:
     Window() = delete;
     Window(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags);
     ~Window();
 
-    std::shared_ptr<SDL_Window> getWindow();
-    std::shared_ptr<SDL_Renderer> getRenderer();
+    SDL_Window* getWindow() const;
+    SDL_Renderer* getRenderer() const;
+
+private:
+    static constexpr void deleteWindow(SDL_Window* window);
+    static constexpr void deleteRenderer(SDL_Renderer* renderer);
 
 private:
     glm::uvec2 m_size;
     std::string m_title;
-    std::shared_ptr<SDL_Window> m_window;
-    std::shared_ptr<SDL_Renderer> m_renderer;
+    std::unique_ptr<SDL_Window, void(*)(SDL_Window*)> m_window;
+    std::unique_ptr<SDL_Renderer, void(*)(SDL_Renderer*)> m_renderer;
 };
 }
 

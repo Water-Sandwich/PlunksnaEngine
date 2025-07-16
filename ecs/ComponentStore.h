@@ -24,6 +24,9 @@ public:
     //get offset of component vector after a potential whole vector move operation
     virtual std::ptrdiff_t offsetAfterMove() = 0;
 
+    //reserve enough size for n objects
+    virtual std::ptrdiff_t reserve(std::size_t size) = 0;
+
     //get address of component from entity
     void* at(Entity entity);
 
@@ -54,6 +57,8 @@ public:
     //calculate how far the vector has moved due to a resize
     std::ptrdiff_t offsetAfterMove() override;
 
+    std::ptrdiff_t reserve(std::size_t size) override;
+
     //return the amount of components in this store
     std::size_t count() const override;
 
@@ -66,7 +71,6 @@ private:
     std::vector<Component> m_components; // Dense
     std::vector<Entity> m_entities; // Dense
     void* m_data = nullptr;
-    void* m_first = nullptr;
 };
 
 } // Plunksna

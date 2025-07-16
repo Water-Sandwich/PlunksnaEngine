@@ -7,6 +7,7 @@
 #include "Keyboard.h"
 #include "Log.h"
 #include "Random.h"
+#include "Mouse.h"
 
 #include <iostream>
 #include <thread>
@@ -43,11 +44,6 @@ void updatePlayer(float delta_ms, Transform2& transform)
 
 void Engine::tick(float delta_ms)
 {
-    // m_player->foreach([&](Transform2& transform2, Player& p)
-    // {
-    //     updatePlayer(delta_ms, transform2);
-    // });
-
     m_renderFilter->foreach([&](Transform2& transform2, RColorRGBA& color) {
         color.r = g_random.randomInt(0, 255);
         color.g = g_random.randomInt(0, 255);
@@ -56,11 +52,14 @@ void Engine::tick(float delta_ms)
         transform2.position.x = g_random.randomInt(0, 640);
         transform2.position.y = g_random.randomInt(0, 480);
     });
+
+    //LOG(g_mouse.getMouseWindow().x << ", " << g_mouse.getMouseWindow().y);
+    LOG(g_mouse.getScrollFrame())
 }
 
 void Engine::render()
 {
-    SDL_Renderer* renderer = m_window.getRenderer().get();
+    SDL_Renderer* renderer = m_window.getRenderer();
 
     SDL_SetRenderDrawColor(renderer, 0,10,10,255);
     SDL_RenderClear(renderer);
@@ -77,6 +76,7 @@ void Engine::handleEvents()
 {
     SDL_Event event;
     g_keyboard.swap();
+    g_mouse.swap();
 
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -100,6 +100,9 @@ void Engine::handleEvents()
             //LOG("UP: "<< SDL_GetKeyName(event.key.key))
             break;
         }
+        case SDL_EVENT_MOUSE_WHEEL: {
+            g_mouse.setScroll(event.wheel.y);
+        }
         }
     }
 }
@@ -119,14 +122,13 @@ void Engine::init()
     m_renderFilter = m_registry.makeFilter<Transform2, RColorRGBA>();
     m_player = m_registry.makeFilter<Transform2, Player>();
 
-    for (int i = 0 ; i < 4096*8; i++) {
+    for (int i = 0 ; i < 2; i++) {
         auto e = m_registry.makeEntity();
         glm::vec2 pos = {g_random.randomInt(0, 640), g_random.randomInt(0, 480)};
         m_registry.add<Transform2>(e, pos, glm::vec2(10,10));
         m_registry.add<RColorRGBA>(e, 255,255,255,255);
         //m_registry.add<Player>(e);
     }
-
 }
 
 void Engine::run()

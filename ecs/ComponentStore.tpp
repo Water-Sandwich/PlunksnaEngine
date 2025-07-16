@@ -93,6 +93,13 @@ std::ptrdiff_t ComponentStore<Component>::offsetAfterMove()
     return dist;
 }
 
+template<typename Component>
+std::ptrdiff_t ComponentStore<Component>::reserve(std::size_t size) {
+    m_components.reserve(size);
+    m_entities.reserve(size);
+    return offsetAfterMove();
+}
+
 template <typename Component>
 std::size_t ComponentStore<Component>::count() const
 {

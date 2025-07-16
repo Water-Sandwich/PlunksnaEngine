@@ -23,7 +23,7 @@ constexpr void Window::deleteRenderer(SDL_Renderer* renderer)
 }
 
 Window::Window(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags) :
-    m_size(size)
+    m_size(size), m_window(nullptr, deleteWindow), m_renderer(nullptr, deleteRenderer)
 {
     SDL_Init(SDL_INIT_VIDEO);
     m_title = title;
@@ -33,8 +33,8 @@ Window::Window(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
 
     SDL_CreateWindowAndRenderer(title.c_str(), size.x, size.y, flags, &window, &renderer);
 
-    m_window = std::shared_ptr<SDL_Window>(window, deleteWindow);
-    m_renderer = std::shared_ptr<SDL_Renderer>(renderer, deleteRenderer);
+    m_window = {window, deleteWindow};
+    m_renderer = {renderer, deleteRenderer};
 
     THROW_IF_NULL(m_window, "No window")
     THROW_IF_NULL(m_renderer, "No renderer")
@@ -47,14 +47,14 @@ Window::~Window()
     LOG("deleting")
 }
 
-std::shared_ptr<SDL_Window> Window::getWindow()
+SDL_Window* Window::getWindow() const
 {
-    return m_window;
+    return m_window.get();
 }
 
-std::shared_ptr<SDL_Renderer> Window::getRenderer()
+SDL_Renderer* Window::getRenderer() const
 {
-    return m_renderer;
+    return m_renderer.get();
 }
 
 } //Plunksna
