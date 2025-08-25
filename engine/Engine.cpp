@@ -52,9 +52,6 @@ void Engine::tick(float delta_ms)
         transform2.position.x = g_random.randomInt(0, 640);
         transform2.position.y = g_random.randomInt(0, 480);
     });
-
-    //LOG(g_mouse.getMouseWindow().x << ", " << g_mouse.getMouseWindow().y);
-    LOG(g_mouse.getScrollFrame())
 }
 
 void Engine::render()
@@ -64,10 +61,10 @@ void Engine::render()
     SDL_SetRenderDrawColor(renderer, 0,10,10,255);
     SDL_RenderClear(renderer);
 
-    m_renderFilter->foreach([&](const Transform2& a, const RColorRGBA& b)
-    {
-        renderSolidRect(renderer, a, b);
-    });
+    // m_renderFilter->foreach([&](const Transform2& a, const RColorRGBA& b)
+    // {
+    //     renderSolidRect(renderer, a, b);
+    // });
 
     SDL_RenderPresent(renderer);
 }
@@ -113,6 +110,8 @@ Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
     m_maxFPS = 60.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
+
+    init();
 }
 
 void Engine::init()
@@ -122,7 +121,7 @@ void Engine::init()
     m_renderFilter = m_registry.makeFilter<Transform2, RColorRGBA>();
     m_player = m_registry.makeFilter<Transform2, Player>();
 
-    for (int i = 0 ; i < 2; i++) {
+    for (int i = 0 ; i < 110000; i++) {
         auto e = m_registry.makeEntity();
         glm::vec2 pos = {g_random.randomInt(0, 640), g_random.randomInt(0, 480)};
         m_registry.add<Transform2>(e, pos, glm::vec2(10,10));
@@ -152,11 +151,6 @@ void Engine::run()
             LOG_S(eWARNING, "High frame time: " << m_deltaTime_ms << "ms");
         }
     }
-}
-
-void Engine::clean()
-{
-    LOG("clean")
 }
 
 Engine::~Engine()

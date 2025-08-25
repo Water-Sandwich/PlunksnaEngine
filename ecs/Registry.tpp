@@ -33,6 +33,7 @@ bool Registry::add(Entity entity, Args&&... args)
             continue;
 
         //retrieve all pointers of all components associated with this entity
+        //TODO: Move logic such that we get the correct pointers HERE instead of within the filter
         auto tup = filter.makeTuple(m_stores, entity);
         filter.add(entity, tup.get());
     }
@@ -82,7 +83,7 @@ bool Registry::remove(Entity entity)
 }
 
 template <typename Component>
-Component* Registry::get(Entity entity)
+Component* Registry::get(Entity entity) const
 {
     if (!m_stores.contains(typeid(Component)))
         return nullptr;
@@ -94,6 +95,7 @@ Component* Registry::get(Entity entity)
 template <typename ... Components>
 Filter<Components...>* Registry::makeFilter(typename Filter<Components...>::FilterFunction func, int priority, std::size_t reserveSize)
 {
+    //TODO: why does this need to be a uniqptr ?!?
     auto filter = std::make_unique<Filter<Components...>>(func, priority, reserveSize);
     auto filterPtr = filter.get();
 
@@ -117,6 +119,9 @@ Filter<Components...>* Registry::makeFilter(typename Filter<Components...>::Filt
 template <typename Component>
 std::size_t Registry::count() const
 {
+    if (!m_stores.contains(typeid(Component)))
+        return 0;
+
     return getStore<Component>().count();
 }
 
@@ -139,7 +144,7 @@ ComponentStore<Component>& Registry::getOrCreateStore()
 }
 
 template <typename Component>
-ComponentStore<Component>& Registry::getStore()
+ComponentStore<Component>& Registry::getStore() const
 {
     return *static_cast<ComponentStore<Component>*>(m_stores.at(typeid(Component)).get());
 }

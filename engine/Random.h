@@ -15,7 +15,7 @@ public:
         : m_gen(m_device())
     {}
 
-    //get random integer type
+    //get random integer type, inclusive min and max
     template <typename TInt1, typename TInt2>
     auto randomInt(TInt1 low, TInt2 high)
     {
@@ -24,7 +24,7 @@ public:
         return distribution(m_gen);
     }
 
-    //get random float type
+    //get random float type, inclusive min and max
     template <typename TReal1, typename TReal2>
     auto randomReal(TReal1 low, TReal2 high)
     {

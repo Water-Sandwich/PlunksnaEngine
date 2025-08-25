@@ -7,9 +7,7 @@ int main()
 {
     try {
         Plunksna::Engine engine("test", {640, 480}, 0);
-        engine.init();
         engine.run();
-        engine.clean();
     }
     catch (const Plunksna::Exception& e) {
         std::cout << "PSNAERR: " << e.what() << std::endl;

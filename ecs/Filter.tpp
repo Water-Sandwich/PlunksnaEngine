@@ -186,6 +186,16 @@ std::size_t Filter<Components...>::count() const
 }
 
 template <typename ... Components>
+bool Filter<Components...>::setFunction(FilterFunction function)
+{
+    if (function == nullptr)
+        return false;
+
+    m_function = function;
+    return true;
+}
+
+template <typename ... Components>
 std::unique_ptr<void, IFilter::FilterDeleter> Filter<Components...>::makeTupleImpl(const std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>>& registryStores, Entity entity)
 {
     auto* tup = new std::tuple<Components*...>(std::make_tuple(getAddressFromStore<Components>(registryStores, entity)...));
@@ -200,9 +210,9 @@ bool Filter<Components...>::updateAllComponentAddressesImpl(std::ptrdiff_t offse
         return false;
 
     for (std::size_t i = 0; i < m_components.size(); i++) {
-        auto* start = reinterpret_cast<std::byte*>(&m_components[i]);
+        auto* tupleAddr = reinterpret_cast<std::byte*>(&m_components[i]);
         const auto componentOffset = s_offsetsPerType.at(type);
-        auto** component = reinterpret_cast<void**>(start + componentOffset);
+        auto** component = reinterpret_cast<void**>(tupleAddr + componentOffset);
 
         std::size_t newAddr = reinterpret_cast<std::size_t>(*component) + offset;
         *component = reinterpret_cast<void*>(newAddr);
@@ -238,6 +248,9 @@ bool Filter<Components...>::foreachImpl()
 template <typename ... Components>
 template <typename Component>
 consteval std::size_t Filter<Components...>::tupleTypeIndex() {
+    static_assert((std::is_same_v<Component, Components> || ...),
+                  "Component not found in tuple");
+
     std::size_t index = 0;
     ((std::is_same_v<Component, Components> ? true : (++index, false)) || ...);
     return index;

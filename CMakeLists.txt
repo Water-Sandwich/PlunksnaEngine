@@ -21,6 +21,24 @@ function(find_or_fetch package_name repo_url tag target_name)
     endif()
 endfunction()
 
+set(SRC_FOLDERS)
+
+function(add_folders)
+    set(SRC_FILES "")
+
+    foreach(folder IN LISTS ARGN)
+        file(GLOB_RECURSE TMP CONFIGURE_DEPENDS
+                ${CMAKE_SOURCE_DIR}/${folder}*.cpp
+                ${CMAKE_SOURCE_DIR}/${folder}*.h
+                ${CMAKE_SOURCE_DIR}/${folder}*.hpp
+                ${CMAKE_SOURCE_DIR}/${folder}*.tpp
+        )
+        list(APPEND SRC_FILES ${TMP})
+    endforeach()
+
+    set(SRC_FOLDERS ${SRC_FILES} PARENT_SCOPE)
+endfunction()
+
 find_or_fetch(
         SDL3
         https://github.com/libsdl-org/SDL.git
@@ -35,16 +53,18 @@ find_or_fetch(
         glm
 )
 
-file(GLOB_RECURSE ENGINE_SRC CONFIGURE_DEPENDS engine/*.cpp engine/*.h)
-file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS ecs/*.cpp ecs/*.h ecs/*.tpp)
+#file(GLOB_RECURSE ENGINE_SRC CONFIGURE_DEPENDS engine/*.cpp engine/*.h)
+#file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS ecs/*.cpp ecs/*.h ecs/*.tpp)
+add_folders(engine/ ecs/)
 
 set(SOURCE_FILES
         main.cpp
-        ${ENGINE_SRC}
-        ${ECS_SRC}
-        Tests.cpp
+        ${SRC_FOLDERS}
 )
 
 add_executable(Plunksna ${SOURCE_FILES})
 
 TARGET_LINK_LIBRARIES(Plunksna PRIVATE SDL3 glm)
+
+add_subdirectory(tests)
+

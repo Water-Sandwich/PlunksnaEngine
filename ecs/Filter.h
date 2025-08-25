@@ -6,7 +6,10 @@
 #define FILTER_H
 
 #include <tuple>
+#include <typeindex>
+#include <unordered_map>
 #include <vector>
+#include <memory>
 
 #include "Entity.h"
 
@@ -108,7 +111,10 @@ public:
     template<typename Component>
     bool updateComponentAddressFast(Entity entity, Component* address);
 
+    //get count of component tuples stored
     std::size_t count() const override;
+
+    bool setFunction(FilterFunction function);
 
 private:
     template <typename Component>

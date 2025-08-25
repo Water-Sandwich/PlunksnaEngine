@@ -13,7 +13,7 @@ ComponentStore<Component>::ComponentStore(std::size_t reserveSize) noexcept
 {
     m_components.reserve(reserveSize);
     m_entities.reserve(reserveSize);
-    m_data = &*m_components.begin();
+    m_vectorStart = &*m_components.begin();
 }
 
 template <typename Component>
@@ -84,12 +84,12 @@ template <typename Component>
 std::ptrdiff_t ComponentStore<Component>::offsetAfterMove()
 {
     void* newData = m_components.data();
-    if (newData == m_data)
+    if (newData == m_vectorStart)
         return 0;
 
-    std::ptrdiff_t dist = static_cast<std::byte*>(newData) - static_cast<std::byte*>(m_data);
+    std::ptrdiff_t dist = static_cast<std::byte*>(newData) - static_cast<std::byte*>(m_vectorStart);
 
-    m_data = newData;
+    m_vectorStart = newData;
     return dist;
 }
 
@@ -104,6 +104,18 @@ template <typename Component>
 std::size_t ComponentStore<Component>::count() const
 {
     return m_components.size();
+}
+
+template <typename Component>
+std::size_t ComponentStore<Component>::capacity() const
+{
+    return m_components.capacity();
+}
+
+template <typename Component>
+std::uintptr_t ComponentStore<Component>::getStart() const
+{
+    return reinterpret_cast<std::uintptr_t>(m_vectorStart);
 }
 
 template <typename Component>

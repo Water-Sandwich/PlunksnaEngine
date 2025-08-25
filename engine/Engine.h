@@ -32,8 +32,6 @@ public:
 
     void run();
 
-    void clean();
-
 private:
     void tick(float delta_ms);
     void render();

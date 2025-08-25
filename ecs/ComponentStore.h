@@ -27,9 +27,13 @@ public:
     //reserve enough size for n objects
     virtual std::ptrdiff_t reserve(std::size_t size) = 0;
 
+    //return capacity of component vector
+    virtual std::size_t capacity() const = 0;
+
     //get address of component from entity
     void* at(Entity entity);
 
+    //get count of components
     virtual std::size_t count() const = 0;
 
 protected:
@@ -62,6 +66,11 @@ public:
     //return the amount of components in this store
     std::size_t count() const override;
 
+    //return capacity of component vector
+    std::size_t capacity() const override;
+
+    std::uintptr_t getStart() const;
+
 private:
     void* atImpl(Entity entity) override;
 
@@ -70,7 +79,8 @@ private:
     PaginatedVector<std::size_t, NULL_INDEX> m_indexes; // Sparse
     std::vector<Component> m_components; // Dense
     std::vector<Entity> m_entities; // Dense
-    void* m_data = nullptr;
+
+    void* m_vectorStart = nullptr; //start of component vector, for tracking if resize happens
 };
 
 } // Plunksna

@@ -43,14 +43,16 @@ public:
 
     //get a pointer to an entity's component
     template<typename Component>
-    Component* get(Entity entity);
+    Component* get(Entity entity) const;
 
     //create a filter, pre-existing components will not be included in the filter
     template<typename... Components>
     Filter<Components...>* makeFilter(typename Filter<Components...>::FilterFunction func = nullptr, int priority = 0, std::size_t reserveSize = FILTER_RESERVE_SIZE);
 
+    //get total amount of entities
     std::size_t totalCount() const;
 
+    //get amount of entities with component
     template<typename Component>
     std::size_t count() const;
 
@@ -59,7 +61,7 @@ private:
     ComponentStore<Component>& getOrCreateStore();
 
     template<typename Component>
-    ComponentStore<Component>& getStore();
+    ComponentStore<Component>& getStore() const;
 
     IComponentStore* getStore(std::type_index type) const;
 
