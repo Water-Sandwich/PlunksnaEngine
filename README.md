@@ -4,10 +4,10 @@ Plunksna is a work in progress game engine with a custom Entity Component System
 
 ## Planned features
 
-Seperation of engine code into seperate static library
-Asset management
-Entity handles
-Unified rendering and audio
+- Seperation of engine code into seperate static library
+- Asset management
+- Entity handles
+- Unified rendering and audio
 
 ## Usage
 
@@ -15,10 +15,10 @@ Currently, if you would like to make a game with this, you will have to write co
 
 ## Dependencies
 
-SDL3 is used for input, window management and 2D rendering
-GLM is used for mathematics
-Catch2 is used for unit testing
-CMake and make for building
+- SDL3 is used for input, window management and 2D rendering
+- GLM is used for mathematics
+- Catch2 is used for unit testing
+- CMake and make for building
 
 ### Linux
 
