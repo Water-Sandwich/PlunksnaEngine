@@ -72,6 +72,14 @@ TEST_CASE("Component Store test", "[ECS]")
 
         }
     }
+
+    SECTION("Invalid arguments")
+    {
+        ComponentStore<glm::vec2> cs(0);
+
+        REQUIRE(!cs.add(NULL_ENTITY, 5, 5));
+        REQUIRE(cs.count() == 0);
+    }
 }
 
 TEST_CASE("Filter test", "[ECS]")
@@ -84,25 +92,39 @@ TEST_CASE("Filter test", "[ECS]")
     REQUIRE(filter.count() == 0);
 
     Entity e = 0;
-    csi.add(e, 5);
-    csv.add(e, 5,5);
 
-    REQUIRE(csi.count() == 1);
-    REQUIRE(csv.count() == 1);
-
-    REQUIRE(filter.add(e, csv.get(e), csi.get(e)));
-    REQUIRE(filter.count() == 1);
-
-    auto function = [](glm::vec2& vec, int& i)
+    SECTION("Add/Remove")
     {
-        vec.x++; vec.y++; i++;
-    };
+        csi.add(e, 5);
+        csv.add(e, 5,5);
 
-    REQUIRE(filter.setFunction(function));
-    REQUIRE(filter.foreachDefault());
+        REQUIRE(csi.count() == 1);
+        REQUIRE(csv.count() == 1);
 
-    REQUIRE(*csi.get(e) == 6);
-    REQUIRE(*csv.get(e) == glm::vec2(6,6));
+        REQUIRE(filter.add(e, csv.get(e), csi.get(e)));
+        REQUIRE(filter.count() == 1);
+
+        auto function = [](glm::vec2& vec, int& i)
+        {
+            vec.x++; vec.y++; i++;
+        };
+
+        REQUIRE(filter.setFunction(function));
+        REQUIRE(filter.foreachDefault());
+
+        REQUIRE(*csi.get(e) == 6);
+        REQUIRE(*csv.get(e) == glm::vec2(6,6));
+
+        //CAPTURES TEST
+        int a = 1;
+        REQUIRE(filter.foreach([&](glm::vec2& vec, int& i)
+        {
+            vec.x += a; vec.y += a; i += a;
+        }));
+
+        REQUIRE(*csi.get(e) == 7);
+        REQUIRE(*csv.get(e) == glm::vec2(7,7));
+    }
 
 }
 

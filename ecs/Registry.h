@@ -75,7 +75,7 @@ private:
 private:
     std::unordered_map<std::type_index, std::unique_ptr<IComponentStore>> m_stores;
     std::vector<std::type_index> m_componentTypes; //maps index -> type
-    std::vector<std::unique_ptr<IFilter>> m_filters;
+    std::vector<std::unique_ptr<IFilter>> m_filters; //uniqueptr due to the fact IFilter depends on polymorphism
 
     EntityDesc m_entities;
     Entity m_maxEntity = 0;
