@@ -1,6 +1,13 @@
 ## Purpose
 
-Plunksna is a work in progress game engine with a custom Entity Component System (ECS) heavily leveraging template metaprogramming. 
+Plunksna is a work in progress game engine with a custom Entity Component System (ECS) heavily leveraging template metaprogramming.
+
+## Planned features
+
+Seperation of engine code into seperate static library
+Asset management
+Entity handles
+Unified rendering and audio
 
 ## Usage
 
@@ -15,7 +22,7 @@ CMake and make for building
 
 ### Linux
 
-install sld3, glm, catch2 using your distro's package manager such as:
+Install sld3, glm and catch2 using your distro's package manager such as:
 
 ```
 # pacman -Sy sdl3 glm catch2
@@ -30,11 +37,13 @@ Make sure the dependencies are built and properly placed in your PATH such that 
 In your terminal run the following:
 
 ```
+git clone git clone https://github.com/Water-Sandwich/PlunksnaEngine.git
+cd PlunksnaEngine/
 Cmake CmakeLists.txt
 make
 ```
 
-and on Linux to run:
+and on Linux to run the project:
 
 ```
 ./Plunksna
