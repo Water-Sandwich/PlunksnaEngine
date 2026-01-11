@@ -11,6 +11,7 @@
 
 #include "ComponentStore.h"
 #include "Filter.h"
+#include "Result.h"
 
 namespace Plunksna {
 
@@ -29,17 +30,15 @@ public:
     Entity makeEntity();
 
     //remove an entity and its components
-    bool removeEntity(Entity entity);
+    Result removeEntity(Entity entity);
 
     //add a component to an entity
-    //returns true on success, false on failure
     template<typename Component, typename... Args>
-    bool add(Entity entity, Args&&... args);
+    Result add(Entity entity, Args&&... args);
 
     //remove a component from an entity
-    //returns true on success, else false
     template<typename Component>
-    bool remove(Entity entity);
+    Result remove(Entity entity);
 
     //get a pointer to an entity's component
     template<typename Component>

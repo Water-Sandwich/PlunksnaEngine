@@ -9,6 +9,7 @@
 #include <string>
 #include <glm/vec2.hpp>
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include "Components.h"
 #include "Window.h"
@@ -36,9 +37,11 @@ private:
     void tick(float delta_ms);
     void render();
     void handleEvents();
+    VkInstance createVKInstance();
 
 private:
     Window m_window;
+    VkInstance m_instance;
 
     TimePoint m_startTime;
     TimePoint m_lastTime;

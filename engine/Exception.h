@@ -27,6 +27,7 @@ public:
 #define THROW_IF_NULL_R(ptr, msg)  if(!ptr){throw Plunksna::Exception(msg);}
 #define THROW_IF_EQ(expr, msg)     if(expr){throw Plunksna::Exception(msg);}
 #define THROW_IF_NEQ(expr, msg)    if(!expr){throw Plunksna::Exception(msg);}
+#define THROW(msg)                 throw Plunksna::Exception(msg);
 
 
 #endif //PLUNKSNAEXCEPTION_H

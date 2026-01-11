@@ -8,24 +8,27 @@
 #include "Log.h"
 #include "Random.h"
 #include "Mouse.h"
+#include "VKRenderer.h"
 
 #include <iostream>
 #include <thread>
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 
 namespace Plunksna {
 
 void renderSolidRect(SDL_Renderer* renderer, const Transform2& transform, const RColorRGBA& color)
 {
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    glm::vec2 offset = transform.scale / 2.f;
-
-    SDL_FRect r{
-        transform.position.x - offset.x, transform.position.y - offset.y,
-        transform.scale.x, transform.scale.y
-    };
-
-    SDL_RenderFillRect(renderer, &r);
-    //SDL_RenderRect()
+    // SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    // glm::vec2 offset = transform.scale / 2.f;
+    //
+    // SDL_FRect r{
+    //     transform.position.x - offset.x, transform.position.y - offset.y,
+    //     transform.scale.x, transform.scale.y
+    // };
+    //
+    // SDL_RenderFillRect(renderer, &r);
+    // //SDL_RenderRect()
 }
 
 void updatePlayer(float delta_ms, Transform2& transform)
@@ -56,17 +59,17 @@ void Engine::tick(float delta_ms)
 
 void Engine::render()
 {
-    SDL_Renderer* renderer = m_window.getRenderer();
-
-    SDL_SetRenderDrawColor(renderer, 0,10,10,255);
-    SDL_RenderClear(renderer);
-
+    // SDL_Renderer* renderer = m_window.getRenderer();
+    //
+    // SDL_SetRenderDrawColor(renderer, 0,10,10,255);
+    // SDL_RenderClear(renderer);
+    //
     // m_renderFilter->foreach([&](const Transform2& a, const RColorRGBA& b)
     // {
     //     renderSolidRect(renderer, a, b);
     // });
-
-    SDL_RenderPresent(renderer);
+    //
+    // SDL_RenderPresent(renderer);
 }
 
 void Engine::handleEvents()
@@ -104,9 +107,44 @@ void Engine::handleEvents()
     }
 }
 
-Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags) :
-    m_window(title, size, flags)
+VkInstance Engine::createVKInstance()
 {
+    VkApplicationInfo appInfo{};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName = "Hello Triangle";
+    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.pEngineName = "Plunksna";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.apiVersion = VK_API_VERSION_1_4;
+
+    Uint32 extensionCount = 0;
+    auto extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+
+    VkInstanceCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    createInfo.pApplicationInfo = &appInfo;
+
+    createInfo.enabledLayerCount = 0;
+    createInfo.enabledExtensionCount = extensionCount;
+    createInfo.ppEnabledExtensionNames = extensions;
+    createInfo.pNext = nullptr;
+
+    auto result =  vkCreateInstance(&createInfo, nullptr, &m_instance) ;
+    if (result != VK_SUCCESS) {
+        THROW(string_VkResult(result))
+    }
+
+    VKRenderer::getExtensions();
+    VKRenderer::getLayers();
+
+    return m_instance;
+
+}
+
+Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags)
+    : m_window(title, size, flags), m_instance(createVKInstance())
+{
+    m_window.createSurface(m_instance);
     m_maxFPS = 60.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
@@ -121,7 +159,7 @@ void Engine::init()
     m_renderFilter = m_registry.makeFilter<Transform2, RColorRGBA>();
     m_player = m_registry.makeFilter<Transform2, Player>();
 
-    for (int i = 0 ; i < 110000; i++) {
+    for (int i = 0 ; i < 1; i++) {
         auto e = m_registry.makeEntity();
         glm::vec2 pos = {g_random.randomInt(0, 640), g_random.randomInt(0, 480)};
         m_registry.add<Transform2>(e, pos, glm::vec2(10,10));
@@ -156,6 +194,8 @@ void Engine::run()
 Engine::~Engine()
 {
     LOG("delete")
+    m_window.destroySurface(m_instance);
+    vkDestroyInstance(m_instance, nullptr);
 }
 
 } //Plunksna

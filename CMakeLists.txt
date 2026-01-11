@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.29)
 project(Plunksna)
 set(CMAKE_CXX_STANDARD 26)
 
+add_compile_options(-Werror -Wreturn-type)
+
+
 function(find_or_fetch package_name repo_url tag target_name)
     find_package(${package_name} QUIET)
 
@@ -53,6 +56,8 @@ find_or_fetch(
         glm
 )
 
+find_package(Vulkan REQUIRED)
+
 #file(GLOB_RECURSE ENGINE_SRC CONFIGURE_DEPENDS engine/*.cpp engine/*.h)
 #file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS ecs/*.cpp ecs/*.h ecs/*.tpp)
 add_folders(engine/ ecs/)
@@ -60,11 +65,20 @@ add_folders(engine/ ecs/)
 set(SOURCE_FILES
         main.cpp
         ${SRC_FOLDERS}
+        engine/Result.h
+        vkrenderer/VKRenderer.cpp
+        vkrenderer/VKRenderer.h
 )
 
 add_executable(Plunksna ${SOURCE_FILES})
 
-TARGET_LINK_LIBRARIES(Plunksna PRIVATE SDL3 glm)
+target_link_libraries(Plunksna PRIVATE SDL3 glm Vulkan::Vulkan)
+
+target_include_directories(Plunksna PRIVATE
+        ${CMAKE_SOURCE_DIR}/engine
+        ${CMAKE_SOURCE_DIR}/ecs
+        ${CMAKE_SOURCE_DIR}/vkrenderer
+)
 
 add_subdirectory(tests)
 

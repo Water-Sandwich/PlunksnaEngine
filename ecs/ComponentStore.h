@@ -9,6 +9,7 @@
 
 #include "Entity.h"
 #include "PaginatedVector.h"
+#include "Result.h"
 
 namespace Plunksna {
 
@@ -53,9 +54,9 @@ public:
 
     //construct a component for entity
     template<typename... Args>
-    bool add(Entity entity, Args&&... args);
+    Result add(Entity entity, Args&&... args);
 
-    //remove component from entity
+    //remove component from entity, returns the entity that had to be swapped
     std::pair<Entity, void*> remove(Entity entity) override;
 
     //calculate how far the vector has moved due to a resize

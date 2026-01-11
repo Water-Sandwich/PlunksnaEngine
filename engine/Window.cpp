@@ -5,8 +5,11 @@
 #include "Window.h"
 
 #include <iostream>
+#include <vector>
 
 #include "Exception.h"
+
+#include <vulkan/vulkan.h>
 
 namespace Plunksna {
 
@@ -16,28 +19,14 @@ constexpr void Window::deleteWindow(SDL_Window* window)
         SDL_DestroyWindow(window);
 }
 
-constexpr void Window::deleteRenderer(SDL_Renderer* renderer)
-{
-    if (renderer)
-        SDL_DestroyRenderer(renderer);
-}
-
 Window::Window(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags) :
-    m_size(size), m_window(nullptr, deleteWindow), m_renderer(nullptr, deleteRenderer)
+    m_size(size), m_window(nullptr, deleteWindow)
 {
-    SDL_Init(SDL_INIT_VIDEO);
     m_title = title;
 
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-
-    SDL_CreateWindowAndRenderer(title.c_str(), size.x, size.y, flags, &window, &renderer);
-
+    SDL_Window* window = SDL_CreateWindow(title.c_str(), size.x, size.y, flags);
     m_window = {window, deleteWindow};
-    m_renderer = {renderer, deleteRenderer};
-
     THROW_IF_NULL(m_window, "No window")
-    THROW_IF_NULL(m_renderer, "No renderer")
 
     LOG("PsnaWindow made: " << title)
 }
@@ -52,9 +41,14 @@ SDL_Window* Window::getWindow() const
     return m_window.get();
 }
 
-SDL_Renderer* Window::getRenderer() const
+void Window::createSurface(VkInstance instance)
 {
-    return m_renderer.get();
+    if (!SDL_Vulkan_CreateSurface(m_window.get(), instance, nullptr, &m_surface))
+        THROW(SDL_GetError())
 }
 
+void Window::destroySurface(VkInstance instance) const
+{
+    vkDestroySurfaceKHR(instance, m_surface, nullptr);
+}
 } //Plunksna

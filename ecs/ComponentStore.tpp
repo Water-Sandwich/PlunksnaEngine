@@ -27,18 +27,18 @@ Component* ComponentStore<Component>::get(Entity entity) const
 
 template <typename Component>
 template <typename ... Args>
-bool ComponentStore<Component>::add(Entity entity, Args&&... args)
+Result ComponentStore<Component>::add(Entity entity, Args&&... args)
 {
     if (entity == NULL_ENTITY) {
         LOG_S(eWARNING, "adding a null entity")
-        return false;
+        return Result::ECS_NULL_ENTITY;
     }
 
     m_components.emplace_back(std::forward<Args>(args)...);
     m_entities.emplace_back(entity);
     m_indexes.insert(entity, m_components.size() - 1);
 
-    return true;
+    return Result::SUCCESS;
 }
 
 template <typename Component>

@@ -8,27 +8,32 @@
 #include <SDL3/SDL.h>
 #include <memory>
 #include <glm/vec2.hpp>
+#include <SDL3/SDL_vulkan.h>
 
 namespace Plunksna {
 class Window
 {
 public:
-    Window() = delete;
     Window(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags);
     ~Window();
 
+    Window() = delete;
+    Window(const Window&) = delete;
+    Window& operator=(const Window&) = delete;
+
     SDL_Window* getWindow() const;
-    SDL_Renderer* getRenderer() const;
+    void createSurface(VkInstance instance);
+    void destroySurface(VkInstance instance) const;
 
 private:
     static constexpr void deleteWindow(SDL_Window* window);
-    static constexpr void deleteRenderer(SDL_Renderer* renderer);
 
 private:
     glm::uvec2 m_size;
     std::string m_title;
     std::unique_ptr<SDL_Window, void(*)(SDL_Window*)> m_window;
-    std::unique_ptr<SDL_Renderer, void(*)(SDL_Renderer*)> m_renderer;
+    VkSurfaceKHR m_surface;
+
 };
 }
 

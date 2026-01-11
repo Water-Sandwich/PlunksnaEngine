@@ -49,6 +49,7 @@ consteval const char* getStr(Severity severity)
 
 #define LOG(msg)        std::cout << Plunksna::getStr(Plunksna::Severity::eINFO) << LOG_SIG << msg << RESET << std::endl;
 #define LOG_S(sev, msg) std::cout << Plunksna::getStr(sev)                       << LOG_SIG << msg << RESET << std::endl;
+#define LOG_C(msg)      std::cout << Plunksna::getStr(Plunksna::Severity::eINFO) << msg << RESET << std::endl;
 }
 
 #endif //PLUNKSNALOG_H
