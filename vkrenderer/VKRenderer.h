@@ -46,7 +46,6 @@ public:
     VKRenderer(const VKRenderer&) = delete;
     VKRenderer(VKRenderer&&) = delete;
 
-    VkInstance createInstance();
     VkInstance init(const Window& window);
     void clean();
 
@@ -64,6 +63,7 @@ private:
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
 
+    void createInstance();
 
     std::vector<VkLayerProperties> getLayers();
     bool checkValidationLayers();
@@ -72,13 +72,23 @@ private:
     std::vector<const char*> getRequiredExtensions();
 
     std::vector<VkPhysicalDevice> getPhysicalDevices();
-    bool isDeviceSuitable(const Window& window);
+    bool isDeviceSuitable(VkPhysicalDevice device, const Window& window);
 
     void createLogicalDevice(const Window& window);
-    QueueFamilyIndices findQueueFamilies(const Window& window);
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, const Window& window);
 
-    bool checkDeviceExtensionSupport();
-    SwapChainSupportDetails querySwapChainSupport(const Window& window);
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, const Window& window);
+
+
+    //=====SWAPCHAIN=====
+
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);
+
+    void createSwapChain(const Window& window);
+    void createSurface(const Window& window);
 
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
@@ -91,7 +101,15 @@ private:
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;
 
+    VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
+    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+    VkFormat m_swapChainImageFormat;
+    VkExtent2D m_swapChainExtent;
+
+    std::vector<VkImage> m_swapChainImages;
+
     const float m_queuePriority = 1.f;
+    const bool m_forceVSync = true;
 
 private:
     //=======DEBUG=========

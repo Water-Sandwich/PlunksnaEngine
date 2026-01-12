@@ -24,10 +24,6 @@ public:
 
     SDL_Window* getWindow() const;
 
-    void createSurface(VkInstance instance);
-    void destroySurface(VkInstance instance);
-    VkSurfaceKHR getSurface() const;
-
 private:
     static constexpr void deleteWindow(SDL_Window* window);
 
@@ -35,7 +31,6 @@ private:
     glm::uvec2 m_size;
     std::string m_title;
     std::unique_ptr<SDL_Window, void(*)(SDL_Window*)> m_window;
-    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
 };
 }

@@ -97,8 +97,6 @@ void Engine::handleEvents()
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags)
     : m_window(title, size, flags)
 {
-    m_renderer.createInstance();
-    m_window.createSurface(m_renderer.m_instance);
     m_renderer.init(m_window);
 
     m_maxFPS = 60.f;
@@ -150,7 +148,6 @@ void Engine::run()
 Engine::~Engine()
 {
     LOG("delete")
-    m_window.destroySurface(m_renderer.m_instance);
 }
 
 } //Plunksna
