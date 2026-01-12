@@ -90,6 +90,14 @@ private:
     void createSwapChain(const Window& window);
     void createSurface(const Window& window);
 
+    void createImageViews();
+    void createGraphicsPipeline();
+
+    static std::vector<char> readFile(const std::string& filename);
+    VkShaderModule createShaderModule(const std::vector<char>& code);
+
+    void createRenderPass();
+
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
     VkInstance m_instance = VK_NULL_HANDLE;
@@ -103,10 +111,16 @@ private:
 
     VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+
+    VkRenderPass m_renderPass = VK_NULL_HANDLE;
+    VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
+
     VkFormat m_swapChainImageFormat;
     VkExtent2D m_swapChainExtent;
 
     std::vector<VkImage> m_swapChainImages;
+    std::vector<VkImageView> m_swapChainImageViews;
 
     const float m_queuePriority = 1.f;
     const bool m_forceVSync = true;
