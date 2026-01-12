@@ -12,6 +12,7 @@ namespace Plunksna
 enum Severity : unsigned char
 {
     eINFO = 0,
+    eVERBOSE,
     eWARNING,
     eLETHAL
 };
@@ -24,8 +25,9 @@ enum Severity : unsigned char
 #define INFO "[INFO]: "
 #define WARNING "[WARNING]: "
 #define LETHAL "[LETHAL]: "
+#define VERBOSE "[VERBOSE]: "
 
-consteval const char* getStr(Severity severity)
+constexpr const char* getStr(Severity severity)
 {
     switch (severity) {
     case Severity::eINFO:

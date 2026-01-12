@@ -109,6 +109,9 @@ void Engine::handleEvents()
 
 VkInstance Engine::createVKInstance()
 {
+    if (VKRenderer::enableValidationLayers && !VKRenderer::checkValidationLayers())
+        THROW("Could not find validation layers")
+
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Hello Triangle";
@@ -117,25 +120,34 @@ VkInstance Engine::createVKInstance()
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_4;
 
-    Uint32 extensionCount = 0;
-    auto extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+    auto extensions = VKRenderer::getRequiredExtensions();
 
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
-    createInfo.enabledLayerCount = 0;
-    createInfo.enabledExtensionCount = extensionCount;
-    createInfo.ppEnabledExtensionNames = extensions;
-    createInfo.pNext = nullptr;
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    if (VKRenderer::enableValidationLayers) {
+        createInfo.enabledLayerCount = static_cast<uint32_t>(VKRenderer::validationLayers.size());
+        createInfo.ppEnabledLayerNames = VKRenderer::validationLayers.data();
+
+        VKRenderer::populateDebugMessengerCreateInfo(debugCreateInfo);
+        createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
+    }
+    else {
+        createInfo.enabledLayerCount = 0;
+        createInfo.pNext = nullptr;
+    }
+
+    createInfo.enabledExtensionCount = static_cast<Uint32>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
 
     auto result =  vkCreateInstance(&createInfo, nullptr, &m_instance) ;
     if (result != VK_SUCCESS) {
         THROW(string_VkResult(result))
     }
 
-    VKRenderer::getExtensions();
-    VKRenderer::getLayers();
+    VKRenderer::initDebugger(m_instance);
 
     return m_instance;
 
@@ -195,6 +207,7 @@ Engine::~Engine()
 {
     LOG("delete")
     m_window.destroySurface(m_instance);
+    VKRenderer::DestroyDebugUtilsMessengerEXT(m_instance, VKRenderer::s_debugger, nullptr);
     vkDestroyInstance(m_instance, nullptr);
 }
 
