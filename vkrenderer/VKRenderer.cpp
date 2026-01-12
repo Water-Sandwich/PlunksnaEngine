@@ -189,7 +189,7 @@ void VKRenderer::selectDevice(const Window& window)
     auto devices = getPhysicalDevices();
 
     for (const auto& device : devices) {
-        if (isDeviceSuitable(device, window)) {
+        if (isDeviceSuitable(window)) {
             m_physicalDevice = device;
             break;
         }
@@ -213,15 +213,15 @@ std::vector<VkPhysicalDevice> VKRenderer::getPhysicalDevices()
     return devices;
 }
 
-QueueFamilyIndices VKRenderer::findQueueFamilies(VkPhysicalDevice device, const Window& window)
+QueueFamilyIndices VKRenderer::findQueueFamilies(const Window& window)
 {
     QueueFamilyIndices indices;
 
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyCount, nullptr);
 
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyCount, queueFamilies.data());
 
     int i = 0;
     for (const auto& queueFamily : queueFamilies) {
@@ -229,7 +229,7 @@ QueueFamilyIndices VKRenderer::findQueueFamilies(VkPhysicalDevice device, const 
             indices.graphicsFamily = i;
 
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, window.getSurface(), &presentSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, i, window.getSurface(), &presentSupport);
         if (presentSupport)
             indices.presentFamily = i;
 
@@ -242,18 +242,58 @@ QueueFamilyIndices VKRenderer::findQueueFamilies(VkPhysicalDevice device, const 
     return indices;
 }
 
-bool VKRenderer::isDeviceSuitable(VkPhysicalDevice device, const Window& window)
+bool VKRenderer::checkDeviceExtensionSupport()
 {
-    auto indices = findQueueFamilies(device, window);
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &extensionCount, nullptr);
 
-    return indices.isComplete();
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &extensionCount, availableExtensions.data());
+
+    std::set<std::string> requiredExtensions(s_deviceExtensions.begin(), s_deviceExtensions.end());
+
+    for (const auto& extension : availableExtensions) {
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
+}
+
+SwapChainSupportDetails VKRenderer::querySwapChainSupport(const Window& window)
+{
+    SwapChainSupportDetails details;
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, window.getSurface(), &details.capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, window.getSurface(), &formatCount, nullptr);
+
+    if (formatCount != 0) {
+        details.formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, window.getSurface(), &formatCount, details.formats.data());
+    }
+
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, window.getSurface(), &presentModeCount, nullptr);
+
+    if (presentModeCount != 0) {
+        details.presentModes.resize(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, window.getSurface(), &presentModeCount, details.presentModes.data());
+    }
+
+    return details;
+}
+
+bool VKRenderer::isDeviceSuitable(const Window& window)
+{
+    auto indices = findQueueFamilies(window);
+
+    return indices.isComplete() && checkDeviceExtensionSupport();
 }
 
 void VKRenderer::createLogicalDevice(const Window& window)
 {
-    auto indices = findQueueFamilies(m_physicalDevice, window);
-
-
+    auto indices = findQueueFamilies(window);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
@@ -275,7 +315,8 @@ void VKRenderer::createLogicalDevice(const Window& window)
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     createInfo.pEnabledFeatures = &deviceFeatures;
 
-    createInfo.enabledExtensionCount = 0;
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(s_deviceExtensions.size());
+    createInfo.ppEnabledExtensionNames = s_deviceExtensions.data();
 
     if (s_enableValidationLayers) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(s_validationLayers.size());

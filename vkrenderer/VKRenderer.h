@@ -30,6 +30,13 @@ struct QueueFamilyIndices
     }
 };
 
+struct SwapChainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+};
+
 class VKRenderer {
 public:
     //=========BASE========
@@ -53,6 +60,10 @@ private:
         "VK_LAYER_KHRONOS_validation"
     };
 
+    inline static const std::vector<const char*> s_deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
 
     std::vector<VkLayerProperties> getLayers();
     bool checkValidationLayers();
@@ -61,10 +72,13 @@ private:
     std::vector<const char*> getRequiredExtensions();
 
     std::vector<VkPhysicalDevice> getPhysicalDevices();
-    bool isDeviceSuitable(VkPhysicalDevice device, const Window& window);
+    bool isDeviceSuitable(const Window& window);
 
     void createLogicalDevice(const Window& window);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, const Window& window);
+    QueueFamilyIndices findQueueFamilies(const Window& window);
+
+    bool checkDeviceExtensionSupport();
+    SwapChainSupportDetails querySwapChainSupport(const Window& window);
 
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
