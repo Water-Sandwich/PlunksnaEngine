@@ -9,6 +9,7 @@
 #include <memory>
 #include <glm/vec2.hpp>
 #include <SDL3/SDL_vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 namespace Plunksna {
 class Window
@@ -22,8 +23,10 @@ public:
     Window& operator=(const Window&) = delete;
 
     SDL_Window* getWindow() const;
+
     void createSurface(VkInstance instance);
-    void destroySurface(VkInstance instance) const;
+    void destroySurface(VkInstance instance);
+    VkSurfaceKHR getSurface() const;
 
 private:
     static constexpr void deleteWindow(SDL_Window* window);
@@ -32,7 +35,7 @@ private:
     glm::uvec2 m_size;
     std::string m_title;
     std::unique_ptr<SDL_Window, void(*)(SDL_Window*)> m_window;
-    VkSurfaceKHR m_surface;
+    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
 };
 }

@@ -13,6 +13,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Components.h"
+#include "VKRenderer.h"
 #include "Window.h"
 #include "../ecs/Registry.h"
 
@@ -27,22 +28,19 @@ public:
     Engine() = delete;
     Engine(const Engine& game) = delete;
     Engine(Engine&& game) = delete;
-
     ~Engine();
 
     void init();
-
     void run();
 
 private:
     void tick(float delta_ms);
     void render();
     void handleEvents();
-    VkInstance createVKInstance();
 
 private:
     Window m_window;
-    VkInstance m_instance;
+    VKRenderer m_renderer;
 
     TimePoint m_startTime;
     TimePoint m_lastTime;

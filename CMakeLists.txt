@@ -68,6 +68,7 @@ set(SOURCE_FILES
         engine/Result.h
         vkrenderer/VKRenderer.cpp
         vkrenderer/VKRenderer.h
+        vkrenderer/VKRendererD.cpp
 )
 
 add_executable(Plunksna ${SOURCE_FILES})

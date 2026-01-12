@@ -17,20 +17,6 @@
 
 namespace Plunksna {
 
-void renderSolidRect(SDL_Renderer* renderer, const Transform2& transform, const RColorRGBA& color)
-{
-    // SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    // glm::vec2 offset = transform.scale / 2.f;
-    //
-    // SDL_FRect r{
-    //     transform.position.x - offset.x, transform.position.y - offset.y,
-    //     transform.scale.x, transform.scale.y
-    // };
-    //
-    // SDL_RenderFillRect(renderer, &r);
-    // //SDL_RenderRect()
-}
-
 void updatePlayer(float delta_ms, Transform2& transform)
 {
     //LOG(delta_ms)
@@ -107,56 +93,14 @@ void Engine::handleEvents()
     }
 }
 
-VkInstance Engine::createVKInstance()
-{
-    if (VKRenderer::enableValidationLayers && !VKRenderer::checkValidationLayers())
-        THROW("Could not find validation layers")
-
-    VkApplicationInfo appInfo{};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Hello Triangle";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "Plunksna";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_4;
-
-    auto extensions = VKRenderer::getRequiredExtensions();
-
-    VkInstanceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-    if (VKRenderer::enableValidationLayers) {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(VKRenderer::validationLayers.size());
-        createInfo.ppEnabledLayerNames = VKRenderer::validationLayers.data();
-
-        VKRenderer::populateDebugMessengerCreateInfo(debugCreateInfo);
-        createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
-    }
-    else {
-        createInfo.enabledLayerCount = 0;
-        createInfo.pNext = nullptr;
-    }
-
-    createInfo.enabledExtensionCount = static_cast<Uint32>(extensions.size());
-    createInfo.ppEnabledExtensionNames = extensions.data();
-
-    auto result =  vkCreateInstance(&createInfo, nullptr, &m_instance) ;
-    if (result != VK_SUCCESS) {
-        THROW(string_VkResult(result))
-    }
-
-    VKRenderer::initDebugger(m_instance);
-
-    return m_instance;
-
-}
 
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags)
-    : m_window(title, size, flags), m_instance(createVKInstance())
+    : m_window(title, size, flags)
 {
-    m_window.createSurface(m_instance);
+    m_renderer.createInstance();
+    m_window.createSurface(m_renderer.m_instance);
+    m_renderer.init(m_window);
+
     m_maxFPS = 60.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
@@ -206,9 +150,7 @@ void Engine::run()
 Engine::~Engine()
 {
     LOG("delete")
-    m_window.destroySurface(m_instance);
-    VKRenderer::DestroyDebugUtilsMessengerEXT(m_instance, VKRenderer::s_debugger, nullptr);
-    vkDestroyInstance(m_instance, nullptr);
+    m_window.destroySurface(m_renderer.m_instance);
 }
 
 } //Plunksna

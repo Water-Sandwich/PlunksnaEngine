@@ -44,11 +44,19 @@ SDL_Window* Window::getWindow() const
 void Window::createSurface(VkInstance instance)
 {
     if (!SDL_Vulkan_CreateSurface(m_window.get(), instance, nullptr, &m_surface))
-        THROW(SDL_GetError())
+        THROW("Could not create surface")
 }
 
-void Window::destroySurface(VkInstance instance) const
+void Window::destroySurface(VkInstance instance)
 {
-    vkDestroySurfaceKHR(instance, m_surface, nullptr);
+    if (m_surface != VK_NULL_HANDLE) {
+        vkDestroySurfaceKHR(instance, m_surface, nullptr);
+        m_surface = VK_NULL_HANDLE;
+    }
+}
+
+VkSurfaceKHR Window::getSurface() const
+{
+    return m_surface;
 }
 } //Plunksna

@@ -4,40 +4,93 @@
 
 #ifndef VKRENDERER_H
 #define VKRENDERER_H
+#include <optional>
 #include <vector>
+#include <SDL3/SDL_stdinc.h>
 #include <vulkan/vulkan_core.h>
+
+#include "Window.h"
 
 namespace Plunksna {
 
+#ifdef NDEBUG
+static const bool s_enableValidationLayers = false;
+#else
+static const bool s_enableValidationLayers = true;
+#endif
+
+struct QueueFamilyIndices
+{
+    std::optional<uint32_t> graphicsFamily;
+    std::optional<uint32_t> presentFamily;
+
+    bool isComplete() const
+    {
+        return graphicsFamily.has_value() && presentFamily.has_value();
+    }
+};
+
 class VKRenderer {
 public:
-    inline static const std::vector<const char*> validationLayers = {
+    //=========BASE========
+    VKRenderer();
+    ~VKRenderer();
+
+    VKRenderer(const VKRenderer&) = delete;
+    VKRenderer(VKRenderer&&) = delete;
+
+    VkInstance createInstance();
+    VkInstance init(const Window& window);
+    void clean();
+
+    void selectDevice(const Window& window);
+
+
+    //======LAYERS AND EXTENSIONS========
+
+private:
+    inline static const std::vector<const char*> s_validationLayers = {
         "VK_LAYER_KHRONOS_validation"
     };
 
-    #ifdef NDEBUG
-        static const bool enableValidationLayers = false;
-    #else
-        static const bool enableValidationLayers = true;
-    #endif
 
+    std::vector<VkLayerProperties> getLayers();
+    bool checkValidationLayers();
 
-    static std::vector<VkLayerProperties> getLayers();
-    static std::vector<VkExtensionProperties> getExtensions();
-    static std::vector<const char*> getRequiredExtensions();
-    static bool checkValidationLayers();
+    std::vector<VkExtensionProperties> getExtensions();
+    std::vector<const char*> getRequiredExtensions();
 
+    std::vector<VkPhysicalDevice> getPhysicalDevices();
+    bool isDeviceSuitable(VkPhysicalDevice device, const Window& window);
+
+    void createLogicalDevice(const Window& window);
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, const Window& window);
+
+public:
+    VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
+    VkInstance m_instance = VK_NULL_HANDLE;
+
+private:
+    VkDevice m_device = VK_NULL_HANDLE;
+    VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
+
+    VkQueue m_graphicsQueue = VK_NULL_HANDLE;
+    VkQueue m_presentQueue = VK_NULL_HANDLE;
+
+    const float m_queuePriority = 1.f;
+
+private:
     //=======DEBUG=========
 
-    static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
-    static VkResult CreateDebugUtilsMessengerEXT(
+    VkResult CreateDebugUtilsMessengerEXT(
         VkInstance instance,
         const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator,
         VkDebugUtilsMessengerEXT* pDebugMessenger);
 
-    static void DestroyDebugUtilsMessengerEXT(
+    void DestroyDebugUtilsMessengerEXT(
         VkInstance instance,
         VkDebugUtilsMessengerEXT debugMessenger,
         const VkAllocationCallbacks* pAllocator);
@@ -48,10 +101,7 @@ public:
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);
 
-    static void initDebugger(VkInstance instance);
-
-public:
-    inline static VkDebugUtilsMessengerEXT s_debugger;
+    void initDebugger();
 };
 
 } // Plunksna
