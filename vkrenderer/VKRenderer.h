@@ -47,6 +47,7 @@ public:
     VKRenderer(VKRenderer&&) = delete;
 
     VkInstance init(const Window& window);
+    void draw();
     void clean();
 
     void selectDevice(const Window& window);
@@ -97,6 +98,12 @@ private:
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
     void createRenderPass();
+    void createFrameBuffers();
+    void createCommandPool();
+    void createCommandBuffer();
+    void createSyncObjects();
+
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
@@ -105,9 +112,13 @@ public:
 private:
     VkDevice m_device = VK_NULL_HANDLE;
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
+    QueueFamilyIndices m_familyIndices;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;
+
+    VkCommandPool m_commandPool = VK_NULL_HANDLE;
+    VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
 
     VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
@@ -119,8 +130,13 @@ private:
     VkFormat m_swapChainImageFormat;
     VkExtent2D m_swapChainExtent;
 
+    VkSemaphore m_vsImageAvailable;
+    VkSemaphore m_vsRenderFinished;
+    VkFence m_vfInFlight;
+
     std::vector<VkImage> m_swapChainImages;
     std::vector<VkImageView> m_swapChainImageViews;
+    std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
     const float m_queuePriority = 1.f;
     const bool m_forceVSync = true;
@@ -128,6 +144,7 @@ private:
 private:
     //=======DEBUG=========
 
+    void initDebugger();
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
     VkResult CreateDebugUtilsMessengerEXT(
@@ -146,8 +163,6 @@ private:
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);
-
-    void initDebugger();
 };
 
 } // Plunksna

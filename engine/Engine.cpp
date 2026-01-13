@@ -45,17 +45,7 @@ void Engine::tick(float delta_ms)
 
 void Engine::render()
 {
-    // SDL_Renderer* renderer = m_window.getRenderer();
-    //
-    // SDL_SetRenderDrawColor(renderer, 0,10,10,255);
-    // SDL_RenderClear(renderer);
-    //
-    // m_renderFilter->foreach([&](const Transform2& a, const RColorRGBA& b)
-    // {
-    //     renderSolidRect(renderer, a, b);
-    // });
-    //
-    // SDL_RenderPresent(renderer);
+    m_renderer.draw();
 }
 
 void Engine::handleEvents()
