@@ -7,7 +7,7 @@ int main()
 {
     try {
         SDL_Init(SDL_INIT_VIDEO);
-        Plunksna::Engine engine("test", {640, 480}, SDL_WINDOW_VULKAN);
+        Plunksna::Engine engine("test", {640, 480}, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
         engine.run();
     }
     catch (const Plunksna::Exception& e) {

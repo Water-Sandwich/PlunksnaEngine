@@ -11,6 +11,8 @@
 
 #include "Window.h"
 
+#include <glm/glm.hpp>
+
 namespace Plunksna {
 
 #ifdef NDEBUG
@@ -37,6 +39,45 @@ struct SwapChainSupportDetails
     std::vector<VkPresentModeKHR> presentModes;
 };
 
+struct Vertex
+{
+    glm::vec2 pos;
+    glm::vec3 color;
+
+    static VkVertexInputBindingDescription getBindingDescription(){
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(Vertex);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+        return attributeDescriptions;
+    }
+
+};
+
+
+
+//===========================================
+//====================RENDERER===============
+//===========================================
+
+
+
 class VKRenderer {
 public:
     //=========BASE========
@@ -47,11 +88,10 @@ public:
     VKRenderer(VKRenderer&&) = delete;
 
     VkInstance init(const Window& window);
-    void draw();
+    void draw(const Window& window);
     void clean();
 
-    void selectDevice(const Window& window);
-
+    void resizeNotif();
 
     //======LAYERS AND EXTENSIONS========
 
@@ -65,45 +105,43 @@ private:
     };
 
     void createInstance();
+    void createLogicalDevice(const Window& window);
+    void createSwapChain(const Window& window);
+    void createSurface(const Window& window);
+    void createImageViews();
+    void createGraphicsPipeline();
+    void createRenderPass();
+    void createFrameBuffers();
+    void createCommandPool();
+    void createCommandBuffers();
+    void createSyncObjects();
+    void createVertexBuffer();
+
+    void cleanSwapChain();
+    void recreateSwapChain(const Window& window);
 
     std::vector<VkLayerProperties> getLayers();
-    bool checkValidationLayers();
-
     std::vector<VkExtensionProperties> getExtensions();
     std::vector<const char*> getRequiredExtensions();
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+    bool checkValidationLayers();
 
+    void selectDevice(const Window& window);
     std::vector<VkPhysicalDevice> getPhysicalDevices();
     bool isDeviceSuitable(VkPhysicalDevice device, const Window& window);
-
-    void createLogicalDevice(const Window& window);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, const Window& window);
 
-    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, const Window& window);
-
-
-    //=====SWAPCHAIN=====
-
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);
 
-    void createSwapChain(const Window& window);
-    void createSurface(const Window& window);
-
-    void createImageViews();
-    void createGraphicsPipeline();
-
     static std::vector<char> readFile(const std::string& filename);
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
-    void createRenderPass();
-    void createFrameBuffers();
-    void createCommandPool();
-    void createCommandBuffer();
-    void createSyncObjects();
-
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
@@ -118,7 +156,7 @@ private:
     VkQueue m_presentQueue = VK_NULL_HANDLE;
 
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
-    VkCommandBuffer m_commandBuffer = VK_NULL_HANDLE;
+    std::vector<VkCommandBuffer> m_commandBuffers;
 
     VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
@@ -130,16 +168,30 @@ private:
     VkFormat m_swapChainImageFormat;
     VkExtent2D m_swapChainExtent;
 
-    VkSemaphore m_vsImageAvailable;
-    VkSemaphore m_vsRenderFinished;
-    VkFence m_vfInFlight;
+    std::vector<VkSemaphore> m_vsImageAvailable;
+    std::vector<VkSemaphore> m_vsRenderFinished;
+    std::vector<VkFence> m_vfInFlight;
 
     std::vector<VkImage> m_swapChainImages;
     std::vector<VkImageView> m_swapChainImageViews;
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
-    const float m_queuePriority = 1.f;
-    const bool m_forceVSync = true;
+    VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
+
+    float m_queuePriority = 1.f;
+    bool m_forceVSync = true;
+
+    int m_maxInFlightFrames = 2;
+    int m_currentFrame = 0;
+
+    bool m_hasResized = false;
+
+    std::vector<Vertex> m_vertices = {
+        {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
 
 private:
     //=======DEBUG=========

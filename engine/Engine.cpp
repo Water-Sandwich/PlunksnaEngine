@@ -45,7 +45,7 @@ void Engine::tick(float delta_ms)
 
 void Engine::render()
 {
-    m_renderer.draw();
+    m_renderer.draw(m_window);
 }
 
 void Engine::handleEvents()
@@ -78,6 +78,11 @@ void Engine::handleEvents()
         }
         case SDL_EVENT_MOUSE_WHEEL: {
             g_mouse.setScroll(event.wheel.y);
+            break;
+        }
+        case SDL_EVENT_WINDOW_RESIZED:{
+            m_renderer.resizeNotif();
+            break;
         }
         }
     }
