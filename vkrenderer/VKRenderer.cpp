@@ -228,6 +228,8 @@ void VKRenderer::draw()
 
 void VKRenderer::clean()
 {
+    vkDeviceWaitIdle(m_device);
+
     for (auto& buf : m_swapChainFramebuffers) {
         VK_DESTROY(buf, m_device, vkDestroyFramebuffer, nullptr)
     }
@@ -249,14 +251,11 @@ void VKRenderer::clean()
     VK_DESTROY(m_vfInFlight, m_device, vkDestroyFence, nullptr)
 
     if (m_device != VK_NULL_HANDLE) {
-        vkDeviceWaitIdle(m_device);
         vkDestroyDevice(m_device, nullptr);
         m_device = VK_NULL_HANDLE;
     }
 
     VK_DESTROY(m_surface, m_instance, vkDestroySurfaceKHR, nullptr)
-
-    VK_DESTROY(m_debugger, m_instance, DestroyDebugUtilsMessengerEXT, nullptr)
 
     if (s_enableValidationLayers)
         VK_DESTROY(m_debugger, m_instance, DestroyDebugUtilsMessengerEXT, nullptr)
