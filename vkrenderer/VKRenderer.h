@@ -11,6 +11,8 @@
 
 #include "Window.h"
 
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 
 namespace Plunksna {
@@ -70,6 +72,12 @@ struct Vertex
 
 };
 
+struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+};
+
 
 
 //===========================================
@@ -109,17 +117,25 @@ private:
     void createSwapChain(const Window& window);
     void createSurface(const Window& window);
     void createImageViews();
+    void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createRenderPass();
     void createFrameBuffers();
     void createCommandPool();
     void createCommandBuffers();
     void createSyncObjects();
+    void createTextureImage();
     void createVertexBuffer();
     void createIndexBuffer();
+    void createUniformBuffers();
+    void createDescriptorPools();
+    void createDescriptorSets();
 
     void cleanSwapChain();
     void recreateSwapChain(const Window& window);
+
+
+    void updateUniformBuffer(uint32_t currentImage);
 
     std::vector<VkLayerProperties> getLayers();
     std::vector<VkExtensionProperties> getExtensions();
@@ -143,8 +159,17 @@ private:
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
+        VkDeviceMemory& bufferMemory);
+
+    VkCommandBuffer beginSingleTimeCommands() ;
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+        VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
     VkInstance m_instance = VK_NULL_HANDLE;
@@ -165,6 +190,7 @@ private:
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
     VkRenderPass m_renderPass = VK_NULL_HANDLE;
+    VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
 
@@ -183,6 +209,17 @@ private:
     VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
     VkBuffer m_indexBuffer = VK_NULL_HANDLE;
     VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
+
+    VkBuffer m_stagingBuffer;
+    VkDeviceMemory m_stagingBufferMemory;
+    VkImage m_textureImage;
+    VkDeviceMemory m_textureImageMemory;
+
+    VkDescriptorPool m_descriptorPool;
+    std::vector<VkDescriptorSet> m_descriptorSets;
+    std::vector<VkBuffer> m_uniformBuffers;
+    std::vector<VkDeviceMemory> m_uniformBuffersMemory;
+    std::vector<void*> m_uniformBuffersMapped;
 
     float m_queuePriority = 1.f;
     bool m_forceVSync = true;
@@ -228,5 +265,24 @@ private:
 };
 
 } // Plunksna
+
+template <typename T>
+struct Node
+{
+    T data;
+    Node* prev = nullptr;
+    Node* next = nullptr;
+};
+
+template <typename T>
+struct List
+{
+    Node<T>* start = nullptr;
+    Node<T>* end = nullptr;
+
+    void Add(T data);
+    void Remove(int index);
+    T get(int index);
+};
 
 #endif //VKRENDERER_H
