@@ -1216,7 +1216,7 @@ void VKRenderer::endSingleTimeCommands(VkCommandBuffer commandBuffer)
     vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(m_graphicsQueue);
 
-    vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(m_device, m_transientCommandPool, 1, &commandBuffer);
 }
 
 void VKRenderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -1317,15 +1317,6 @@ void VKRenderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLa
     barrier.srcAccessMask = 0; // TODO
     barrier.dstAccessMask = 0; // TODO
 
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        0 /* TODO */, 0 /* TODO */,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
-
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
 
@@ -1344,7 +1335,7 @@ void VKRenderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLa
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     } else {
-        throw std::invalid_argument("unsupported layout transition!");
+        THROW("unsupported layout transition!");
     }
 
     vkCmdPipelineBarrier(

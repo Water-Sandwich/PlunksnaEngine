@@ -266,23 +266,4 @@ private:
 
 } // Plunksna
 
-template <typename T>
-struct Node
-{
-    T data;
-    Node* prev = nullptr;
-    Node* next = nullptr;
-};
-
-template <typename T>
-struct List
-{
-    Node<T>* start = nullptr;
-    Node<T>* end = nullptr;
-
-    void Add(T data);
-    void Remove(int index);
-    T get(int index);
-};
-
 #endif //VKRENDERER_H
