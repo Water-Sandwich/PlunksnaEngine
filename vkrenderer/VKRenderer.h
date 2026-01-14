@@ -116,6 +116,7 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void createVertexBuffer();
+    void createIndexBuffer();
 
     void cleanSwapChain();
     void recreateSwapChain(const Window& window);
@@ -142,7 +143,8 @@ private:
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
     VkInstance m_instance = VK_NULL_HANDLE;
@@ -156,6 +158,7 @@ private:
     VkQueue m_presentQueue = VK_NULL_HANDLE;
 
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
+    VkCommandPool m_transientCommandPool = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> m_commandBuffers;
 
     VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
@@ -178,6 +181,8 @@ private:
 
     VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
     VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
+    VkBuffer m_indexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
 
     float m_queuePriority = 1.f;
     bool m_forceVSync = true;
@@ -188,9 +193,14 @@ private:
     bool m_hasResized = false;
 
     std::vector<Vertex> m_vertices = {
-        {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    const std::vector<uint16_t> m_indices = {
+        0, 1, 2, 2, 3, 0
     };
 
 private:
