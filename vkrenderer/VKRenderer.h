@@ -8,12 +8,14 @@
 #include <vector>
 #include <SDL3/SDL_stdinc.h>
 #include <vulkan/vulkan_core.h>
+#include <filesystem>
 
 #include "Window.h"
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <bits/chrono.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -78,6 +80,9 @@ struct Vertex
         return attributeDescriptions;
     }
 
+    bool operator==(const Vertex& other) const {
+        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+    }
 };
 
 struct UniformBufferObject {
@@ -92,7 +97,9 @@ struct UniformBufferObject {
 //====================RENDERER===============
 //===========================================
 
-
+const std::filesystem::path g_workingPath = std::filesystem::current_path().parent_path();
+const std::filesystem::path g_modelPath = g_workingPath / "models";
+const std::filesystem::path g_texturePath = g_workingPath / "textures";
 
 class VKRenderer {
 public:
@@ -141,6 +148,7 @@ private:
     void createTextureImageView();
     void createTextureSampler();
 
+    void loadModel();
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();
@@ -258,22 +266,8 @@ private:
 
     bool m_hasResized = false;
 
-    const std::vector<Vertex> m_vertices = {
-        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-        {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-    };
-
-    const std::vector<uint16_t> m_indices = {
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4,
-    };
+    std::vector<Vertex> m_vertices;
+    std::vector<uint32_t> m_indices;
 
 private:
     //=======DEBUG=========
