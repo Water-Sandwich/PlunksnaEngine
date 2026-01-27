@@ -43,8 +43,9 @@ struct SwapChainSupportDetails
 
 struct Vertex
 {
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec3 color;
+    glm::vec2 texCoord;
 
     static VkVertexInputBindingDescription getBindingDescription(){
         VkVertexInputBindingDescription bindingDescription{};
@@ -55,17 +56,22 @@ struct Vertex
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
         attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
         return attributeDescriptions;
     }
@@ -117,14 +123,20 @@ private:
     void createSwapChain(const Window& window);
     void createSurface(const Window& window);
     void createImageViews();
+
     void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createRenderPass();
     void createFrameBuffers();
+
     void createCommandPool();
     void createCommandBuffers();
     void createSyncObjects();
+
     void createTextureImage();
+    void createTextureImageView();
+    void createTextureSampler();
+
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();
@@ -133,7 +145,6 @@ private:
 
     void cleanSwapChain();
     void recreateSwapChain(const Window& window);
-
 
     void updateUniformBuffer(uint32_t currentImage);
 
@@ -170,6 +181,10 @@ private:
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
         VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+    VkImageView createImageView(VkImage image, VkFormat format);
+
+    float getMaxAnisotropy();
+
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
     VkInstance m_instance = VK_NULL_HANDLE;
@@ -197,7 +212,7 @@ private:
     VkFormat m_swapChainImageFormat;
     VkExtent2D m_swapChainExtent;
 
-    std::vector<VkSemaphore> m_vsImageAvailable;
+    std::vector<VkSemaphore> m_vsImageAvailable; //TODO: semaphores should belong to image, not frame
     std::vector<VkSemaphore> m_vsRenderFinished;
     std::vector<VkFence> m_vfInFlight;
 
@@ -214,6 +229,8 @@ private:
     VkDeviceMemory m_stagingBufferMemory;
     VkImage m_textureImage;
     VkDeviceMemory m_textureImageMemory;
+    VkImageView m_textureImageView;
+    VkSampler m_textureSampler;
 
     VkDescriptorPool m_descriptorPool;
     std::vector<VkDescriptorSet> m_descriptorSets;
@@ -229,11 +246,11 @@ private:
 
     bool m_hasResized = false;
 
-    std::vector<Vertex> m_vertices = {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    const std::vector<Vertex> m_vertices = {
+        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
     };
 
     const std::vector<uint16_t> m_indices = {
