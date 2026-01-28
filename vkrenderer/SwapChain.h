@@ -9,14 +9,8 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Context.h"
+#include "RendererUtils.h"
 #include "Window.h"
-
-struct SwapChainSupportDetails
-{
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
 
 namespace Plunksna {
 
@@ -40,7 +34,7 @@ private:
     void createDepthBuffers();
     void createFrameBuffers();
 
-    SwapChainSupportDetails querySwapChainSupport(const Window& window);
+    RenderUtils::SwapChainSupportDetails querySwapChainSupport(const Window& window);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);

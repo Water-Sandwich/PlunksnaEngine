@@ -7,6 +7,9 @@
 #include "RendererUtils.h"
 
 namespace Plunksna {
+
+using namespace Plunksna::RenderUtils;
+
 SwapChain::SwapChain(Context& context) : m_context(context) {}
 
 void SwapChain::init(const Context& context, const Window& window)
@@ -99,9 +102,9 @@ void SwapChain::createDepthBuffers()
     VkFormat depthFormat = findDepthFormat(m_context);
 
     createImage(m_context, m_swapChainExtent.width, m_swapChainExtent.height, 1, depthFormat,
-                VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                m_depthImage, m_depthImageMemory);
+                       VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                       m_depthImage, m_depthImageMemory);
 
     m_depthImageView = createImageView(m_context, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 }

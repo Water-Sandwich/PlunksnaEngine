@@ -12,93 +12,26 @@
 #include "Exception.h"
 #include "Log.h"
 #include "Window.h"
+
 #include <fstream>
+#include <chrono>
+#include <unordered_map>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-#include <chrono>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-#include <unordered_map>
-
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
-
 #include "RendererUtils.h"
 
+using namespace Plunksna::RenderUtils;
+
 namespace Plunksna {
-
-std::vector<VkLayerProperties> Renderer::getLayers()
-{
-    uint32_t layerCount = 0;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-    std::vector<VkLayerProperties> layers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
-
-    // LOG("Available VK layers:");
-    // for (const auto& layer : layers) {
-    //     LOG_C(layer.layerName);
-    // }
-
-    return layers;
-}
-
-std::vector<VkExtensionProperties> Renderer::getExtensions()
-{
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-    std::vector<VkExtensionProperties> extensions(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
-    // LOG("Available VK extensions:")
-    // for (auto ext : extensions) {
-    //     LOG_C(ext.extensionName);
-    // }
-
-    return extensions;
-}
-
-std::vector<const char*> Renderer::getRequiredExtensions()
-{
-    uint32_t sdlExtensionCount = 0;
-    auto sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
-
-    std::vector<const char*> extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
-
-    if (s_enableValidationLayers) {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-
-    return extensions;
-}
-
-bool Renderer::checkValidationLayers()
-{
-    auto layers = getLayers();
-
-    for (auto validLayer : s_validationLayers) {
-        bool found = false;
-
-        for (auto layer : layers) {
-            if (strcmp(layer.layerName, validLayer) == 0) {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-            return false;
-    }
-
-    return true;
-}
 
 
 Renderer::Renderer()
@@ -113,7 +46,7 @@ Renderer::~Renderer()
 
 void Renderer::createInstance()
 {
-    if (s_enableValidationLayers && !checkValidationLayers())
+    if (!checkValidationLayers(s_validationLayers))
         THROW("Could not find validation layers")
 
     VkApplicationInfo appInfo{};
@@ -124,7 +57,7 @@ void Renderer::createInstance()
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_4;
 
-    auto extensions = getRequiredExtensions();
+    auto extensions = getRequiredExtensions(s_enableValidationLayers);
 
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -151,7 +84,7 @@ void Renderer::createInstance()
         THROW(string_VkResult(result))
     }
 
-    getPhysicalDevices();
+    getPhysicalDevices(m_context);
 }
 
 VkInstance Renderer::init(const Window& window)
@@ -318,10 +251,10 @@ void Renderer::resizeNotif()
 
 void Renderer::selectDevice(const Window& window)
 {
-    auto devices = getPhysicalDevices();
+    auto devices = getPhysicalDevices(m_context);
 
     for (const auto& device : devices) {
-        if (isDeviceSuitable(device, window)) {
+        if (isDeviceSuitable(device)) {
             m_context.physicalDevice = device;
             break;
         }
@@ -331,145 +264,12 @@ void Renderer::selectDevice(const Window& window)
         THROW("Failed to find suitable GPU")
 }
 
-std::vector<VkPhysicalDevice> Renderer::getPhysicalDevices()
-{
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(m_context.instance, &deviceCount, nullptr);
-
-    if (deviceCount == 0)
-        THROW("No devices with Vulkan support found")
-
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(m_context.instance, &deviceCount, devices.data());
-
-    return devices;
-}
-
-QueueFamilyIndices Renderer::findQueueFamilies(VkPhysicalDevice device, const Window& window)
-{
-    QueueFamilyIndices indices;
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-    int i = 0;
-    for (const auto& queueFamily : queueFamilies) {
-        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            indices.graphicsFamily = i;
-
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &presentSupport);
-        if (presentSupport)
-            indices.presentFamily = i;
-
-        if (indices.isComplete())
-            return indices;
-
-        i++;
-    }
-
-    return indices;
-}
-
-bool Renderer::checkDeviceExtensionSupport(VkPhysicalDevice device)
-{
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-    std::set<std::string> requiredExtensions(s_deviceExtensions.begin(), s_deviceExtensions.end());
-
-    for (const auto& extension : availableExtensions) {
-        requiredExtensions.erase(extension.extensionName);
-    }
-
-    return requiredExtensions.empty();
-}
-
-SwapChainSupportDetails Renderer::querySwapChainSupport(VkPhysicalDevice device, const Window& window)
-{
-    SwapChainSupportDetails details;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.capabilities);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, nullptr);
-
-    if (formatCount != 0) {
-        details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, details.formats.data());
-    }
-
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, nullptr);
-
-    if (presentModeCount != 0) {
-        details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, details.presentModes.data());
-    }
-
-    return details;
-}
-
-VkSurfaceFormatKHR Renderer::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
-{
-    for (const auto& availableFormat : availableFormats) {
-        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace ==
-            VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            return availableFormat;
-        }
-    }
-
-    return availableFormats[0];
-}
-
-VkPresentModeKHR Renderer::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
-{
-    if (m_forceVSync)
-        return VK_PRESENT_MODE_FIFO_KHR;
-
-    for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            return availablePresentMode;
-        }
-    }
-
-    return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-VkExtent2D Renderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window)
-{
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        return capabilities.currentExtent;
-    }
-
-    int width, height;
-    SDL_GetWindowSizeInPixels(window.getWindow(), &width, &height);
-
-    VkExtent2D actualExtent = {
-        static_cast<uint32_t>(width),
-        static_cast<uint32_t>(height)
-    };
-
-    actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
-                                    capabilities.maxImageExtent.width);
-    actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
-                                     capabilities.maxImageExtent.height);
-
-    return actualExtent;
-}
-
 void Renderer::createSwapChain(const Window& window)
 {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(m_context.physicalDevice, window);
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(m_context.physicalDevice, m_surface);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, m_forceVSync);
     VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -569,8 +369,8 @@ void Renderer::createGraphicsPipeline()
     auto vertShaderCode = readFile("../shaders/vertShader.spv");
     auto fragShaderCode = readFile("../shaders/fragShader.spv");
 
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    VkShaderModule vertShaderModule = createShaderModule(m_context, vertShaderCode);
+    VkShaderModule fragShaderModule = createShaderModule(m_context, fragShaderCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -730,38 +530,6 @@ void Renderer::createGraphicsPipeline()
 
     vkDestroyShaderModule(m_context.device, fragShaderModule, nullptr);
     vkDestroyShaderModule(m_context.device, vertShaderModule, nullptr);
-}
-
-std::vector<char> Renderer::readFile(const std::string& filename)
-{
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-    if (!file.is_open()) {
-        THROW("Failed to open file")
-    }
-
-    size_t fileSize = (size_t)file.tellg();
-    std::vector<char> buffer(fileSize);
-
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-
-    file.close();
-    return buffer;
-}
-
-VkShaderModule Renderer::createShaderModule(const std::vector<char>& code)
-{
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(m_context.device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-        THROW("Failed to create shader module")
-
-    return shaderModule;
 }
 
 void Renderer::createRenderPass()
@@ -976,7 +744,7 @@ void Renderer::createTextureSampler()
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
     samplerInfo.anisotropyEnable = VK_TRUE;
-    samplerInfo.maxAnisotropy = getMaxAnisotropy();
+    samplerInfo.maxAnisotropy = getMaxAnisotropy(m_context);
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
@@ -1545,27 +1313,15 @@ void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texW
     endSingleTimeCommands(commandBuffer);
 }
 
-float Renderer::getMaxAnisotropy()
+bool Renderer::isDeviceSuitable(VkPhysicalDevice device)
 {
-    VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(m_context.physicalDevice, &properties);
-    return properties.limits.maxSamplerAnisotropy;
-}
+    auto indices = findQueueFamilies(device, m_surface);
 
-bool Renderer::hasStencil(VkFormat format)
-{
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
-
-bool Renderer::isDeviceSuitable(VkPhysicalDevice device, const Window& window)
-{
-    auto indices = findQueueFamilies(device, window);
-
-    bool extensionsSupported = checkDeviceExtensionSupport(device);
+    bool extensionsSupported = checkDeviceExtensionSupport(device, s_deviceExtensions);
 
     bool swapChainAdequate = false;
     if (extensionsSupported) {
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device, window);
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device, m_surface);
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
@@ -1577,7 +1333,7 @@ bool Renderer::isDeviceSuitable(VkPhysicalDevice device, const Window& window)
 
 void Renderer::createLogicalDevice(const Window& window)
 {
-    m_context.familyIndices = findQueueFamilies(m_context.physicalDevice, window);
+    m_context.familyIndices = findQueueFamilies(m_context.physicalDevice, m_surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {

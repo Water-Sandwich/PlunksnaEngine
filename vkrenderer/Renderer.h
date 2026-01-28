@@ -111,43 +111,24 @@ private:
     void createVertexBuffer();
     void createIndexBuffer();
 
-
-    std::vector<VkLayerProperties> getLayers();
-    std::vector<VkExtensionProperties> getExtensions();
-    std::vector<const char*> getRequiredExtensions();
-    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-    bool checkValidationLayers();
-
+    //init device
     void selectDevice(const Window& window);
-    std::vector<VkPhysicalDevice> getPhysicalDevices();
-    bool isDeviceSuitable(VkPhysicalDevice device, const Window& window);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, const Window& window);
+    bool isDeviceSuitable(VkPhysicalDevice device);
 
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, const Window& window);
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);
-
-    static std::vector<char> readFile(const std::string& filename);
-    VkShaderModule createShaderModule(const std::vector<char>& code);
-
+    //buffers and commands
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
                       VkDeviceMemory& bufferMemory);
 
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
                                uint32_t mipLevels);
     void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
-
-    float getMaxAnisotropy();
-
-    bool hasStencil(VkFormat format);
 
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
