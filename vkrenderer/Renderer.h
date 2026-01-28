@@ -18,6 +18,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Context.h"
+#include "FrameResource.h"
 #include "SwapChain.h"
 #include "Vertex.h"
 
@@ -74,36 +75,42 @@ private:
 
     void createInstance();
     void createLogicalDevice(const Window& window);
+
+    //swapchain
     void createSwapChain(const Window& window);
     void createSurface(const Window& window);
+    void recreateSwapChain(const Window& window);
     void createImageViews();
+    void createFrameBuffers();
+    void createDepthBuffers();
+    void cleanSwapChain();
 
     void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createRenderPass();
-    void createFrameBuffers();
 
     void createCommandPool();
+    void createDescriptorPools();
+
+    //frame resources
+    void createFrameResources();
     void createCommandBuffers();
     void createSyncObjects();
+    void createUniformBuffers();
+    void createDescriptorSets();
 
-    void createDepthBuffers();
+    void updateUniformBuffer(uint32_t currentImage);
 
+    //textures
     void createTextureImage();
     void createTextureImageView();
     void createTextureSampler();
 
+    //3d
     void loadModel();
     void createVertexBuffer();
     void createIndexBuffer();
-    void createUniformBuffers();
-    void createDescriptorPools();
-    void createDescriptorSets();
 
-    void cleanSwapChain();
-    void recreateSwapChain(const Window& window);
-
-    void updateUniformBuffer(uint32_t currentImage);
 
     std::vector<VkLayerProperties> getLayers();
     std::vector<VkExtensionProperties> getExtensions();
@@ -153,30 +160,13 @@ private:
 
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
     VkCommandPool m_transientCommandPool = VK_NULL_HANDLE;
-    std::vector<VkCommandBuffer> m_commandBuffers;
-
-    VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
-    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
     VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
 
-    VkFormat m_swapChainImageFormat;
-    VkExtent2D m_swapChainExtent;
-
-    std::vector<VkSemaphore> m_vsImageAvailable; //TODO: semaphores should belong to image, not frame
-    std::vector<VkSemaphore> m_vsRenderFinished;
-    std::vector<VkFence> m_vfInFlight;
-
-    std::vector<VkImage> m_swapChainImages;
-    std::vector<VkImageView> m_swapChainImageViews;
-    std::vector<VkFramebuffer> m_swapChainFramebuffers;
-
-    VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
-    VkBuffer m_indexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
+    VkDescriptorPool m_descriptorPool;
+    std::vector<FrameResource> m_frameResources;
 
     VkImage m_textureImage;
     uint32_t m_mipLevels;
@@ -184,12 +174,20 @@ private:
     VkImageView m_textureImageView;
     VkSampler m_textureSampler;
 
-    VkDescriptorPool m_descriptorPool;
-    std::vector<VkDescriptorSet> m_descriptorSets;
-    std::vector<VkBuffer> m_uniformBuffers;
-    std::vector<VkDeviceMemory> m_uniformBuffersMemory;
-    std::vector<void*> m_uniformBuffersMapped;
+    //swapchain
+    VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
+    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
+    //swapchain
+    VkFormat m_swapChainImageFormat;
+    VkExtent2D m_swapChainExtent;
+
+    //swapchain
+    std::vector<VkImage> m_swapChainImages;
+    std::vector<VkImageView> m_swapChainImageViews;
+    std::vector<VkFramebuffer> m_swapChainFramebuffers;
+
+    //swapchain
     VkImage m_depthImage = VK_NULL_HANDLE;
     VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
     VkImageView m_depthImageView = VK_NULL_HANDLE;
@@ -201,6 +199,11 @@ private:
     int m_currentFrame = 0;
 
     bool m_hasResized = false;
+
+    VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
+    VkBuffer m_indexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
 
     std::vector<Vertex> m_vertices;
     std::vector<uint32_t> m_indices;

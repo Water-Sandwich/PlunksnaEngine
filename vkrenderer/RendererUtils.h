@@ -8,6 +8,7 @@
 #include <vulkan/vulkan_core.h>
 #include <vector>
 #include "Context.h"
+#include "Log.h"
 
 namespace Plunksna {
 
@@ -31,6 +32,7 @@ void createImage(const Context& context, uint32_t width, uint32_t height, uint32
                  VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
 uint32_t findMemoryType(const Context& context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
 }
 
 #endif //RENDERERINCLUDES_H

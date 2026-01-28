@@ -4,9 +4,10 @@
 
 #include "SwapChain.h"
 #include "Exception.h"
-#include "RendererIncludes.h"
+#include "RendererUtils.h"
 
 namespace Plunksna {
+SwapChain::SwapChain(Context& context) : m_context(context) {}
 
 void SwapChain::init(const Context& context, const Window& window)
 {

@@ -72,10 +72,10 @@ set(SOURCE_FILES
         vkrenderer/SwapChain.cpp
         vkrenderer/SwapChain.h
         vkrenderer/Vertex.h
-        vkrenderer/QueueFamilyIndices.h
-        vkrenderer/RendererIncludes.h
-        vkrenderer/RenderIncludes.cpp
+        vkrenderer/RendererUtils.h
+        vkrenderer/RenderUtils.cpp
         vkrenderer/Context.h
+        vkrenderer/FrameResource.h
 )
 
 add_executable(Plunksna ${SOURCE_FILES})
