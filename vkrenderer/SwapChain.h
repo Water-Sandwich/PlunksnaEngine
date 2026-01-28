@@ -22,16 +22,21 @@ namespace Plunksna {
 
 class SwapChain {
 public:
-    SwapChain() = default;
+    SwapChain(Context& context);
     ~SwapChain() = default;
 
+    SwapChain() = delete;
     SwapChain(const SwapChain&) = delete;
     SwapChain(SwapChain&&) = delete;
 
-    void init(const Context& context, const Window& window);
+    void init(const Window& window);
+    void createSurface(const Window& window);
 
     void regenerate(const Window& window);
     void clean();
+
+    VkSwapchainKHR swapChain() const;
+    VkSurfaceKHR surface() const;
 
 private:
 

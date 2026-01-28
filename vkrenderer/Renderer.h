@@ -74,8 +74,6 @@ private:
 
     void createInstance();
     void createLogicalDevice(const Window& window);
-    void createSwapChain(const Window& window);
-    void createSurface(const Window& window);
     void createImageViews();
 
     void createDescriptorSetLayout();
@@ -100,9 +98,6 @@ private:
     void createDescriptorPools();
     void createDescriptorSets();
 
-    void cleanSwapChain();
-    void recreateSwapChain(const Window& window);
-
     void updateUniformBuffer(uint32_t currentImage);
 
     std::vector<VkLayerProperties> getLayers();
@@ -115,11 +110,6 @@ private:
     std::vector<VkPhysicalDevice> getPhysicalDevices();
     bool isDeviceSuitable(VkPhysicalDevice device, const Window& window);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, const Window& window);
-
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, const Window& window);
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);
 
     static std::vector<char> readFile(const std::string& filename);
     VkShaderModule createShaderModule(const std::vector<char>& code);
@@ -147,6 +137,7 @@ public:
 
 private:
     Context m_context;
+    SwapChain m_swapChain;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;
@@ -155,23 +146,13 @@ private:
     VkCommandPool m_transientCommandPool = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> m_commandBuffers;
 
-    VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
-    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-
     VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
 
-    VkFormat m_swapChainImageFormat;
-    VkExtent2D m_swapChainExtent;
-
     std::vector<VkSemaphore> m_vsImageAvailable; //TODO: semaphores should belong to image, not frame
     std::vector<VkSemaphore> m_vsRenderFinished;
     std::vector<VkFence> m_vfInFlight;
-
-    std::vector<VkImage> m_swapChainImages;
-    std::vector<VkImageView> m_swapChainImageViews;
-    std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
     VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
     VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
@@ -190,12 +171,7 @@ private:
     std::vector<VkDeviceMemory> m_uniformBuffersMemory;
     std::vector<void*> m_uniformBuffersMapped;
 
-    VkImage m_depthImage = VK_NULL_HANDLE;
-    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
-    VkImageView m_depthImageView = VK_NULL_HANDLE;
-
     float m_queuePriority = 1.f;
-    bool m_forceVSync = true;
 
     int m_maxInFlightFrames = 2;
     int m_currentFrame = 0;

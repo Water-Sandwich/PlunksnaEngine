@@ -101,7 +101,7 @@ bool Renderer::checkValidationLayers()
 }
 
 
-Renderer::Renderer()
+Renderer::Renderer() : m_swapChain()
 {
     //init();
 }
@@ -162,12 +162,10 @@ VkInstance Renderer::init(const Window& window)
     if (s_enableValidationLayers)
         initDebugger();
 
-    if (m_surface == VK_NULL_HANDLE)
-        createSurface(window);
-
+    m_swapChain.createSurface(window);
     selectDevice(window);
     createLogicalDevice(window);
-    createSwapChain(window);
+    m_swapChain.init(window);
 
     createImageViews();
     createRenderPass();
@@ -198,11 +196,11 @@ void Renderer::draw(const Window& window)
     vkWaitForFences(m_context.device, 1, &m_vfInFlight[m_currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(m_context.device, m_swapChain, UINT64_MAX, m_vsImageAvailable[m_currentFrame],
+    VkResult result = vkAcquireNextImageKHR(m_context.device, m_swapChain.swapChain(), UINT64_MAX, m_vsImageAvailable[m_currentFrame],
                                             VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        recreateSwapChain(window);
+        m_swapChain.regenerate(window);
         return;
     }
 
@@ -236,6 +234,7 @@ void Renderer::draw(const Window& window)
         THROW("failed to submit draw command buffer!");
     }
 
+    //TODO: move below to swapchain
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -263,7 +262,7 @@ void Renderer::draw(const Window& window)
 
 void Renderer::clean()
 {
-    cleanSwapChain();
+    m_swapChain.clean();
 
     for (auto& buf : m_uniformBuffers)
         VK_DESTROY(buf, m_context.device, vkDestroyBuffer)
@@ -307,7 +306,7 @@ void Renderer::clean()
         m_context.device = VK_NULL_HANDLE;
     }
 
-    VK_DESTROY(m_surface, m_context.instance, vkDestroySurfaceKHR)
+    //VK_DESTROY(m_context.surface, m_context.instance, vkDestroySurfaceKHR)
 
     if (s_enableValidationLayers)
         VK_DESTROY(m_debugger, m_context.instance, DestroyDebugUtilsMessengerEXT)
@@ -396,152 +395,6 @@ bool Renderer::checkDeviceExtensionSupport(VkPhysicalDevice device)
     }
 
     return requiredExtensions.empty();
-}
-
-SwapChainSupportDetails Renderer::querySwapChainSupport(VkPhysicalDevice device, const Window& window)
-{
-    SwapChainSupportDetails details;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.capabilities);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, nullptr);
-
-    if (formatCount != 0) {
-        details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, details.formats.data());
-    }
-
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, nullptr);
-
-    if (presentModeCount != 0) {
-        details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, details.presentModes.data());
-    }
-
-    return details;
-}
-
-VkSurfaceFormatKHR Renderer::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
-{
-    for (const auto& availableFormat : availableFormats) {
-        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace ==
-            VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            return availableFormat;
-        }
-    }
-
-    return availableFormats[0];
-}
-
-VkPresentModeKHR Renderer::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
-{
-    if (m_forceVSync)
-        return VK_PRESENT_MODE_FIFO_KHR;
-
-    for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            return availablePresentMode;
-        }
-    }
-
-    return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-VkExtent2D Renderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window)
-{
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        return capabilities.currentExtent;
-    }
-
-    int width, height;
-    SDL_GetWindowSizeInPixels(window.getWindow(), &width, &height);
-
-    VkExtent2D actualExtent = {
-        static_cast<uint32_t>(width),
-        static_cast<uint32_t>(height)
-    };
-
-    actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
-                                    capabilities.maxImageExtent.width);
-    actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
-                                     capabilities.maxImageExtent.height);
-
-    return actualExtent;
-}
-
-void Renderer::createSwapChain(const Window& window)
-{
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(m_context.physicalDevice, window);
-
-    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-    VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
-
-    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-
-    if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
-        imageCount = swapChainSupport.capabilities.maxImageCount;
-    }
-
-    VkSwapchainCreateInfoKHR createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = m_surface;
-
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = surfaceFormat.format;
-    createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = presentMode;
-    createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
-
-    uint32_t queueFamilyIndices[] = {
-        m_context.familyIndices.graphicsFamily.value(),
-        m_context.familyIndices.presentFamily.value()
-    };
-
-    if (m_context.familyIndices.graphicsFamily != m_context.familyIndices.presentFamily) {
-        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = 2;
-        createInfo.pQueueFamilyIndices = queueFamilyIndices;
-    }
-    else {
-        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        createInfo.queueFamilyIndexCount = 0; // Optional
-        createInfo.pQueueFamilyIndices = nullptr; // Optional
-    }
-
-    if (vkCreateSwapchainKHR(m_context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
-        THROW("Could not create swapchain")
-    }
-
-    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, nullptr);
-    m_swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, m_swapChainImages.data());
-
-    m_swapChainExtent = extent;
-    m_swapChainImageFormat = surfaceFormat.format;
-}
-
-void Renderer::createSurface(const Window& window)
-{
-    if (!SDL_Vulkan_CreateSurface(window.getWindow(), m_context.instance, nullptr, &m_surface))
-        THROW("Could not create surface")
-}
-
-void Renderer::createImageViews()
-{
-    m_swapChainImageViews.resize(m_swapChainImages.size());
-
-    for (size_t i = 0; i < m_swapChainImages.size(); i++)
-        m_swapChainImageViews[i] = createImageView(m_context, m_swapChainImages[i], m_swapChainImageFormat, 1);
 }
 
 void Renderer::createDescriptorSetLayout()
@@ -916,17 +769,6 @@ void Renderer::createSyncObjects()
     }
 }
 
-void Renderer::createDepthBuffers()
-{
-    VkFormat depthFormat = findDepthFormat(m_context);
-    createImage(m_context, m_swapChainExtent.width, m_swapChainExtent.height, 1, depthFormat,
-                VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                m_depthImage, m_depthImageMemory);
-
-    m_depthImageView = createImageView(m_context, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
-}
-
 void Renderer::createTextureImage()
 {
     int texWidth, texHeight, texChannels;
@@ -1170,36 +1012,6 @@ void Renderer::createDescriptorSets()
 
         vkUpdateDescriptorSets(m_context.device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
     }
-}
-
-
-void Renderer::cleanSwapChain()
-{
-    vkDeviceWaitIdle(m_context.device);
-
-    for (auto& buf : m_swapChainFramebuffers) {
-        VK_DESTROY_F(buf, m_context.device, vkDestroyFramebuffer, nullptr)
-    }
-
-    for (auto& view : m_swapChainImageViews) {
-        VK_DESTROY_F(view, m_context.device, vkDestroyImageView, nullptr)
-    }
-
-    VK_DESTROY(m_depthImage, m_context.device, vkDestroyImage)
-    VK_DESTROY(m_depthImageView, m_context.device, vkDestroyImageView)
-    VK_DESTROY(m_depthImageMemory, m_context.device, vkFreeMemory)
-
-    VK_DESTROY_F(m_swapChain, m_context.device, vkDestroySwapchainKHR, nullptr)
-}
-
-void Renderer::recreateSwapChain(const Window& window)
-{
-    cleanSwapChain();
-
-    createSwapChain(window);
-    createImageViews();
-    createDepthBuffers();
-    createFrameBuffers();
 }
 
 void Renderer::updateUniformBuffer(uint32_t currentImage)

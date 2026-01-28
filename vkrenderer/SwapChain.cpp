@@ -8,10 +8,10 @@
 
 namespace Plunksna {
 
-void SwapChain::init(const Context& context, const Window& window)
-{
-    m_context = context;
+SwapChain::SwapChain(Context& context) : m_context(context) {}
 
+void SwapChain::init(const Window& window)
+{
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(window);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -54,16 +54,23 @@ void SwapChain::init(const Context& context, const Window& window)
         createInfo.pQueueFamilyIndices = nullptr; // Optional
     }
 
-    if (vkCreateSwapchainKHR(context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(m_context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
         THROW("Could not create swapchain")
     }
 
-    vkGetSwapchainImagesKHR(context.device, m_swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, nullptr);
     m_swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(context.device, m_swapChain, &imageCount, m_swapChainImages.data());
+    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, m_swapChainImages.data());
 
     m_swapChainExtent = extent;
     m_swapChainImageFormat = surfaceFormat.format;
+}
+
+void SwapChain::createSurface(const Window& window)
+{
+    if (m_surface == VK_NULL_HANDLE && !SDL_Vulkan_CreateSurface(window.getWindow(), m_context.instance, nullptr, &m_surface))
+        THROW("Could not create surface")
+
 }
 
 void SwapChain::clean()
@@ -82,7 +89,18 @@ void SwapChain::clean()
     VK_DESTROY(m_depthImageView, m_context.device, vkDestroyImageView)
     VK_DESTROY(m_depthImageMemory, m_context.device, vkFreeMemory)
 
+    VK_DESTROY(m_surface, m_context.instance, vkDestroySurfaceKHR)
     VK_DESTROY_F(m_swapChain, m_context.device, vkDestroySwapchainKHR, nullptr)
+}
+
+VkSwapchainKHR SwapChain::swapChain() const
+{
+    return m_swapChain;
+}
+
+VkSurfaceKHR SwapChain::surface() const
+{
+    return m_surface;
 }
 
 void SwapChain::createImageViews()
@@ -134,7 +152,7 @@ void SwapChain::regenerate(const Window& window)
 {
     clean();
 
-    init(m_context, window);
+    init(window);
     createImageViews();
     createDepthBuffers();
     createFrameBuffers();
