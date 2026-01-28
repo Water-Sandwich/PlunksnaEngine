@@ -28,9 +28,9 @@ public:
     SwapChain(const SwapChain&) = delete;
     SwapChain(SwapChain&&) = delete;
 
-    void init(VkDevice device, VkPhysicalDevice physicalDevice, const Window& window, QueueFamilyIndices families);
+    void init(const Context& context, const Window& window);
 
-    void regenerate(const Window& window, QueueFamilyIndices families);
+    void regenerate(const Window& window);
     void clean();
 
 private:
@@ -39,7 +39,7 @@ private:
     void createDepthBuffers();
     void createFrameBuffers();
 
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, const Window& window);
+    SwapChainSupportDetails querySwapChainSupport(const Window& window);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);

@@ -25,6 +25,12 @@ VkFormat findSupportedFormat(const Context& context, const std::vector<VkFormat>
                                        VkFormatFeatureFlags features);
 
 VkFormat findDepthFormat(const Context& context);
+
+void createImage(const Context& context, uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling,
+                 VkImageUsageFlags usage,
+                 VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+
+uint32_t findMemoryType(const Context& context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 }
 
 #endif //RENDERERINCLUDES_H

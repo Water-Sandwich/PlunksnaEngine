@@ -8,9 +8,11 @@
 
 namespace Plunksna {
 
-void SwapChain::init(VkDevice device, VkPhysicalDevice physicalDevice, const Window& window, QueueFamilyIndices families)
+void SwapChain::init(const Context& context, const Window& window)
 {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, window);
+    m_context = context;
+
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(window);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -52,13 +54,13 @@ void SwapChain::init(VkDevice device, VkPhysicalDevice physicalDevice, const Win
         createInfo.pQueueFamilyIndices = nullptr; // Optional
     }
 
-    if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
         THROW("Could not create swapchain")
     }
 
-    vkGetSwapchainImagesKHR(device, m_swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(context.device, m_swapChain, &imageCount, nullptr);
     m_swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(device, m_swapChain, &imageCount, m_swapChainImages.data());
+    vkGetSwapchainImagesKHR(context.device, m_swapChain, &imageCount, m_swapChainImages.data());
 
     m_swapChainExtent = extent;
     m_swapChainImageFormat = surfaceFormat.format;
@@ -95,46 +97,69 @@ void SwapChain::createDepthBuffers()
 {
     VkFormat depthFormat = findDepthFormat(m_context);
 
-    // createImage(m_swapChainExtent.width, m_swapChainExtent.height, 1, depthFormat,
-    //             VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-    //             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-    //             m_depthImage, m_depthImageMemory);
+    createImage(m_context, m_swapChainExtent.width, m_swapChainExtent.height, 1, depthFormat,
+                VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                m_depthImage, m_depthImageMemory);
 
     m_depthImageView = createImageView(m_context, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
-void SwapChain::createFrameBuffers() {}
+void SwapChain::createFrameBuffers()
+{
+    m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
 
-void SwapChain::regenerate(const Window& window, QueueFamilyIndices families)
+    for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
+        std::array<VkImageView, 2> attachments = {
+            m_swapChainImageViews[i],
+            m_depthImageView
+        };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = m_context.renderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = m_swapChainExtent.width;
+        framebufferInfo.height = m_swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(m_context.device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) != VK_SUCCESS) {
+            THROW("failed to create framebuffer!");
+        }
+    }
+}
+
+void SwapChain::regenerate(const Window& window)
 {
     clean();
 
-    init(m_context.device, m_context.physicalDevice, window, families);
+    init(m_context, window);
     createImageViews();
     createDepthBuffers();
     createFrameBuffers();
 }
 
-SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice device, const Window& window)
+SwapChainSupportDetails SwapChain::querySwapChainSupport(const Window& window)
 {
     SwapChainSupportDetails details;
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_context.physicalDevice, m_surface, &details.capabilities);
 
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(m_context.physicalDevice, m_surface, &formatCount, nullptr);
 
     if (formatCount != 0) {
         details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, details.formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(m_context.physicalDevice, m_surface, &formatCount, details.formats.data());
     }
 
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(m_context.physicalDevice, m_surface, &presentModeCount, nullptr);
 
     if (presentModeCount != 0) {
         details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, details.presentModes.data());
+        vkGetPhysicalDeviceSurfacePresentModesKHR(m_context.physicalDevice, m_surface, &presentModeCount, details.presentModes.data());
     }
 
     return details;

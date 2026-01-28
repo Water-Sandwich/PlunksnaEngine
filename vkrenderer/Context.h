@@ -27,6 +27,8 @@ struct Context
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
+    VkRenderPass renderPass = VK_NULL_HANDLE;
+
     QueueFamilyIndices familyIndices;
 };
 
