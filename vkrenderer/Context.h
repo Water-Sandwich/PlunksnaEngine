@@ -2,10 +2,11 @@
 // Created by d on 1/28/26.
 //
 
-#ifndef QUEUEFAMILYINDICES_H
-#define QUEUEFAMILYINDICES_H
+#ifndef CONTEXT_H
+#define CONTEXT_H
 
 #include <optional>
+#include <vulkan/vulkan_core.h>
 
 namespace Plunksna {
 
@@ -20,6 +21,15 @@ struct QueueFamilyIndices
     }
 };
 
+struct Context
+{
+    VkInstance instance = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
+    QueueFamilyIndices familyIndices;
+};
+
 }
 
-#endif //QUEUEFAMILYINDICES_H
+#endif //CONTEXT_H

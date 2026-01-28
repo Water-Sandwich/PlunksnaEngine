@@ -8,7 +8,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#include "QueueFamilyIndices.h"
+#include "Context.h"
 #include "Window.h"
 
 struct SwapChainSupportDetails
@@ -59,10 +59,7 @@ private:
     VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
     VkImageView m_depthImageView = VK_NULL_HANDLE;
 
-    QueueFamilyIndices m_familyIndices;
-
-    VkDevice m_device;
-    VkPhysicalDevice m_physicalDevice;
+    Context& m_context;
 
     bool m_forceVerticalSync = true;
 };

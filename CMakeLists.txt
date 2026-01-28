@@ -75,6 +75,7 @@ set(SOURCE_FILES
         vkrenderer/QueueFamilyIndices.h
         vkrenderer/RendererIncludes.h
         vkrenderer/RenderIncludes.cpp
+        vkrenderer/Context.h
 )
 
 add_executable(Plunksna ${SOURCE_FILES})

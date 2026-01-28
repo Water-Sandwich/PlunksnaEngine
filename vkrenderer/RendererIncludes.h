@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan_core.h>
 #include <vector>
+#include "Context.h"
 
 namespace Plunksna {
 
@@ -17,13 +18,13 @@ if(obj != VK_NULL_HANDLE){func(parent, obj, __VA_ARGS__);obj = VK_NULL_HANDLE;}
 
 constexpr Severity vkToPkSev(VkDebugUtilsMessageSeverityFlagBitsEXT vkSev);
 
-VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, uint32_t mipLevels = 1,
+VkImageView createImageView(const Context& context, VkImage image, VkFormat format, uint32_t mipLevels = 1,
                                    VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT);
 
-VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling,
+VkFormat findSupportedFormat(const Context& context, const std::vector<VkFormat>& candidates, VkImageTiling tiling,
                                        VkFormatFeatureFlags features);
 
-VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
+VkFormat findDepthFormat(const Context& context);
 }
 
 #endif //RENDERERINCLUDES_H

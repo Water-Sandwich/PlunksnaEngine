@@ -17,9 +17,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Context.h"
 #include "SwapChain.h"
 #include "Vertex.h"
-#include "QueueFamilyIndices.h"
 
 namespace Plunksna {
 #ifdef NDEBUG
@@ -148,12 +148,9 @@ private:
 
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
-    VkInstance m_instance = VK_NULL_HANDLE;
 
 private:
-    VkDevice m_device = VK_NULL_HANDLE;
-    VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
-    QueueFamilyIndices m_familyIndices;
+    Context m_context;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;

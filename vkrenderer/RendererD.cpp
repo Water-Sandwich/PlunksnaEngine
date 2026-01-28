@@ -50,7 +50,7 @@ void Renderer::initDebugger()
     createInfo.pfnUserCallback = debugCallback;
     createInfo.pUserData = nullptr;
 
-     if (CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugger) != VK_SUCCESS)
+     if (CreateDebugUtilsMessengerEXT(m_context.instance, &createInfo, nullptr, &m_debugger) != VK_SUCCESS)
          THROW("Failed to set up debugger")
 }
 

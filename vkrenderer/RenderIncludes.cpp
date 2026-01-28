@@ -21,7 +21,7 @@ constexpr Severity vkToPkSev(VkDebugUtilsMessageSeverityFlagBitsEXT vkSev)
     }
 }
 
-VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, uint32_t mipLevels,
+VkImageView createImageView(const Context& context, VkImage image, VkFormat format, uint32_t mipLevels,
                                    VkImageAspectFlags aspectFlags)
 {
     VkImageViewCreateInfo createInfo{};
@@ -40,19 +40,19 @@ VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, uin
 
     VkImageView view;
 
-    if (vkCreateImageView(device, &createInfo, nullptr, &view) != VK_SUCCESS) {
+    if (vkCreateImageView(context.device, &createInfo, nullptr, &view) != VK_SUCCESS) {
         THROW("Could not create image view")
     }
 
     return view;
 }
 
-VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, const std::vector<VkFormat>& candidates,
+VkFormat findSupportedFormat(const Context& context, const std::vector<VkFormat>& candidates,
     VkImageTiling tiling, VkFormatFeatureFlags features)
 {
     for (VkFormat format : candidates) {
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+        vkGetPhysicalDeviceFormatProperties(context.physicalDevice, format, &props);
 
         if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
             return format;
@@ -65,9 +65,9 @@ VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, const std::vector<
     THROW("Couldnt find a supported format")
 }
 
-VkFormat findDepthFormat(VkPhysicalDevice physicalDevice)
+VkFormat findDepthFormat(const Context& context)
 {
-    return findSupportedFormat(physicalDevice,
+    return findSupportedFormat(context,
         {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT

@@ -10,10 +10,6 @@ namespace Plunksna {
 
 void SwapChain::init(VkDevice device, VkPhysicalDevice physicalDevice, const Window& window, QueueFamilyIndices families)
 {
-    m_familyIndices = families;
-    m_device = device;
-    m_physicalDevice = physicalDevice;
-
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, window);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -43,9 +39,9 @@ void SwapChain::init(VkDevice device, VkPhysicalDevice physicalDevice, const Win
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    uint32_t queueFamilyIndices[] = {m_familyIndices.graphicsFamily.value(), m_familyIndices.presentFamily.value()};
+    uint32_t queueFamilyIndices[] = {m_context.familyIndices.graphicsFamily.value(), m_context.familyIndices.presentFamily.value()};
 
-    if (m_familyIndices.graphicsFamily != m_familyIndices.presentFamily) {
+    if (m_context.familyIndices.graphicsFamily != m_context.familyIndices.presentFamily) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         createInfo.queueFamilyIndexCount = 2;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -70,21 +66,21 @@ void SwapChain::init(VkDevice device, VkPhysicalDevice physicalDevice, const Win
 
 void SwapChain::clean()
 {
-    vkDeviceWaitIdle(m_device);
+    vkDeviceWaitIdle(m_context.device);
 
     for (auto& buf : m_swapChainFramebuffers) {
-        VK_DESTROY_F(buf, m_device, vkDestroyFramebuffer, nullptr)
+        VK_DESTROY_F(buf, m_context.device, vkDestroyFramebuffer, nullptr)
     }
 
     for (auto& view : m_swapChainImageViews) {
-        VK_DESTROY_F(view, m_device, vkDestroyImageView, nullptr)
+        VK_DESTROY_F(view, m_context.device, vkDestroyImageView, nullptr)
     }
 
-    VK_DESTROY(m_depthImage, m_device, vkDestroyImage)
-    VK_DESTROY(m_depthImageView, m_device, vkDestroyImageView)
-    VK_DESTROY(m_depthImageMemory, m_device, vkFreeMemory)
+    VK_DESTROY(m_depthImage, m_context.device, vkDestroyImage)
+    VK_DESTROY(m_depthImageView, m_context.device, vkDestroyImageView)
+    VK_DESTROY(m_depthImageMemory, m_context.device, vkFreeMemory)
 
-    VK_DESTROY_F(m_swapChain, m_device, vkDestroySwapchainKHR, nullptr)
+    VK_DESTROY_F(m_swapChain, m_context.device, vkDestroySwapchainKHR, nullptr)
 }
 
 void SwapChain::createImageViews()
@@ -92,18 +88,19 @@ void SwapChain::createImageViews()
     m_swapChainImageViews.resize(m_swapChainImages.size());
 
     for (size_t i = 0; i < m_swapChainImages.size(); i++)
-        m_swapChainImageViews[i] = createImageView(m_device, m_swapChainImages[i], m_swapChainImageFormat);
+        m_swapChainImageViews[i] = createImageView(m_context, m_swapChainImages[i], m_swapChainImageFormat);
 }
 
 void SwapChain::createDepthBuffers()
 {
-    VkFormat depthFormat = findDepthFormat(m_physicalDevice);
+    VkFormat depthFormat = findDepthFormat(m_context);
+
     // createImage(m_swapChainExtent.width, m_swapChainExtent.height, 1, depthFormat,
     //             VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     //             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     //             m_depthImage, m_depthImageMemory);
 
-    m_depthImageView = createImageView(m_device, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
+    m_depthImageView = createImageView(m_context, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
 void SwapChain::createFrameBuffers() {}
@@ -112,7 +109,7 @@ void SwapChain::regenerate(const Window& window, QueueFamilyIndices families)
 {
     clean();
 
-    init(m_device, m_physicalDevice, window, families);
+    init(m_context.device, m_context.physicalDevice, window, families);
     createImageViews();
     createDepthBuffers();
     createFrameBuffers();
