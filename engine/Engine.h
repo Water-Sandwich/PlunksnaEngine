@@ -13,7 +13,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Components.h"
-#include "VKRenderer.h"
+#include "Renderer.h"
 #include "Window.h"
 #include "../ecs/Registry.h"
 
@@ -40,7 +40,7 @@ private:
 
 private:
     Window m_window;
-    VKRenderer m_renderer;
+    Renderer m_renderer;
 
     TimePoint m_startTime;
     TimePoint m_lastTime;

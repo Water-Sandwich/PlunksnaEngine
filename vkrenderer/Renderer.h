@@ -20,7 +20,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Plunksna {
-
 #ifdef NDEBUG
 static const bool s_enableValidationLayers = false;
 #else
@@ -51,7 +50,8 @@ struct Vertex
     glm::vec3 color;
     glm::vec2 texCoord;
 
-    static VkVertexInputBindingDescription getBindingDescription(){
+    static VkVertexInputBindingDescription getBindingDescription()
+    {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 0;
         bindingDescription.stride = sizeof(Vertex);
@@ -60,7 +60,8 @@ struct Vertex
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
+    {
         std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
@@ -80,17 +81,18 @@ struct Vertex
         return attributeDescriptions;
     }
 
-    bool operator==(const Vertex& other) const {
+    bool operator==(const Vertex& other) const
+    {
         return pos == other.pos && color == other.color && texCoord == other.texCoord;
     }
 };
 
-struct UniformBufferObject {
+struct UniformBufferObject
+{
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
 };
-
 
 
 //===========================================
@@ -101,14 +103,15 @@ const std::filesystem::path g_workingPath = std::filesystem::current_path().pare
 const std::filesystem::path g_modelPath = g_workingPath / "models";
 const std::filesystem::path g_texturePath = g_workingPath / "textures";
 
-class VKRenderer {
+class Renderer
+{
 public:
     //=========BASE========
-    VKRenderer();
-    ~VKRenderer();
+    Renderer();
+    ~Renderer();
 
-    VKRenderer(const VKRenderer&) = delete;
-    VKRenderer(VKRenderer&&) = delete;
+    Renderer(const Renderer&) = delete;
+    Renderer(Renderer&&) = delete;
 
     VkInstance init(const Window& window);
     void draw(const Window& window);
@@ -183,22 +186,26 @@ private:
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
-        VkDeviceMemory& bufferMemory);
+                      VkDeviceMemory& bufferMemory);
 
-    VkCommandBuffer beginSingleTimeCommands() ;
+    VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
-    void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-        VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
-    VkImageView createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT);
+    void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling,
+                     VkImageUsageFlags usage,
+                     VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
+                               uint32_t mipLevels);
+    VkImageView createImageView(VkImage image, VkFormat format, uint32_t mipLevels,
+                                VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT);
     void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
     float getMaxAnisotropy();
 
-    VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+    VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
+                                 VkFormatFeatureFlags features);
     VkFormat findDepthFormat();
     bool hasStencil(VkFormat format);
 
@@ -292,7 +299,6 @@ private:
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);
 };
-
 } // Plunksna
 
 #endif //VKRENDERER_H

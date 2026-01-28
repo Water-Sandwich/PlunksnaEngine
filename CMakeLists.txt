@@ -66,8 +66,8 @@ set(SOURCE_FILES
         main.cpp
         ${SRC_FOLDERS}
         engine/Result.h
-        vkrenderer/VKRenderer.cpp
-        vkrenderer/VKRenderer.h
+        vkrenderer/Renderer.cpp
+        vkrenderer/Renderer.h
         vkrenderer/VKRendererD.cpp
 )
 

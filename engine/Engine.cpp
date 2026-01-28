@@ -8,7 +8,7 @@
 #include "Log.h"
 #include "Random.h"
 #include "Mouse.h"
-#include "VKRenderer.h"
+#include "Renderer.h"
 
 #include <iostream>
 #include <thread>

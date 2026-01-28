@@ -5,7 +5,7 @@
 // Created by d on 1/5/26.
 //
 
-#include "VKRenderer.h"
+#include "Renderer.h"
 
 #include <cstring>
 #include <SDL3/SDL_vulkan.h>
@@ -30,7 +30,7 @@ constexpr Severity vkToPkSev(VkDebugUtilsMessageSeverityFlagBitsEXT vkSev)
     }
 }
 
-VkBool32 VKRenderer::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+VkBool32 Renderer::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData)
 {
@@ -41,7 +41,7 @@ VkBool32 VKRenderer::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messag
     return VK_FALSE;
 }
 
-void VKRenderer::initDebugger()
+void Renderer::initDebugger()
 {
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -54,7 +54,7 @@ void VKRenderer::initDebugger()
          THROW("Failed to set up debugger")
 }
 
-void VKRenderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
+void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {
     createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -63,7 +63,7 @@ void VKRenderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInf
     createInfo.pfnUserCallback = debugCallback;
 }
 
-VkResult VKRenderer::CreateDebugUtilsMessengerEXT(VkInstance instance,
+VkResult Renderer::CreateDebugUtilsMessengerEXT(VkInstance instance,
                                                   const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator,
                                                   VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
@@ -75,7 +75,7 @@ VkResult VKRenderer::CreateDebugUtilsMessengerEXT(VkInstance instance,
     return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-void VKRenderer::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
+void Renderer::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
     const VkAllocationCallbacks* pAllocator)
 {
     if (m_debugger == VK_NULL_HANDLE) return;
