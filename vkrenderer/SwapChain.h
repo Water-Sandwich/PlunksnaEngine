@@ -23,6 +23,7 @@ public:
     SwapChain(const SwapChain&) = delete;
     SwapChain(SwapChain&&) = delete;
 
+    void createSurface(const Window& window);
     void init(const Context& context, const Window& window);
 
     void regenerate(const Window& window);
@@ -33,11 +34,6 @@ private:
     void createImageViews();
     void createDepthBuffers();
     void createFrameBuffers();
-
-    RenderUtils::SwapChainSupportDetails querySwapChainSupport(const Window& window);
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);
 
 private:
     Context& m_context;

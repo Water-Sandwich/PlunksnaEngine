@@ -12,14 +12,20 @@ using namespace Plunksna::RenderUtils;
 
 SwapChain::SwapChain(Context& context) : m_context(context) {}
 
+void SwapChain::createSurface(const Window& window)
+{
+    if (!SDL_Vulkan_CreateSurface(window.getWindow(), m_context.instance, nullptr, &m_surface))
+        THROW("Could not create surface")
+}
+
 void SwapChain::init(const Context& context, const Window& window)
 {
     m_context = context;
 
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(window);
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(context.physicalDevice, m_surface);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, m_forceVerticalSync);
     VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -74,13 +80,11 @@ void SwapChain::clean()
 {
     vkDeviceWaitIdle(m_context.device);
 
-    for (auto& buf : m_swapChainFramebuffers) {
+    for (auto& buf : m_swapChainFramebuffers)
         VK_DESTROY_F(buf, m_context.device, vkDestroyFramebuffer, nullptr)
-    }
 
-    for (auto& view : m_swapChainImageViews) {
+    for (auto& view : m_swapChainImageViews)
         VK_DESTROY_F(view, m_context.device, vkDestroyImageView, nullptr)
-    }
 
     VK_DESTROY(m_depthImage, m_context.device, vkDestroyImage)
     VK_DESTROY(m_depthImageView, m_context.device, vkDestroyImageView)
@@ -144,76 +148,4 @@ void SwapChain::regenerate(const Window& window)
     createFrameBuffers();
 }
 
-SwapChainSupportDetails SwapChain::querySwapChainSupport(const Window& window)
-{
-    SwapChainSupportDetails details;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_context.physicalDevice, m_surface, &details.capabilities);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(m_context.physicalDevice, m_surface, &formatCount, nullptr);
-
-    if (formatCount != 0) {
-        details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(m_context.physicalDevice, m_surface, &formatCount, details.formats.data());
-    }
-
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(m_context.physicalDevice, m_surface, &presentModeCount, nullptr);
-
-    if (presentModeCount != 0) {
-        details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(m_context.physicalDevice, m_surface, &presentModeCount, details.presentModes.data());
-    }
-
-    return details;
-}
-
-VkSurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
-{
-    for (const auto& availableFormat : availableFormats) {
-        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace ==
-            VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            return availableFormat;
-            }
-    }
-
-    return availableFormats[0];
-}
-
-VkPresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
-{
-    if (m_forceVerticalSync)
-        return VK_PRESENT_MODE_FIFO_KHR;
-
-    for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            return availablePresentMode;
-        }
-    }
-
-    return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window)
-{
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        return capabilities.currentExtent;
-    }
-
-    int width, height;
-    SDL_GetWindowSizeInPixels(window.getWindow(), &width, &height);
-
-    VkExtent2D actualExtent = {
-        static_cast<uint32_t>(width),
-        static_cast<uint32_t>(height)
-    };
-
-    actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
-                                    capabilities.maxImageExtent.width);
-    actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
-                                     capabilities.maxImageExtent.height);
-
-    return actualExtent;
-}
 } // Plunksna

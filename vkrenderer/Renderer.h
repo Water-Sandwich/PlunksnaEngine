@@ -170,8 +170,8 @@ private:
 
     //swapchain
     VkImage m_depthImage = VK_NULL_HANDLE;
-    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
     VkImageView m_depthImageView = VK_NULL_HANDLE;
+    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
 
     float m_queuePriority = 1.f;
     bool m_forceVSync = true;
