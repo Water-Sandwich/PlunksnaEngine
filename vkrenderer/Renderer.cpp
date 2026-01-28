@@ -29,37 +29,9 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-namespace std {
-template <>
-struct hash<Plunksna::Vertex>
-{
-    size_t operator()(Plunksna::Vertex const& vertex) const
-    {
-        return ((hash<glm::vec3>()(vertex.pos) ^
-                (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-            (hash<glm::vec2>()(vertex.texCoord) << 1);
-    }
-};
-}
+#include "RendererIncludes.h"
 
 namespace Plunksna {
-#define VK_DESTROY_F(obj, parent, func, ...) if(obj != VK_NULL_HANDLE){func(parent, obj, __VA_ARGS__);obj = VK_NULL_HANDLE;}
-
-#define VK_DESTROY(obj, parent, func) VK_DESTROY_F(obj, parent, func, nullptr)
-
-constexpr Severity vkToPkSev(VkDebugUtilsMessageSeverityFlagBitsEXT vkSev)
-{
-    switch (vkSev) {
-    default:
-        return Severity::eINFO;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        return Severity::eLETHAL;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        return Severity::eWARNING;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        return Severity::eVERBOSE;
-    }
-}
 
 std::vector<VkLayerProperties> Renderer::getLayers()
 {
@@ -566,7 +538,7 @@ void Renderer::createImageViews()
     m_swapChainImageViews.resize(m_swapChainImages.size());
 
     for (size_t i = 0; i < m_swapChainImages.size(); i++)
-        m_swapChainImageViews[i] = createImageView(m_swapChainImages[i], m_swapChainImageFormat, 1);
+        m_swapChainImageViews[i] = createImageView(m_device, m_swapChainImages[i], m_swapChainImageFormat, 1);
 }
 
 void Renderer::createDescriptorSetLayout()
@@ -822,7 +794,7 @@ void Renderer::createRenderPass()
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = findDepthFormat();
+    depthAttachment.format = findDepthFormat(m_physicalDevice);
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -943,13 +915,13 @@ void Renderer::createSyncObjects()
 
 void Renderer::createDepthBuffers()
 {
-    VkFormat depthFormat = findDepthFormat();
+    VkFormat depthFormat = findDepthFormat(m_physicalDevice);
     createImage(m_swapChainExtent.width, m_swapChainExtent.height, 1, depthFormat,
                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 m_depthImage, m_depthImageMemory);
 
-    m_depthImageView = createImageView(m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
+    m_depthImageView = createImageView(m_device, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
 void Renderer::createTextureImage()
@@ -994,7 +966,7 @@ void Renderer::createTextureImage()
 
 void Renderer::createTextureImageView()
 {
-    m_textureImageView = createImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, m_mipLevels);
+    m_textureImageView = createImageView(m_device, m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, m_mipLevels);
 }
 
 void Renderer::createTextureSampler()
@@ -1529,32 +1501,6 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
     endSingleTimeCommands(commandBuffer);
 }
 
-VkImageView Renderer::createImageView(VkImage image, VkFormat format, uint32_t mipLevels,
-                                      VkImageAspectFlags aspectFlags)
-{
-    VkImageViewCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    createInfo.image = image;
-
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = format;
-
-    createInfo.subresourceRange.aspectMask = aspectFlags;
-    createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = 1;
-    createInfo.subresourceRange.baseArrayLayer = 0;
-    createInfo.subresourceRange.layerCount = 1;
-    createInfo.subresourceRange.levelCount = mipLevels;
-
-    VkImageView view;
-
-    if (vkCreateImageView(m_device, &createInfo, nullptr, &view) != VK_SUCCESS) {
-        THROW("Could not create image view")
-    }
-
-    return view;
-}
-
 void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight,
                                uint32_t mipLevels)
 {
@@ -1649,33 +1595,6 @@ float Renderer::getMaxAnisotropy()
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(m_physicalDevice, &properties);
     return properties.limits.maxSamplerAnisotropy;
-}
-
-VkFormat Renderer::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
-                                       VkFormatFeatureFlags features)
-{
-    for (VkFormat format : candidates) {
-        VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &props);
-
-        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-            return format;
-        }
-        if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-            return format;
-        }
-    }
-
-    THROW("Couldnt find a supported format")
-}
-
-VkFormat Renderer::findDepthFormat()
-{
-    return findSupportedFormat(
-        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-    );
 }
 
 bool Renderer::hasStencil(VkFormat format)

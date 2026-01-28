@@ -68,7 +68,13 @@ set(SOURCE_FILES
         engine/Result.h
         vkrenderer/Renderer.cpp
         vkrenderer/Renderer.h
-        vkrenderer/VKRendererD.cpp
+        vkrenderer/RendererD.cpp
+        vkrenderer/SwapChain.cpp
+        vkrenderer/SwapChain.h
+        vkrenderer/Vertex.h
+        vkrenderer/QueueFamilyIndices.h
+        vkrenderer/RendererIncludes.h
+        vkrenderer/RenderIncludes.cpp
 )
 
 add_executable(Plunksna ${SOURCE_FILES})

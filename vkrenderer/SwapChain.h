@@ -1,0 +1,72 @@
+//
+// Created by d on 1/28/26.
+//
+
+#ifndef SWAPCHAIN_H
+#define SWAPCHAIN_H
+
+#include <vector>
+#include <vulkan/vulkan_core.h>
+
+#include "QueueFamilyIndices.h"
+#include "Window.h"
+
+struct SwapChainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+};
+
+namespace Plunksna {
+
+class SwapChain {
+public:
+    SwapChain() = default;
+    ~SwapChain() = default;
+
+    SwapChain(const SwapChain&) = delete;
+    SwapChain(SwapChain&&) = delete;
+
+    void init(VkDevice device, VkPhysicalDevice physicalDevice, const Window& window, QueueFamilyIndices families);
+
+    void regenerate(const Window& window, QueueFamilyIndices families);
+    void clean();
+
+private:
+
+    void createImageViews();
+    void createDepthBuffers();
+    void createFrameBuffers();
+
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, const Window& window);
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);
+
+private:
+    VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
+    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+
+    VkFormat m_swapChainImageFormat;
+    VkExtent2D m_swapChainExtent;
+
+    std::vector<VkImage> m_swapChainImages;
+    std::vector<VkImageView> m_swapChainImageViews;
+    std::vector<VkFramebuffer> m_swapChainFramebuffers;
+
+    VkImage m_depthImage = VK_NULL_HANDLE;
+    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
+    VkImageView m_depthImageView = VK_NULL_HANDLE;
+
+    QueueFamilyIndices m_familyIndices;
+
+    VkDevice m_device;
+    VkPhysicalDevice m_physicalDevice;
+
+    bool m_forceVerticalSync = true;
+};
+
+} // Plunksna
+
+#endif //SWAPCHAIN_H
