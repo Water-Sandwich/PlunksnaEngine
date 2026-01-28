@@ -4,14 +4,18 @@
 
 #include "SwapChain.h"
 #include "Exception.h"
-#include "RendererIncludes.h"
+#include "RendererUtils.h"
 
 namespace Plunksna {
 
+using namespace Plunksna::RenderUtils;
+
 SwapChain::SwapChain(Context& context) : m_context(context) {}
 
-void SwapChain::init(const Window& window)
+void SwapChain::init(const Context& context, const Window& window)
 {
+    m_context = context;
+
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(window);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -54,23 +58,16 @@ void SwapChain::init(const Window& window)
         createInfo.pQueueFamilyIndices = nullptr; // Optional
     }
 
-    if (vkCreateSwapchainKHR(m_context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
         THROW("Could not create swapchain")
     }
 
-    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(context.device, m_swapChain, &imageCount, nullptr);
     m_swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, m_swapChainImages.data());
+    vkGetSwapchainImagesKHR(context.device, m_swapChain, &imageCount, m_swapChainImages.data());
 
     m_swapChainExtent = extent;
     m_swapChainImageFormat = surfaceFormat.format;
-}
-
-void SwapChain::createSurface(const Window& window)
-{
-    if (m_surface == VK_NULL_HANDLE && !SDL_Vulkan_CreateSurface(window.getWindow(), m_context.instance, nullptr, &m_surface))
-        THROW("Could not create surface")
-
 }
 
 void SwapChain::clean()
@@ -89,18 +86,7 @@ void SwapChain::clean()
     VK_DESTROY(m_depthImageView, m_context.device, vkDestroyImageView)
     VK_DESTROY(m_depthImageMemory, m_context.device, vkFreeMemory)
 
-    VK_DESTROY(m_surface, m_context.instance, vkDestroySurfaceKHR)
     VK_DESTROY_F(m_swapChain, m_context.device, vkDestroySwapchainKHR, nullptr)
-}
-
-VkSwapchainKHR SwapChain::swapChain() const
-{
-    return m_swapChain;
-}
-
-VkSurfaceKHR SwapChain::surface() const
-{
-    return m_surface;
 }
 
 void SwapChain::createImageViews()
@@ -116,9 +102,9 @@ void SwapChain::createDepthBuffers()
     VkFormat depthFormat = findDepthFormat(m_context);
 
     createImage(m_context, m_swapChainExtent.width, m_swapChainExtent.height, 1, depthFormat,
-                VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                m_depthImage, m_depthImageMemory);
+                       VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                       m_depthImage, m_depthImageMemory);
 
     m_depthImageView = createImageView(m_context, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
@@ -152,7 +138,7 @@ void SwapChain::regenerate(const Window& window)
 {
     clean();
 
-    init(window);
+    init(m_context, window);
     createImageViews();
     createDepthBuffers();
     createFrameBuffers();

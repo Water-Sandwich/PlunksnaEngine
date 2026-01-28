@@ -9,14 +9,8 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Context.h"
+#include "RendererUtils.h"
 #include "Window.h"
-
-struct SwapChainSupportDetails
-{
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
 
 namespace Plunksna {
 
@@ -44,12 +38,14 @@ private:
     void createDepthBuffers();
     void createFrameBuffers();
 
-    SwapChainSupportDetails querySwapChainSupport(const Window& window);
+    RenderUtils::SwapChainSupportDetails querySwapChainSupport(const Window& window);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window);
 
 private:
+    Context& m_context;
+
     VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
@@ -61,10 +57,8 @@ private:
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
     VkImage m_depthImage = VK_NULL_HANDLE;
-    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
     VkImageView m_depthImageView = VK_NULL_HANDLE;
-
-    Context& m_context;
+    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
 
     bool m_forceVerticalSync = true;
 };

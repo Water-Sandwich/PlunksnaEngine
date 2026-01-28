@@ -18,6 +18,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Context.h"
+#include "FrameResource.h"
 #include "SwapChain.h"
 #include "Vertex.h"
 
@@ -74,53 +75,54 @@ private:
 
     void createInstance();
     void createLogicalDevice(const Window& window);
+
+    //swapchain
+    void createSwapChain(const Window& window);
+    void createSurface(const Window& window);
+    void recreateSwapChain(const Window& window);
     void createImageViews();
+    void createFrameBuffers();
+    void createDepthBuffers();
+    void cleanSwapChain();
 
     void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createRenderPass();
-    void createFrameBuffers();
 
     void createCommandPool();
+    void createDescriptorPools();
+
+    //frame resources
+    void createFrameResources();
     void createCommandBuffers();
     void createSyncObjects();
-
-    void createDepthBuffers();
-
-    void createTextureImage();
-    void createTextureImageView();
-    void createTextureSampler();
-
-    void loadModel();
-    void createVertexBuffer();
-    void createIndexBuffer();
     void createUniformBuffers();
-    void createDescriptorPools();
     void createDescriptorSets();
 
     void updateUniformBuffer(uint32_t currentImage);
 
-    std::vector<VkLayerProperties> getLayers();
-    std::vector<VkExtensionProperties> getExtensions();
-    std::vector<const char*> getRequiredExtensions();
-    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-    bool checkValidationLayers();
+    //textures
+    void createTextureImage();
+    void createTextureImageView();
+    void createTextureSampler();
 
+    //3d
+    void loadModel();
+    void createVertexBuffer();
+    void createIndexBuffer();
+
+    //init device
     void selectDevice(const Window& window);
-    std::vector<VkPhysicalDevice> getPhysicalDevices();
-    bool isDeviceSuitable(VkPhysicalDevice device, const Window& window);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, const Window& window);
+    bool isDeviceSuitable(VkPhysicalDevice device);
 
-    static std::vector<char> readFile(const std::string& filename);
-    VkShaderModule createShaderModule(const std::vector<char>& code);
-
+    //buffers and commands
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
                       VkDeviceMemory& bufferMemory);
 
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
@@ -128,36 +130,24 @@ private:
                                uint32_t mipLevels);
     void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
-    float getMaxAnisotropy();
-
-    bool hasStencil(VkFormat format);
-
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
 
 private:
     Context m_context;
-    SwapChain m_swapChain;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;
 
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
     VkCommandPool m_transientCommandPool = VK_NULL_HANDLE;
-    std::vector<VkCommandBuffer> m_commandBuffers;
 
     VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
 
-    std::vector<VkSemaphore> m_vsImageAvailable; //TODO: semaphores should belong to image, not frame
-    std::vector<VkSemaphore> m_vsRenderFinished;
-    std::vector<VkFence> m_vfInFlight;
-
-    VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
-    VkBuffer m_indexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
+    VkDescriptorPool m_descriptorPool;
+    std::vector<FrameResource> m_frameResources;
 
     VkImage m_textureImage;
     uint32_t m_mipLevels;
@@ -165,18 +155,36 @@ private:
     VkImageView m_textureImageView;
     VkSampler m_textureSampler;
 
-    VkDescriptorPool m_descriptorPool;
-    std::vector<VkDescriptorSet> m_descriptorSets;
-    std::vector<VkBuffer> m_uniformBuffers;
-    std::vector<VkDeviceMemory> m_uniformBuffersMemory;
-    std::vector<void*> m_uniformBuffersMapped;
+    //swapchain
+    VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
+    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+
+    //swapchain
+    VkFormat m_swapChainImageFormat;
+    VkExtent2D m_swapChainExtent;
+
+    //swapchain
+    std::vector<VkImage> m_swapChainImages;
+    std::vector<VkImageView> m_swapChainImageViews;
+    std::vector<VkFramebuffer> m_swapChainFramebuffers;
+
+    //swapchain
+    VkImage m_depthImage = VK_NULL_HANDLE;
+    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
+    VkImageView m_depthImageView = VK_NULL_HANDLE;
 
     float m_queuePriority = 1.f;
+    bool m_forceVSync = true;
 
     int m_maxInFlightFrames = 2;
     int m_currentFrame = 0;
 
     bool m_hasResized = false;
+
+    VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
+    VkBuffer m_indexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
 
     std::vector<Vertex> m_vertices;
     std::vector<uint32_t> m_indices;
