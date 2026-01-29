@@ -30,6 +30,9 @@ struct Context
     VkRenderPass renderPass = VK_NULL_HANDLE;
 
     QueueFamilyIndices familyIndices;
+
+    VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+    VkBool32 sampleShading = VK_TRUE;
 };
 
 }

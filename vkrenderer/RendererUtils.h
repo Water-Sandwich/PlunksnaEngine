@@ -44,8 +44,8 @@ VkFormat findSupportedFormat(const Context& context, const std::vector<VkFormat>
                             VkFormatFeatureFlags features);
 
 void createImage(const Context& context, uint32_t width, uint32_t height, uint32_t mipLevels,
-                VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,VkMemoryPropertyFlags properties,
-                VkImage& image, VkDeviceMemory& imageMemory);
+                VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
+                VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
 
 
 //extensions and layers
@@ -70,6 +70,8 @@ uint32_t findMemoryType(const Context& context, uint32_t typeFilter, VkMemoryPro
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 std::vector<VkPhysicalDevice> getPhysicalDevices(const Context& context);
+
+VkSampleCountFlagBits getMaxMSAA(VkPhysicalDevice device);
 
 //swapchain
 VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);

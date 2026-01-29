@@ -18,12 +18,12 @@ void SwapChain::createSurface(const Window& window)
         THROW("Could not create surface")
 }
 
-void SwapChain::init(const Window& window)
+void SwapChain::init(const Window& window, bool vSync)
 {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(m_context.physicalDevice, m_surface);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, m_forceVerticalSync);
+    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, vSync);
     VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -78,6 +78,7 @@ void SwapChain::initResources()
 {
     createImageViews();
     createDepthBuffers();
+    createSampledImage();
     createFrameBuffers();
 }
 
@@ -110,6 +111,10 @@ void SwapChain::clean()
     VK_DESTROY(m_depthImageView, m_context.device, vkDestroyImageView)
     VK_DESTROY(m_depthImageMemory, m_context.device, vkFreeMemory)
 
+    VK_DESTROY(m_colorImage, m_context.device, vkDestroyImage)
+    VK_DESTROY(m_colorImageView, m_context.device, vkDestroyImageView)
+    VK_DESTROY(m_colorImageMemory, m_context.device, vkFreeMemory)
+
     VK_DESTROY_F(m_swapChain, m_context.device, vkDestroySwapchainKHR, nullptr)
 }
 
@@ -118,7 +123,7 @@ void SwapChain::cleanSurface()
     VK_DESTROY(m_surface, m_context.instance, vkDestroySurfaceKHR)
 }
 
-VkResult SwapChain::fetch(const FrameResource& resource, uint32_t& imageIndex)
+VkResult SwapChain::fetch(const FrameResource& resource, uint32_t& imageIndex) const
 {
     return vkAcquireNextImageKHR(
         m_context.device, m_swapChain, UINT64_MAX,
@@ -177,10 +182,11 @@ void SwapChain::createDepthBuffers()
 {
     VkFormat depthFormat = findDepthFormat(m_context);
 
+    //TODO: dont msaa depth buffer?
     createImage(m_context, m_extent.width, m_extent.height, 1, depthFormat,
                        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                       m_depthImage, m_depthImageMemory);
+                       m_depthImage, m_depthImageMemory, m_context.msaaSamples);
 
     m_depthImageView = createImageView(m_context, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
@@ -190,9 +196,10 @@ void SwapChain::createFrameBuffers()
     m_framebuffers.resize(m_imageViews.size());
 
     for (size_t i = 0; i < m_imageViews.size(); i++) {
-        std::array<VkImageView, 2> attachments = {
+        std::array<VkImageView, 3> attachments = {
+            m_colorImageView,
+            m_depthImageView,
             m_imageViews[i],
-            m_depthImageView
         };
 
         VkFramebufferCreateInfo framebufferInfo{};
@@ -210,11 +217,20 @@ void SwapChain::createFrameBuffers()
     }
 }
 
-void SwapChain::regenerate(const Window& window)
+void SwapChain::createSampledImage()
+{
+    createImage(m_context, m_extent.width, m_extent.height, 1, m_imageFormat,
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_colorImage, m_colorImageMemory, m_context.msaaSamples);
+
+    m_colorImageView = createImageView(m_context, m_colorImage, m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+}
+
+void SwapChain::regenerate(const Window& window, bool vSync)
 {
     clean();
 
-    init(window);
+    init(window, vSync);
     initResources();
 }
 

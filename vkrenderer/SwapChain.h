@@ -25,19 +25,19 @@ public:
     SwapChain(SwapChain&&) = delete;
 
     void createSurface(const Window& window);
-    void init(const Window& window);
+    void init(const Window& window, bool vSync);
     void initResources();
 
     QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device) const;
     RenderUtils::SwapChainSupportDetails getSupport(VkPhysicalDevice device) const;
     VkFramebuffer getFrameBuffer(uint32_t index) const;
 
-    void regenerate(const Window& window);
+    void regenerate(const Window& window, bool vSync);
     void clean();
     void cleanSurface();
 
     //draw
-    VkResult fetch(const FrameResource& resource, uint32_t& imageIndex);
+    VkResult fetch(const FrameResource& resource, uint32_t& imageIndex) const;
     VkResult present(const FrameResource& resource, VkQueue presentQueue, uint32_t imageIndex);
 
     VkExtent2D extent() const;
@@ -50,6 +50,7 @@ private:
     void createImageViews();
     void createDepthBuffers();
     void createFrameBuffers();
+    void createSampledImage();
 
 private:
     Context& m_context;
@@ -68,7 +69,9 @@ private:
     VkImageView m_depthImageView = VK_NULL_HANDLE;
     VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
 
-    bool m_forceVerticalSync = true;
+    VkImage m_colorImage = VK_NULL_HANDLE;
+    VkImageView m_colorImageView = VK_NULL_HANDLE;
+    VkDeviceMemory m_colorImageMemory = VK_NULL_HANDLE;
 };
 
 } // Plunksna

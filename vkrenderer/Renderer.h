@@ -149,7 +149,7 @@ private:
     VkSampler m_textureSampler;
 
     float m_queuePriority = 1.f;
-    bool m_forceVSync = true;
+    bool m_verticalSync = true;
 
     int m_maxInFlightFrames = 2;
     int m_currentFrame = 0;
@@ -164,7 +164,6 @@ private:
 
     std::vector<Vertex> m_vertices;
     std::vector<uint32_t> m_indices;
-
 private:
     //=======DEBUG=========
 
