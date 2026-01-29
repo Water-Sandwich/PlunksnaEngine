@@ -135,6 +135,7 @@ public:
 
 private:
     Context m_context;
+    //SwapChain m_swapChain;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;
@@ -149,6 +150,7 @@ private:
     VkDescriptorPool m_descriptorPool;
     std::vector<FrameResource> m_frameResources;
 
+    //texture
     VkImage m_textureImage;
     uint32_t m_mipLevels;
     VkDeviceMemory m_textureImageMemory;
@@ -181,6 +183,7 @@ private:
 
     bool m_hasResized = false;
 
+    //model
     VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
     VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
     VkBuffer m_indexBuffer = VK_NULL_HANDLE;

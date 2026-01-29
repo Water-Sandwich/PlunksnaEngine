@@ -130,11 +130,13 @@ void Renderer::draw(const Window& window)
 {
     vkWaitForFences(m_context.device, 1, &m_frameResources[m_currentFrame].frameInFlightFence, VK_TRUE, UINT64_MAX);
 
+    //swap fetch
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(
         m_context.device, m_swapChain, UINT64_MAX,
         m_frameResources[m_currentFrame].imageAvailableSem,
         VK_NULL_HANDLE, &imageIndex);
+    //end
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         recreateSwapChain(window);
@@ -151,6 +153,7 @@ void Renderer::draw(const Window& window)
     recordCommandBuffer(m_frameResources[m_currentFrame].commandBuffer, imageIndex);
 
 
+    //swap submit
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -170,7 +173,9 @@ void Renderer::draw(const Window& window)
     if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_frameResources[m_currentFrame].frameInFlightFence) != VK_SUCCESS) {
         THROW("failed to submit draw command buffer!");
     }
+    //end
 
+    //swap present
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -184,6 +189,7 @@ void Renderer::draw(const Window& window)
     presentInfo.pResults = nullptr; // Optional
 
     result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
+    //end present
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_hasResized) {
         m_hasResized = false;

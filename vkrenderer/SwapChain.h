@@ -9,6 +9,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Context.h"
+#include "FrameResource.h"
 #include "RendererUtils.h"
 #include "Window.h"
 
@@ -16,7 +17,7 @@ namespace Plunksna {
 
 class SwapChain {
 public:
-    SwapChain(Context& context);
+    explicit SwapChain(Context& context);
     ~SwapChain() = default;
 
     SwapChain() = delete;
@@ -28,6 +29,10 @@ public:
 
     void regenerate(const Window& window);
     void clean();
+
+    //draw
+    VkResult fetch(const FrameResource& resource, uint32_t& imageIndex);
+    VkResult present(const FrameResource& resource, VkQueue presentQueue, uint32_t imageIndex);
 
 private:
 

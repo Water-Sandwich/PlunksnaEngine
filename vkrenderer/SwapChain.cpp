@@ -93,6 +93,33 @@ void SwapChain::clean()
     VK_DESTROY_F(m_swapChain, m_context.device, vkDestroySwapchainKHR, nullptr)
 }
 
+VkResult SwapChain::fetch(const FrameResource& resource, uint32_t& imageIndex)
+{
+    return vkAcquireNextImageKHR(
+        m_context.device, m_swapChain, UINT64_MAX,
+        resource.imageAvailableSem,
+        VK_NULL_HANDLE, &imageIndex);
+}
+
+VkResult SwapChain::present(const FrameResource& resource, VkQueue presentQueue, uint32_t imageIndex)
+{
+    VkSemaphore signalSemaphores[] = {resource.renderFinishedSem};
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = {m_swapChain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr; // Optional
+
+    return vkQueuePresentKHR(presentQueue, &presentInfo);
+}
+
 void SwapChain::createImageViews()
 {
     m_swapChainImageViews.resize(m_swapChainImages.size());
