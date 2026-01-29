@@ -155,7 +155,7 @@ void Renderer::draw(const Window& window)
         THROW("failed to submit draw command buffer!");
     }
 
-    result = m_swapChain.present(currentFrame, m_presentQueue, imageIndex);
+    result = m_swapChain.present(m_presentQueue, imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_hasResized) {
         m_hasResized = false;

@@ -66,7 +66,6 @@ void SwapChain::init(const Window& window, bool vSync)
         THROW("Could not create swapchain")
     }
 
-    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, nullptr);
     m_images.resize(imageCount);
     vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, m_images.data());
 
@@ -140,7 +139,7 @@ VkResult SwapChain::fetch(const FrameResource& resource, uint32_t& imageIndex) c
         VK_NULL_HANDLE, &imageIndex);
 }
 
-VkResult SwapChain::present(const FrameResource& resource, VkQueue presentQueue, uint32_t imageIndex)
+VkResult SwapChain::present(VkQueue presentQueue, uint32_t imageIndex)
 {
     VkSemaphore signalSemaphores[] = {m_renderFinished[imageIndex]};
 
