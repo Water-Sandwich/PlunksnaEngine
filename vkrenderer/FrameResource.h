@@ -21,7 +21,6 @@ struct FrameResource {
     VkDeviceMemory uniformBufferMemory = VK_NULL_HANDLE;
 
     VkSemaphore imageAvailableSem = VK_NULL_HANDLE;
-    VkSemaphore renderFinishedSem = VK_NULL_HANDLE;
     VkFence frameInFlightFence = VK_NULL_HANDLE;
 
     void destroyBuffers(const Context& context)
@@ -33,7 +32,6 @@ struct FrameResource {
     void destroySync(const Context& context)
     {
         VK_DESTROY(imageAvailableSem, context.device, vkDestroySemaphore)
-        VK_DESTROY(renderFinishedSem, context.device, vkDestroySemaphore)
         VK_DESTROY(frameInFlightFence, context.device, vkDestroyFence)
     }
 };

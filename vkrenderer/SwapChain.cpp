@@ -80,6 +80,7 @@ void SwapChain::initResources()
     createDepthBuffers();
     createSampledImage();
     createFrameBuffers();
+    createSemaphores();
 }
 
 QueueFamilyIndices SwapChain::getQueueFamilies(VkPhysicalDevice device) const
@@ -97,15 +98,23 @@ VkFramebuffer SwapChain::getFrameBuffer(uint32_t index) const
     return m_framebuffers[index];
 }
 
+VkSemaphore SwapChain::getRenderFinishedSemaphore(uint32_t index) const
+{
+    return m_renderFinished[index];
+}
+
 void SwapChain::clean()
 {
     vkDeviceWaitIdle(m_context.device);
 
     for (auto& buf : m_framebuffers)
-        VK_DESTROY_F(buf, m_context.device, vkDestroyFramebuffer, nullptr)
+        VK_DESTROY(buf, m_context.device, vkDestroyFramebuffer)
 
     for (auto& view : m_imageViews)
-        VK_DESTROY_F(view, m_context.device, vkDestroyImageView, nullptr)
+        VK_DESTROY(view, m_context.device, vkDestroyImageView)
+
+    for (auto& sem : m_renderFinished)
+        VK_DESTROY(sem, m_context.device, vkDestroySemaphore)
 
     VK_DESTROY(m_depthImage, m_context.device, vkDestroyImage)
     VK_DESTROY(m_depthImageView, m_context.device, vkDestroyImageView)
@@ -115,7 +124,7 @@ void SwapChain::clean()
     VK_DESTROY(m_colorImageView, m_context.device, vkDestroyImageView)
     VK_DESTROY(m_colorImageMemory, m_context.device, vkFreeMemory)
 
-    VK_DESTROY_F(m_swapChain, m_context.device, vkDestroySwapchainKHR, nullptr)
+    VK_DESTROY(m_swapChain, m_context.device, vkDestroySwapchainKHR)
 }
 
 void SwapChain::cleanSurface()
@@ -133,7 +142,7 @@ VkResult SwapChain::fetch(const FrameResource& resource, uint32_t& imageIndex) c
 
 VkResult SwapChain::present(const FrameResource& resource, VkQueue presentQueue, uint32_t imageIndex)
 {
-    VkSemaphore signalSemaphores[] = {resource.renderFinishedSem};
+    VkSemaphore signalSemaphores[] = {m_renderFinished[imageIndex]};
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -224,6 +233,19 @@ void SwapChain::createSampledImage()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_colorImage, m_colorImageMemory, m_context.msaaSamples);
 
     m_colorImageView = createImageView(m_context, m_colorImage, m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+}
+
+void SwapChain::createSemaphores()
+{
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    m_renderFinished.resize(m_images.size());
+
+    for (int i = 0; i < m_renderFinished.size(); i++) {
+        if (vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_renderFinished[i]) != VK_SUCCESS)
+            THROW("Could not create semaphore")
+    }
 }
 
 void SwapChain::regenerate(const Window& window, bool vSync)

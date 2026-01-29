@@ -32,7 +32,7 @@ struct Context
     QueueFamilyIndices familyIndices;
 
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-    VkBool32 sampleShading = VK_TRUE;
+    VkBool32 sampleShading = VK_FALSE;
 };
 
 }

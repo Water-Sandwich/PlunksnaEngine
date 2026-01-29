@@ -135,19 +135,19 @@ void Renderer::draw(const Window& window)
     vkResetCommandBuffer(currentFrame.commandBuffer, 0);
     recordCommandBuffer(currentFrame.commandBuffer, imageIndex);
 
+    VkSemaphore waitSemaphores[] = {currentFrame.imageAvailableSem};
+    VkSemaphore signalSemaphores[] = {m_swapChain.getRenderFinishedSemaphore(imageIndex)};
+
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {currentFrame.imageAvailableSem};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
-
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &currentFrame.commandBuffer;
+    submitInfo.pWaitDstStageMask = waitStages;
 
-    VkSemaphore signalSemaphores[] = {currentFrame.renderFinishedSem};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -553,9 +553,6 @@ void Renderer::createSyncObjects()
 
     for (int i = 0; i < m_maxInFlightFrames; i++) {
         if (vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_frameResources[i].imageAvailableSem) != VK_SUCCESS)
-            THROW("Could not create semaphore")
-
-        if (vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_frameResources[i].renderFinishedSem) != VK_SUCCESS)
             THROW("Could not create semaphore")
 
         if (vkCreateFence(m_context.device, &fenceInfo, nullptr, &m_frameResources[i].frameInFlightFence) != VK_SUCCESS)

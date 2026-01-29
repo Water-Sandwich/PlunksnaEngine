@@ -31,6 +31,7 @@ public:
     QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device) const;
     RenderUtils::SwapChainSupportDetails getSupport(VkPhysicalDevice device) const;
     VkFramebuffer getFrameBuffer(uint32_t index) const;
+    VkSemaphore getRenderFinishedSemaphore(uint32_t index) const;
 
     void regenerate(const Window& window, bool vSync);
     void clean();
@@ -51,6 +52,7 @@ private:
     void createDepthBuffers();
     void createFrameBuffers();
     void createSampledImage();
+    void createSemaphores();
 
 private:
     Context& m_context;
@@ -64,6 +66,7 @@ private:
     std::vector<VkImage> m_images;
     std::vector<VkImageView> m_imageViews;
     std::vector<VkFramebuffer> m_framebuffers;
+    std::vector<VkSemaphore> m_renderFinished;
 
     VkImage m_depthImage = VK_NULL_HANDLE;
     VkImageView m_depthImageView = VK_NULL_HANDLE;
