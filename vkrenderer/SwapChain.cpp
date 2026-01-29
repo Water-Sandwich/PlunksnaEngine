@@ -18,11 +18,9 @@ void SwapChain::createSurface(const Window& window)
         THROW("Could not create surface")
 }
 
-void SwapChain::init(const Context& context, const Window& window)
+void SwapChain::init(const Window& window)
 {
-    m_context = context;
-
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(context.physicalDevice, m_surface);
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(m_context.physicalDevice, m_surface);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, m_forceVerticalSync);
@@ -64,26 +62,48 @@ void SwapChain::init(const Context& context, const Window& window)
         createInfo.pQueueFamilyIndices = nullptr; // Optional
     }
 
-    if (vkCreateSwapchainKHR(context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(m_context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
         THROW("Could not create swapchain")
     }
 
-    vkGetSwapchainImagesKHR(context.device, m_swapChain, &imageCount, nullptr);
-    m_swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(context.device, m_swapChain, &imageCount, m_swapChainImages.data());
+    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, nullptr);
+    m_images.resize(imageCount);
+    vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, m_images.data());
 
-    m_swapChainExtent = extent;
-    m_swapChainImageFormat = surfaceFormat.format;
+    m_extent = extent;
+    m_imageFormat = surfaceFormat.format;
+}
+
+void SwapChain::initResources()
+{
+    createImageViews();
+    createDepthBuffers();
+    createFrameBuffers();
+}
+
+QueueFamilyIndices SwapChain::getQueueFamilies(VkPhysicalDevice device) const
+{
+    return RenderUtils::findQueueFamilies(device, m_surface);
+}
+
+SwapChainSupportDetails SwapChain::getSupport(VkPhysicalDevice device) const
+{
+    return querySwapChainSupport(device, m_surface);
+}
+
+VkFramebuffer SwapChain::getFrameBuffer(uint32_t index) const
+{
+    return m_framebuffers[index];
 }
 
 void SwapChain::clean()
 {
     vkDeviceWaitIdle(m_context.device);
 
-    for (auto& buf : m_swapChainFramebuffers)
+    for (auto& buf : m_framebuffers)
         VK_DESTROY_F(buf, m_context.device, vkDestroyFramebuffer, nullptr)
 
-    for (auto& view : m_swapChainImageViews)
+    for (auto& view : m_imageViews)
         VK_DESTROY_F(view, m_context.device, vkDestroyImageView, nullptr)
 
     VK_DESTROY(m_depthImage, m_context.device, vkDestroyImage)
@@ -91,6 +111,11 @@ void SwapChain::clean()
     VK_DESTROY(m_depthImageMemory, m_context.device, vkFreeMemory)
 
     VK_DESTROY_F(m_swapChain, m_context.device, vkDestroySwapchainKHR, nullptr)
+}
+
+void SwapChain::cleanSurface()
+{
+    VK_DESTROY(m_surface, m_context.instance, vkDestroySurfaceKHR)
 }
 
 VkResult SwapChain::fetch(const FrameResource& resource, uint32_t& imageIndex)
@@ -120,19 +145,39 @@ VkResult SwapChain::present(const FrameResource& resource, VkQueue presentQueue,
     return vkQueuePresentKHR(presentQueue, &presentInfo);
 }
 
+VkExtent2D SwapChain::extent() const
+{
+    return m_extent;
+}
+
+int SwapChain::width() const
+{
+    return m_extent.width;
+}
+
+int SwapChain::height() const
+{
+    return m_extent.height;
+}
+
+VkFormat SwapChain::format() const
+{
+    return m_imageFormat;
+}
+
 void SwapChain::createImageViews()
 {
-    m_swapChainImageViews.resize(m_swapChainImages.size());
+    m_imageViews.resize(m_images.size());
 
-    for (size_t i = 0; i < m_swapChainImages.size(); i++)
-        m_swapChainImageViews[i] = createImageView(m_context, m_swapChainImages[i], m_swapChainImageFormat);
+    for (size_t i = 0; i < m_images.size(); i++)
+        m_imageViews[i] = createImageView(m_context, m_images[i], m_imageFormat);
 }
 
 void SwapChain::createDepthBuffers()
 {
     VkFormat depthFormat = findDepthFormat(m_context);
 
-    createImage(m_context, m_swapChainExtent.width, m_swapChainExtent.height, 1, depthFormat,
+    createImage(m_context, m_extent.width, m_extent.height, 1, depthFormat,
                        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                        m_depthImage, m_depthImageMemory);
@@ -142,11 +187,11 @@ void SwapChain::createDepthBuffers()
 
 void SwapChain::createFrameBuffers()
 {
-    m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
+    m_framebuffers.resize(m_imageViews.size());
 
-    for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
+    for (size_t i = 0; i < m_imageViews.size(); i++) {
         std::array<VkImageView, 2> attachments = {
-            m_swapChainImageViews[i],
+            m_imageViews[i],
             m_depthImageView
         };
 
@@ -155,11 +200,11 @@ void SwapChain::createFrameBuffers()
         framebufferInfo.renderPass = m_context.renderPass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = m_swapChainExtent.width;
-        framebufferInfo.height = m_swapChainExtent.height;
+        framebufferInfo.width = m_extent.width;
+        framebufferInfo.height = m_extent.height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(m_context.device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) != VK_SUCCESS) {
+        if (vkCreateFramebuffer(m_context.device, &framebufferInfo, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
             THROW("failed to create framebuffer!");
         }
     }
@@ -169,10 +214,8 @@ void SwapChain::regenerate(const Window& window)
 {
     clean();
 
-    init(m_context, window);
-    createImageViews();
-    createDepthBuffers();
-    createFrameBuffers();
+    init(window);
+    initResources();
 }
 
 } // Plunksna

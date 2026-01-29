@@ -26,6 +26,7 @@ struct SwapChainSupportDetails
     std::vector<VkPresentModeKHR> presentModes;
 };
 
+
 //==========================
 //==========HELPER FUNCTIONS
 //==========================

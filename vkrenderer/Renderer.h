@@ -76,15 +76,6 @@ private:
     void createInstance();
     void createLogicalDevice(const Window& window);
 
-    //swapchain
-    void createSwapChain(const Window& window);
-    void createSurface(const Window& window);
-    void recreateSwapChain(const Window& window);
-    void createImageViews();
-    void createFrameBuffers();
-    void createDepthBuffers();
-    void cleanSwapChain();
-
     void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createRenderPass();
@@ -135,7 +126,7 @@ public:
 
 private:
     Context m_context;
-    //SwapChain m_swapChain;
+    SwapChain m_swapChain;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;
@@ -156,24 +147,6 @@ private:
     VkDeviceMemory m_textureImageMemory;
     VkImageView m_textureImageView;
     VkSampler m_textureSampler;
-
-    //swapchain
-    VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
-    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-
-    //swapchain
-    VkFormat m_swapChainImageFormat;
-    VkExtent2D m_swapChainExtent;
-
-    //swapchain
-    std::vector<VkImage> m_swapChainImages;
-    std::vector<VkImageView> m_swapChainImageViews;
-    std::vector<VkFramebuffer> m_swapChainFramebuffers;
-
-    //swapchain
-    VkImage m_depthImage = VK_NULL_HANDLE;
-    VkImageView m_depthImageView = VK_NULL_HANDLE;
-    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
 
     float m_queuePriority = 1.f;
     bool m_forceVSync = true;
