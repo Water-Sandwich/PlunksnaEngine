@@ -44,14 +44,9 @@ VkFormat findDepthFormat(const Context& context);
 VkFormat findSupportedFormat(const Context& context, const std::vector<VkFormat>& candidates, VkImageTiling tiling,
                             VkFormatFeatureFlags features);
 
-//[[deprecated]]
-void createImage(const Context& context, uint32_t width, uint32_t height, uint32_t mipLevels,
-                VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
-
 void createImage(const Context& context, Image& image, uint32_t width, uint32_t height, uint32_t mipLevels,
                 VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-                VkSampleCountFlagBits numSamples, VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+                VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
 
 
 //extensions and layers

@@ -28,7 +28,7 @@ namespace Plunksna {
 #ifdef NDEBUG
 static const bool s_enableValidationLayers = false;
 #else
-static const bool s_enableValidationLayers = false;
+static const bool s_enableValidationLayers = true;
 #endif
 
 
@@ -148,10 +148,17 @@ private:
     VkDescriptorPool m_descriptorPool;
     std::vector<FrameResource> m_frameResources;
 
+    //TODO: make models and textures managed by an asset manager
+    //model
+    Buffer m_vertexBuffer;
+    Buffer m_indexBuffer;
+
+    std::vector<Vertex> m_vertices;
+    std::vector<uint32_t> m_indices;
+
     //texture
-    VkImage m_textureImage;
+    Image m_textureImage;
     uint32_t m_mipLevels;
-    VkDeviceMemory m_textureImageMemory;
     VkImageView m_textureImageView;
     VkSampler m_textureSampler;
 
@@ -163,12 +170,6 @@ private:
 
     bool m_hasResized = false;
 
-    //model
-    Buffer m_vertexBuffer;
-    Buffer m_indexBuffer;
-
-    std::vector<Vertex> m_vertices;
-    std::vector<uint32_t> m_indices;
 private:
     //=======DEBUG=========
 

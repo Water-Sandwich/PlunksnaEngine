@@ -186,8 +186,7 @@ void Renderer::clean()
 
     VK_DESTROY(m_textureSampler, m_context.device, vkDestroySampler)
     VK_DESTROY(m_textureImageView, m_context.device, vkDestroyImageView)
-    VK_DESTROY(m_textureImage, m_context.device, vkDestroyImage);
-    VK_DESTROY(m_textureImageMemory, m_context.device, vkFreeMemory);
+    m_textureImage.destroy(m_context);
 
     VK_DESTROY(m_descriptorPool, m_context.device, vkDestroyDescriptorPool)
     VK_DESTROY(m_descriptorSetLayout, m_context.device, vkDestroyDescriptorSetLayout)
@@ -581,24 +580,27 @@ void Renderer::createTextureImage()
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
     stbi_image_free(pixels);
 
-    createImage(m_context, texWidth, texHeight, m_mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
+    // createImage(m_context, texWidth, texHeight, m_mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+    //             VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    //             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
 
-    transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+    createImage(m_context, m_textureImage, texWidth, texHeight, m_mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    transitionImageLayout(m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_mipLevels);
 
-    copyBufferToImage(stagingBuffer.buffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    copyBufferToImage(stagingBuffer.buffer, m_textureImage.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
     //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
 
     stagingBuffer.destroy(m_context);
 
-    generateMipMaps(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, m_mipLevels);
+    generateMipMaps(m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, m_mipLevels);
 }
 
 void Renderer::createTextureImageView()
 {
-    m_textureImageView = createImageView(m_context, m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, m_mipLevels);
+    m_textureImageView = createImageView(m_context, m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, m_mipLevels);
 }
 
 void Renderer::createTextureSampler()
@@ -695,7 +697,7 @@ void Renderer::createIndexBuffer()
 
     memcpy(data, m_indices.data(), (size_t)bufferSize);
 
-    createBuffer(m_indexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    createBuffer(m_indexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
     endAndCopyStagingBuffer(stagingBuffer, m_indexBuffer, bufferSize);

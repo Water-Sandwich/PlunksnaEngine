@@ -10,6 +10,7 @@
 
 namespace Plunksna {
 
+//an image in device memory
 struct Image
 {
     VkImage image            = VK_NULL_HANDLE;

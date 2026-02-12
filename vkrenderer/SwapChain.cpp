@@ -188,7 +188,8 @@ void SwapChain::createDepthBuffers()
     VkFormat depthFormat = findDepthFormat(m_context);
 
     createImage(m_context, m_depthImage, m_extent.width, m_extent.height, 1, depthFormat,
-        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, m_context.msaaSamples);
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, m_context.msaaSamples);
 
     m_depthImageView = createImageView(m_context, m_depthImage.image, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
@@ -221,7 +222,8 @@ void SwapChain::createFrameBuffers()
 void SwapChain::createSampledImage()
 {
     createImage(m_context, m_colorImage, m_extent.width, m_extent.height, 1, m_imageFormat, VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, m_context.msaaSamples);
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, m_context.msaaSamples);
 
     m_colorImageView = createImageView(m_context, m_colorImage.image, m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
