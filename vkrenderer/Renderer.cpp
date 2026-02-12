@@ -203,8 +203,10 @@ void Renderer::clean()
     for (auto& rec : m_frameResources)
         rec.destroySync(m_context);
 
-    VK_DESTROY(m_vertexBuffer, m_context.device, vkDestroyBuffer)
-    VK_DESTROY(m_vertexBufferMemory, m_context.device, vkFreeMemory)
+    //VK_DESTROY(m_vertexBuffer, m_context.device, vkDestroyBuffer)
+    //VK_DESTROY(m_vertexBufferMemory, m_context.device, vkFreeMemory)
+
+    m_vertexBuffer.destroy(m_context);
 
     VK_DESTROY(m_indexBuffer, m_context.device, vkDestroyBuffer)
     VK_DESTROY(m_indexBufferMemory, m_context.device, vkFreeMemory)
@@ -681,24 +683,37 @@ void Renderer::createVertexBuffer()
 {
     VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                 stagingBuffer, stagingBufferMemory);
+    // VkBuffer stagingBuffer;
+    // VkDeviceMemory stagingBufferMemory;
+    // createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    //              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    //              stagingBuffer, stagingBufferMemory);
+
+    Buffer stagingBuffer;
+    createBuffer(stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void* data;
-    vkMapMemory(m_context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    // vkMapMemory(m_context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    // memcpy(data, m_vertices.data(), (size_t)bufferSize);
+    // vkUnmapMemory(m_context.device, stagingBufferMemory);
+
+    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
     memcpy(data, m_vertices.data(), (size_t)bufferSize);
-    vkUnmapMemory(m_context.device, stagingBufferMemory);
+    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer, m_vertexBufferMemory);
+    // createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    //              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer, m_vertexBufferMemory);
 
-    copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
+    createBuffer(m_vertexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
-    vkDestroyBuffer(m_context.device, stagingBuffer, nullptr);
-    vkFreeMemory(m_context.device, stagingBufferMemory, nullptr);
+    copyBuffer(stagingBuffer.buffer, m_vertexBuffer.buffer, bufferSize);
+
+    // vkDestroyBuffer(m_context.device, stagingBuffer, nullptr);
+    // vkFreeMemory(m_context.device, stagingBufferMemory, nullptr);
+
+    stagingBuffer.destroy(m_context);
 }
 
 void Renderer::createIndexBuffer()
@@ -875,7 +890,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 
-    VkBuffer vertexBuffers[] = {m_vertexBuffer};
+    VkBuffer vertexBuffers[] = {m_vertexBuffer.buffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
@@ -932,6 +947,31 @@ void Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemor
         "failed to allocate buffer memory!")
 
     vkBindBufferMemory(m_context.device, buffer, bufferMemory, 0);
+}
+
+void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags)
+{
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = memoryUsage;
+    allocInfo.flags = flags;
+
+    ASSERT_V(
+        vmaCreateBuffer(
+            m_context.allocator,
+            &bufferInfo,
+            &allocInfo,
+            &buffer.buffer,
+            &buffer.allocation,
+            nullptr
+        ),
+        "failed to create buffer!"
+    );
 }
 
 VkCommandBuffer Renderer::beginSingleTimeCommands()

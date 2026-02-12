@@ -112,6 +112,41 @@ void createImage(const Context& context, uint32_t width, uint32_t height, uint32
     vkBindImageMemory(context.device, image, imageMemory, 0);
 }
 
+void createImage(const Context& context, uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format,
+    VkImageTiling tiling, VkImageUsageFlags usage, Image& image,
+    VkSampleCountFlagBits numSamples, VmaMemoryUsage memoryUsage)
+{
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = mipLevels;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = usage;
+    imageInfo.samples = numSamples;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = memoryUsage;
+
+    ASSERT_V(
+        vmaCreateImage(
+            context.allocator,
+            &imageInfo,
+            &allocInfo,
+            &image.image,
+            &image.allocation,
+            nullptr
+        ),
+        "failed to create image with VMA!"
+    );
+}
+
 uint32_t findMemoryType(const Context& context, uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;

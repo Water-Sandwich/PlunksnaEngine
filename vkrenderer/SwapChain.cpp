@@ -114,13 +114,11 @@ void SwapChain::clean()
     for (auto& sem : m_renderFinished)
         VK_DESTROY(sem, m_context.device, vkDestroySemaphore)
 
-    VK_DESTROY(m_depthImage, m_context.device, vkDestroyImage)
     VK_DESTROY(m_depthImageView, m_context.device, vkDestroyImageView)
-    VK_DESTROY(m_depthImageMemory, m_context.device, vkFreeMemory)
+    m_depthImage.destroy(m_context);
 
-    VK_DESTROY(m_colorImage, m_context.device, vkDestroyImage)
     VK_DESTROY(m_colorImageView, m_context.device, vkDestroyImageView)
-    VK_DESTROY(m_colorImageMemory, m_context.device, vkFreeMemory)
+    m_colorImage.destroy(m_context);
 
     VK_DESTROY(m_swapChain, m_context.device, vkDestroySwapchainKHR)
 }
@@ -190,11 +188,9 @@ void SwapChain::createDepthBuffers()
     VkFormat depthFormat = findDepthFormat(m_context);
 
     createImage(m_context, m_extent.width, m_extent.height, 1, depthFormat,
-                       VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                       m_depthImage, m_depthImageMemory, m_context.msaaSamples);
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, m_depthImage, m_context.msaaSamples);
 
-    m_depthImageView = createImageView(m_context, m_depthImage, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
+    m_depthImageView = createImageView(m_context, m_depthImage.image, depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
 void SwapChain::createFrameBuffers()
@@ -224,11 +220,11 @@ void SwapChain::createFrameBuffers()
 
 void SwapChain::createSampledImage()
 {
-    createImage(m_context, m_extent.width, m_extent.height, 1, m_imageFormat,
-        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_colorImage, m_colorImageMemory, m_context.msaaSamples);
+    createImage(m_context, m_extent.width, m_extent.height, 1, m_imageFormat, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        m_colorImage, m_context.msaaSamples);
 
-    m_colorImageView = createImageView(m_context, m_colorImage, m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    m_colorImageView = createImageView(m_context, m_colorImage.image, m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 
 void SwapChain::createSemaphores()

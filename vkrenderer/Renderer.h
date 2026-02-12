@@ -22,6 +22,7 @@
 #include "FrameResource.h"
 #include "SwapChain.h"
 #include "Vertex.h"
+#include "Buffer.h"
 
 namespace Plunksna {
 #ifdef NDEBUG
@@ -110,8 +111,12 @@ private:
 
     //buffers and commands
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+    //[[deprecated]]
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
                       VkDeviceMemory& bufferMemory);
+
+    void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = {});
 
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
@@ -159,10 +164,12 @@ private:
     bool m_hasResized = false;
 
     //model
-    VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
+    //VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
+    //VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
     VkBuffer m_indexBuffer = VK_NULL_HANDLE;
     VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
+
+    Buffer m_vertexBuffer;
 
     std::vector<Vertex> m_vertices;
     std::vector<uint32_t> m_indices;

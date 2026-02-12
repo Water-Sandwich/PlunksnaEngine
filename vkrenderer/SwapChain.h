@@ -12,6 +12,7 @@
 #include "FrameResource.h"
 #include "RendererUtils.h"
 #include "Window.h"
+#include "Image.h"
 
 namespace Plunksna {
 
@@ -45,6 +46,7 @@ public:
     RenderUtils::SwapChainSupportDetails getSupport(VkPhysicalDevice device) const;
     VkFramebuffer getFrameBuffer(uint32_t index) const;
     VkSemaphore getRenderFinishedSemaphore(uint32_t index) const;
+
 private:
     void createImageViews();
     void createDepthBuffers();
@@ -66,13 +68,11 @@ private:
     std::vector<VkFramebuffer> m_framebuffers;
     std::vector<VkSemaphore> m_renderFinished;
 
-    VkImage m_depthImage = VK_NULL_HANDLE;
+    Image m_depthImage;
     VkImageView m_depthImageView = VK_NULL_HANDLE;
-    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
 
-    VkImage m_colorImage = VK_NULL_HANDLE;
+    Image m_colorImage;
     VkImageView m_colorImageView = VK_NULL_HANDLE;
-    VkDeviceMemory m_colorImageMemory = VK_NULL_HANDLE;
 };
 
 } // Plunksna

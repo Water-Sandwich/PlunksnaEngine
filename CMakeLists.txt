@@ -75,6 +75,8 @@ set(SOURCE_FILES
         main.cpp
         ${SRC_FOLDERS}
         assethandler/Mesh.h
+        vkrenderer/Image.h
+        vkrenderer/Buffer.h
 )
 
 add_executable(Plunksna ${SOURCE_FILES})
