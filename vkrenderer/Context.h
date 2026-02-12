@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <vulkan/vulkan_core.h>
+#include <vk_mem_alloc.h>
 
 namespace Plunksna {
 
@@ -24,6 +25,7 @@ struct QueueFamilyIndices
 struct Context
 {
     VkInstance instance = VK_NULL_HANDLE;
+    VmaAllocator allocator;
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 

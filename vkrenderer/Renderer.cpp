@@ -4,6 +4,9 @@
 
 #include "Renderer.h"
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 #include <cstring>
 #include <vulkan/vk_enum_string_helper.h>
 #include <set>
@@ -42,8 +45,7 @@ Renderer::~Renderer()
 
 void Renderer::createInstance()
 {
-    if (!checkValidationLayers(s_validationLayers))
-        THROW("Could not find validation layers")
+    ASSERT(checkValidationLayers(s_validationLayers), "Could not find validation layers")
 
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -79,8 +81,17 @@ void Renderer::createInstance()
     if (result != VK_SUCCESS) {
         THROW(string_VkResult(result))
     }
+}
 
-    getPhysicalDevices(m_context);
+void Renderer::createAllocator()
+{
+    VmaAllocatorCreateInfo allocatorCreateInfo = {};
+    allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_4;
+    allocatorCreateInfo.physicalDevice = m_context.physicalDevice;
+    allocatorCreateInfo.device = m_context.device;
+    allocatorCreateInfo.instance = m_context.instance;
+
+    vmaCreateAllocator(&allocatorCreateInfo, &m_context.allocator);
 }
 
 VkInstance Renderer::init(const Window& window)
@@ -95,6 +106,7 @@ VkInstance Renderer::init(const Window& window)
 
     selectDevice(window);
     createLogicalDevice(window);
+    createAllocator();
     m_swapChain.init(window, m_verticalSync);
 
     createRenderPass();
@@ -126,8 +138,7 @@ void Renderer::draw(const Window& window)
     uint32_t imageIndex;
     VkResult result = m_swapChain.fetch(currentFrame, imageIndex);
 
-    if (result != VK_SUCCESS)
-        THROW("Could not recreate swapchain")
+    ASSERT_V(result, "Could not recreate swapchain")
 
     updateUniformBuffer(m_currentFrame);
 
@@ -151,9 +162,7 @@ void Renderer::draw(const Window& window)
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, currentFrame.frameInFlightFence) != VK_SUCCESS) {
-        THROW("failed to submit draw command buffer!");
-    }
+    ASSERT_V(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, currentFrame.frameInFlightFence), "failed to submit draw command buffer!")
 
     result = m_swapChain.present(m_presentQueue, imageIndex);
 
@@ -200,6 +209,8 @@ void Renderer::clean()
     VK_DESTROY(m_indexBuffer, m_context.device, vkDestroyBuffer)
     VK_DESTROY(m_indexBufferMemory, m_context.device, vkFreeMemory)
 
+    vmaDestroyAllocator(m_context.allocator);
+
     if (m_context.device != VK_NULL_HANDLE) {
         vkDestroyDevice(m_context.device, nullptr);
         m_context.device = VK_NULL_HANDLE;
@@ -231,8 +242,7 @@ void Renderer::selectDevice(const Window& window)
         }
     }
 
-    if (m_context.physicalDevice == VK_NULL_HANDLE)
-        THROW("Failed to find suitable GPU")
+    ASSERT(m_context.physicalDevice != VK_NULL_HANDLE, "Failed to find suitable GPU")
 }
 
 void Renderer::createDescriptorSetLayout()
@@ -257,9 +267,8 @@ void Renderer::createDescriptorSetLayout()
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    if (vkCreateDescriptorSetLayout(m_context.device, &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS) {
-        THROW("failed to create descriptor set layout!");
-    }
+    ASSERT_V(vkCreateDescriptorSetLayout(m_context.device, &layoutInfo, nullptr, &m_descriptorSetLayout),
+        "failed to create descriptor set layout!")
 }
 
 void Renderer::createGraphicsPipeline()
@@ -395,10 +404,7 @@ void Renderer::createGraphicsPipeline()
     depthStencil.front = {}; // Optional
     depthStencil.back = {}; // Optional
 
-
-    if (vkCreatePipelineLayout(m_context.device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
-        THROW("failed to create pipeline layout!")
-
+    ASSERT_V(vkCreatePipelineLayout(m_context.device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout), "failed to create pipeline layout!")
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -422,9 +428,8 @@ void Renderer::createGraphicsPipeline()
 
     pipelineInfo.pDepthStencilState = &depthStencil;
 
-    if (vkCreateGraphicsPipelines(m_context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline) !=
-        VK_SUCCESS)
-        THROW("failed to create graphics pipeline!")
+    ASSERT_V(vkCreateGraphicsPipelines(m_context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline),
+        "failed to create graphics pipeline!")
 
     vkDestroyShaderModule(m_context.device, fragShaderModule, nullptr);
     vkDestroyShaderModule(m_context.device, vertShaderModule, nullptr);
@@ -500,8 +505,8 @@ void Renderer::createRenderPass()
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(m_context.device, &renderPassInfo, nullptr, &m_context.renderPass) != VK_SUCCESS)
-        THROW("failed to create render pass!")
+    ASSERT_V(vkCreateRenderPass(m_context.device, &renderPassInfo, nullptr, &m_context.renderPass),
+        "failed to create render pass!")
 }
 
 void Renderer::createCommandPool()
@@ -511,18 +516,16 @@ void Renderer::createCommandPool()
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = m_context.familyIndices.graphicsFamily.value();
 
-    if (vkCreateCommandPool(m_context.device, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS) {
-        THROW("failed to create command pool!");
-    }
+    ASSERT_V(vkCreateCommandPool(m_context.device, &poolInfo, nullptr, &m_commandPool),
+        "failed to create command pool!")
 
     VkCommandPoolCreateInfo transientCommandInfo{};
     transientCommandInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
     poolInfo.queueFamilyIndex = m_context.familyIndices.graphicsFamily.value();
 
-    if (vkCreateCommandPool(m_context.device, &poolInfo, nullptr, &m_transientCommandPool) != VK_SUCCESS) {
-        THROW("failed to create command pool!");
-    }
+    ASSERT_V(vkCreateCommandPool(m_context.device, &poolInfo, nullptr, &m_transientCommandPool),
+        "failed to create command pool!")
 }
 
 void Renderer::createCommandBuffers()
@@ -535,8 +538,8 @@ void Renderer::createCommandBuffers()
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = (uint32_t)tempBuffer.size();
 
-    if (vkAllocateCommandBuffers(m_context.device, &allocInfo, tempBuffer.data()) != VK_SUCCESS)
-        THROW("failed to allocate command buffers!");
+    ASSERT_V(vkAllocateCommandBuffers(m_context.device, &allocInfo, tempBuffer.data()),
+        "failed to allocate command buffers!")
 
     for (int i = 0; i < m_maxInFlightFrames; i++)
         m_frameResources[i].commandBuffer = tempBuffer[i];
@@ -552,11 +555,11 @@ void Renderer::createSyncObjects()
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (int i = 0; i < m_maxInFlightFrames; i++) {
-        if (vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_frameResources[i].imageAvailableSem) != VK_SUCCESS)
-            THROW("Could not create semaphore")
+        ASSERT_V(vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_frameResources[i].imageAvailableSem),
+            "Could not create semaphore")
 
-        if (vkCreateFence(m_context.device, &fenceInfo, nullptr, &m_frameResources[i].frameInFlightFence) != VK_SUCCESS)
-            THROW("Could not create fence")
+        ASSERT_V(vkCreateFence(m_context.device, &fenceInfo, nullptr, &m_frameResources[i].frameInFlightFence),
+            "Could not create fence")
     }
 }
 
@@ -569,8 +572,7 @@ void Renderer::createTextureImage()
 
     m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
-    if (!pixels)
-        THROW("failed to load texture image!");
+    ASSERT(pixels, "failed to load texture image!")
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -629,9 +631,8 @@ void Renderer::createTextureSampler()
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
-    if (vkCreateSampler(m_context.device, &samplerInfo, nullptr, &m_textureSampler) != VK_SUCCESS) {
-        THROW("failed to create texture sampler!");
-    }
+    ASSERT_V(vkCreateSampler(m_context.device, &samplerInfo, nullptr, &m_textureSampler),
+        "failed to create texture sampler!");
 }
 
 void Renderer::loadModel()
@@ -752,8 +753,8 @@ void Renderer::createDescriptorPools()
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(m_maxInFlightFrames);
 
-    if (vkCreateDescriptorPool(m_context.device, &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS)
-        THROW("failed to create descriptor pool!");
+    ASSERT_V(vkCreateDescriptorPool(m_context.device, &poolInfo, nullptr, &m_descriptorPool),
+        "failed to create descriptor pool!")
 }
 
 void Renderer::createDescriptorSets()
@@ -767,8 +768,8 @@ void Renderer::createDescriptorSets()
     allocInfo.descriptorSetCount = static_cast<uint32_t>(m_maxInFlightFrames);
     allocInfo.pSetLayouts = layouts.data();
 
-    if (vkAllocateDescriptorSets(m_context.device, &allocInfo, tempBuffer.data()) != VK_SUCCESS)
-        THROW("failed to allocate descriptor sets!");
+    ASSERT_V(vkAllocateDescriptorSets(m_context.device, &allocInfo, tempBuffer.data()),
+        "failed to allocate descriptor sets!")
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
         m_frameResources[i].descriptorSet = tempBuffer[i];
@@ -853,9 +854,8 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     beginInfo.flags = 0; // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
 
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        THROW("failed to begin recording command buffer! (begin)");
-    }
+    ASSERT_V(vkBeginCommandBuffer(commandBuffer, &beginInfo),
+        "failed to begin recording command buffer! (begin)")
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -903,9 +903,8 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     vkCmdEndRenderPass(commandBuffer);
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        THROW("failed to record command buffer! (end)");
-    }
+    ASSERT_V(vkEndCommandBuffer(commandBuffer),
+        "failed to record command buffer! (end)")
 }
 
 void Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
@@ -917,8 +916,8 @@ void Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemor
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(m_context.device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
-        THROW("failed to create buffer!");
+    ASSERT_V(vkCreateBuffer(m_context.device, &bufferInfo, nullptr, &buffer),
+        "failed to create buffer!")
 
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(m_context.device, buffer, &memRequirements);
@@ -928,8 +927,9 @@ void Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemor
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(m_context, memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(m_context.device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
-        THROW("failed to allocate buffer memory!");
+
+    ASSERT_V(vkAllocateMemory(m_context.device, &allocInfo, nullptr, &bufferMemory),
+        "failed to allocate buffer memory!")
 
     vkBindBufferMemory(m_context.device, buffer, bufferMemory, 0);
 }
@@ -1213,10 +1213,11 @@ void Renderer::createLogicalDevice(const Window& window)
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(m_context.physicalDevice, &createInfo, nullptr, &m_context.device) != VK_SUCCESS)
-        THROW("Could not create logical device")
+    ASSERT_V(vkCreateDevice(m_context.physicalDevice, &createInfo, nullptr, &m_context.device),
+        "Could not create logical device")
 
     vkGetDeviceQueue(m_context.device, m_context.familyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
     vkGetDeviceQueue(m_context.device, m_context.familyIndices.presentFamily.value(), 0, &m_presentQueue);
 }
+
 } // Plunksna

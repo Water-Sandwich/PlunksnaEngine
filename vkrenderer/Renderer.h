@@ -5,6 +5,7 @@
 #ifndef VKRENDERER_H
 #define VKRENDERER_H
 
+#include <vk_mem_alloc.h>
 #include <optional>
 #include <vector>
 #include <SDL3/SDL_stdinc.h>
@@ -26,7 +27,7 @@ namespace Plunksna {
 #ifdef NDEBUG
 static const bool s_enableValidationLayers = false;
 #else
-static const bool s_enableValidationLayers = true;
+static const bool s_enableValidationLayers = false;
 #endif
 
 
@@ -75,6 +76,7 @@ private:
 
     void createInstance();
     void createLogicalDevice(const Window& window);
+    void createAllocator();
 
     void createDescriptorSetLayout();
     void createGraphicsPipeline();

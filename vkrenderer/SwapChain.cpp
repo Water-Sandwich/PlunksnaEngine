@@ -14,8 +14,8 @@ SwapChain::SwapChain(Context& context) : m_context(context) {}
 
 void SwapChain::createSurface(const Window& window)
 {
-    if (!SDL_Vulkan_CreateSurface(window.getWindow(), m_context.instance, nullptr, &m_surface))
-        THROW("Could not create surface")
+    ASSERT(SDL_Vulkan_CreateSurface(window.getWindow(), m_context.instance, nullptr, &m_surface),
+        "Could not create surface")
 }
 
 void SwapChain::init(const Window& window, bool vSync)
@@ -62,9 +62,8 @@ void SwapChain::init(const Window& window, bool vSync)
         createInfo.pQueueFamilyIndices = nullptr; // Optional
     }
 
-    if (vkCreateSwapchainKHR(m_context.device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
-        THROW("Could not create swapchain")
-    }
+    ASSERT_V(vkCreateSwapchainKHR(m_context.device, &createInfo, nullptr, &m_swapChain),
+        "Could not create swapchain")
 
     m_images.resize(imageCount);
     vkGetSwapchainImagesKHR(m_context.device, m_swapChain, &imageCount, m_images.data());
@@ -190,7 +189,6 @@ void SwapChain::createDepthBuffers()
 {
     VkFormat depthFormat = findDepthFormat(m_context);
 
-    //TODO: dont msaa depth buffer?
     createImage(m_context, m_extent.width, m_extent.height, 1, depthFormat,
                        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -219,9 +217,8 @@ void SwapChain::createFrameBuffers()
         framebufferInfo.height = m_extent.height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(m_context.device, &framebufferInfo, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
-            THROW("failed to create framebuffer!");
-        }
+        ASSERT_V(vkCreateFramebuffer(m_context.device, &framebufferInfo, nullptr, &m_framebuffers[i]),
+            "failed to create framebuffer!")
     }
 }
 
@@ -242,8 +239,8 @@ void SwapChain::createSemaphores()
     m_renderFinished.resize(m_images.size());
 
     for (int i = 0; i < m_renderFinished.size(); i++) {
-        if (vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_renderFinished[i]) != VK_SUCCESS)
-            THROW("Could not create semaphore")
+        ASSERT_V(vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_renderFinished[i]),
+            "Could not create semaphore")
     }
 }
 

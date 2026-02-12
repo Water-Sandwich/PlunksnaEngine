@@ -137,7 +137,9 @@ ComponentStore<Component>& Registry::getOrCreateStore()
     std::unique_ptr<IComponentStore> store(storePtr);
     m_stores[typeid(Component)] = std::move(store);
 
-    THROW_IF_EQ(m_componentTypes.size() == MAX_COMPONENTS, "Max components reached!");
+    ASSERT(m_componentTypes.size() != MAX_COMPONENTS,
+        "Max components reached!")
+
     m_componentTypes.emplace_back(typeid(Component));
 
     return *static_cast<ComponentStore<Component>*>(storePtr);

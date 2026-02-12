@@ -43,9 +43,8 @@ VkImageView createImageView(const Context& context, VkImage image, VkFormat form
 
     VkImageView view;
 
-    if (vkCreateImageView(context.device, &createInfo, nullptr, &view) != VK_SUCCESS) {
-        THROW("Could not create image view")
-    }
+    ASSERT_V(vkCreateImageView(context.device, &createInfo, nullptr, &view),
+        "Could not create image view")
 
     return view;
 }
@@ -96,8 +95,8 @@ void createImage(const Context& context, uint32_t width, uint32_t height, uint32
     imageInfo.samples = numSamples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(context.device, &imageInfo, nullptr, &image) != VK_SUCCESS)
-        THROW("failed to create image!");
+    ASSERT_V(vkCreateImage(context.device, &imageInfo, nullptr, &image),
+        "failed to create image!")
 
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(context.device, image, &memRequirements);
@@ -107,8 +106,8 @@ void createImage(const Context& context, uint32_t width, uint32_t height, uint32
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(context, memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(context.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
-        THROW("failed to allocate image memory!");
+    ASSERT_V(vkAllocateMemory(context.device, &allocInfo, nullptr, &imageMemory),
+        "failed to allocate image memory!")
 
     vkBindImageMemory(context.device, image, imageMemory, 0);
 }
@@ -206,8 +205,7 @@ std::vector<VkPhysicalDevice> getPhysicalDevices(const Context& context)
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(context.instance, &deviceCount, nullptr);
 
-    if (deviceCount == 0)
-        THROW("No devices with Vulkan support found")
+    ASSERT(deviceCount != 0, "No devices with Vulkan support found")
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(context.instance, &deviceCount, devices.data());
@@ -293,9 +291,7 @@ std::vector<char> readFile(const std::string& filename)
 {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
-    if (!file.is_open()) {
-        THROW("Failed to open file")
-    }
+    ASSERT(file.is_open(), "Failed to open file")
 
     size_t fileSize = (size_t)file.tellg();
     std::vector<char> buffer(fileSize);
@@ -340,8 +336,9 @@ VkShaderModule createShaderModule(const Context& context, const std::vector<char
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(context.device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-        THROW("Failed to create shader module")
+
+    ASSERT_V(vkCreateShaderModule(context.device, &createInfo, nullptr, &shaderModule),
+        "Failed to create shader module")
 
     return shaderModule;
 }

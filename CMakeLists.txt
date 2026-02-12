@@ -4,7 +4,6 @@ set(CMAKE_CXX_STANDARD 26)
 
 add_compile_options(-Werror -Wreturn-type)
 
-
 function(find_or_fetch package_name repo_url tag target_name)
     find_package(${package_name} QUIET)
 
@@ -24,23 +23,23 @@ function(find_or_fetch package_name repo_url tag target_name)
     endif()
 endfunction()
 
-set(SRC_FOLDERS)
-
 function(add_folders)
     set(SRC_FILES "")
 
     foreach(folder IN LISTS ARGN)
         file(GLOB_RECURSE TMP CONFIGURE_DEPENDS
-                ${CMAKE_SOURCE_DIR}/${folder}*.cpp
-                ${CMAKE_SOURCE_DIR}/${folder}*.h
-                ${CMAKE_SOURCE_DIR}/${folder}*.hpp
-                ${CMAKE_SOURCE_DIR}/${folder}*.tpp
+                ${CMAKE_SOURCE_DIR}/${folder}/*.cpp
+                ${CMAKE_SOURCE_DIR}/${folder}/*.h
+                ${CMAKE_SOURCE_DIR}/${folder}/*.hpp
+                ${CMAKE_SOURCE_DIR}/${folder}/*.tpp
         )
         list(APPEND SRC_FILES ${TMP})
     endforeach()
 
     set(SRC_FOLDERS ${SRC_FILES} PARENT_SCOPE)
 endfunction()
+
+set(SRC_FOLDERS)
 
 find_or_fetch(
         SDL3
@@ -56,26 +55,26 @@ find_or_fetch(
         glm
 )
 
+find_or_fetch(
+        VulkanMemoryAllocator
+        https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+        3.3.0
+        GPUOpen::VulkanMemoryAllocator
+)
+
 find_package(Vulkan REQUIRED)
 
-#file(GLOB_RECURSE ENGINE_SRC CONFIGURE_DEPENDS engine/*.cpp engine/*.h)
-#file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS ecs/*.cpp ecs/*.h ecs/*.tpp)
-add_folders(engine/ ecs/)
+add_folders(
+        engine/
+        ecs/
+        vkrenderer/
+        assethandler/
+)
 
 set(SOURCE_FILES
         main.cpp
         ${SRC_FOLDERS}
-        engine/Result.h
-        vkrenderer/Renderer.cpp
-        vkrenderer/Renderer.h
-        vkrenderer/RendererD.cpp
-        vkrenderer/SwapChain.cpp
-        vkrenderer/SwapChain.h
-        vkrenderer/Vertex.h
-        vkrenderer/RendererUtils.h
-        vkrenderer/RenderUtils.cpp
-        vkrenderer/Context.h
-        vkrenderer/FrameResource.h
+        assethandler/Mesh.h
 )
 
 add_executable(Plunksna ${SOURCE_FILES})
@@ -86,7 +85,7 @@ target_include_directories(Plunksna PRIVATE
         ${CMAKE_SOURCE_DIR}/engine
         ${CMAKE_SOURCE_DIR}/ecs
         ${CMAKE_SOURCE_DIR}/vkrenderer
+        ${CMAKE_SOURCE_DIR}/assethandler
 )
 
 add_subdirectory(tests)
-
