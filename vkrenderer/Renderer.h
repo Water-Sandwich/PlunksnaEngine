@@ -164,12 +164,8 @@ private:
     bool m_hasResized = false;
 
     //model
-    //VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
-    //VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
-    VkBuffer m_indexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
-
     Buffer m_vertexBuffer;
+    Buffer m_indexBuffer;
 
     std::vector<Vertex> m_vertices;
     std::vector<uint32_t> m_indices;

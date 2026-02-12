@@ -207,9 +207,7 @@ void Renderer::clean()
     //VK_DESTROY(m_vertexBufferMemory, m_context.device, vkFreeMemory)
 
     m_vertexBuffer.destroy(m_context);
-
-    VK_DESTROY(m_indexBuffer, m_context.device, vkDestroyBuffer)
-    VK_DESTROY(m_indexBufferMemory, m_context.device, vkFreeMemory)
+    m_indexBuffer.destroy(m_context);
 
     vmaDestroyAllocator(m_context.allocator);
 
@@ -683,35 +681,19 @@ void Renderer::createVertexBuffer()
 {
     VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
 
-    // VkBuffer stagingBuffer;
-    // VkDeviceMemory stagingBufferMemory;
-    // createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    //              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    //              stagingBuffer, stagingBufferMemory);
-
     Buffer stagingBuffer;
     createBuffer(stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void* data;
-    // vkMapMemory(m_context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    // memcpy(data, m_vertices.data(), (size_t)bufferSize);
-    // vkUnmapMemory(m_context.device, stagingBufferMemory);
-
     vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
     memcpy(data, m_vertices.data(), (size_t)bufferSize);
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
-
-    // createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-    //              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer, m_vertexBufferMemory);
 
     createBuffer(m_vertexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
     copyBuffer(stagingBuffer.buffer, m_vertexBuffer.buffer, bufferSize);
-
-    // vkDestroyBuffer(m_context.device, stagingBuffer, nullptr);
-    // vkFreeMemory(m_context.device, stagingBufferMemory, nullptr);
 
     stagingBuffer.destroy(m_context);
 }
@@ -720,24 +702,21 @@ void Renderer::createIndexBuffer()
 {
     VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                 stagingBuffer, stagingBufferMemory);
+    Buffer stagingBuffer;
+    createBuffer(stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void* data;
-    vkMapMemory(m_context.device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
     memcpy(data, m_indices.data(), (size_t)bufferSize);
-    vkUnmapMemory(m_context.device, stagingBufferMemory);
+    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_indexBuffer, m_indexBufferMemory);
+    createBuffer(m_indexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
-    copyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
+    copyBuffer(stagingBuffer.buffer, m_indexBuffer.buffer, bufferSize);
 
-    vkDestroyBuffer(m_context.device, stagingBuffer, nullptr);
-    vkFreeMemory(m_context.device, stagingBufferMemory, nullptr);
+    stagingBuffer.destroy(m_context);
 }
 
 void Renderer::createUniformBuffers()
@@ -751,6 +730,8 @@ void Renderer::createUniformBuffers()
 
         vkMapMemory(m_context.device, m_frameResources[i].uniformBufferMemory,
             0, bufferSize, 0, &m_frameResources[i].uniformBufferMapped);
+
+
     }
 }
 
@@ -894,7 +875,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -949,7 +930,8 @@ void Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemor
     vkBindBufferMemory(m_context.device, buffer, bufferMemory, 0);
 }
 
-void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags)
+void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+    VmaAllocationCreateFlags flags)
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
