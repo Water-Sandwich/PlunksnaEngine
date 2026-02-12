@@ -112,10 +112,6 @@ private:
     //buffers and commands
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-    //[[deprecated]]
-    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
-                      VkDeviceMemory& bufferMemory);
-
     void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = {});
 
     VkCommandBuffer beginSingleTimeCommands();
@@ -127,6 +123,10 @@ private:
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
                                uint32_t mipLevels);
     void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+
+    Buffer beginStagingBuffer(VkDeviceSize bufferSize, void** data);
+
+    void endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize);
 
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;

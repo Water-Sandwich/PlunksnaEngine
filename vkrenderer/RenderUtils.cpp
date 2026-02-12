@@ -112,8 +112,8 @@ void createImage(const Context& context, uint32_t width, uint32_t height, uint32
     vkBindImageMemory(context.device, image, imageMemory, 0);
 }
 
-void createImage(const Context& context, uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format,
-    VkImageTiling tiling, VkImageUsageFlags usage, Image& image,
+void createImage(const Context& context, Image& image, uint32_t width, uint32_t height, uint32_t mipLevels,
+    VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
     VkSampleCountFlagBits numSamples, VmaMemoryUsage memoryUsage)
 {
     VkImageCreateInfo imageInfo{};

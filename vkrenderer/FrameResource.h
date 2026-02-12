@@ -7,6 +7,8 @@
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#include "Buffer.h"
 #include "Context.h"
 #include "RendererUtils.h"
 
@@ -16,17 +18,16 @@ struct FrameResource {
     VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 
-    VkBuffer uniformBuffer = VK_NULL_HANDLE;
     void* uniformBufferMapped = nullptr;
-    VkDeviceMemory uniformBufferMemory = VK_NULL_HANDLE;
+    Buffer uniformBuffer;
 
     VkSemaphore imageAvailableSem = VK_NULL_HANDLE;
     VkFence frameInFlightFence = VK_NULL_HANDLE;
 
     void destroyBuffers(const Context& context)
     {
-        VK_DESTROY(uniformBuffer, context.device, vkDestroyBuffer)
-        VK_DESTROY(uniformBufferMemory, context.device, vkFreeMemory)
+        vmaUnmapMemory(context.allocator, uniformBuffer.allocation);
+        uniformBuffer.destroy(context);
     }
 
     void destroySync(const Context& context)

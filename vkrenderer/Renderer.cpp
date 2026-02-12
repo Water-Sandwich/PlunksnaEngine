@@ -574,17 +574,11 @@ void Renderer::createTextureImage()
 
     ASSERT(pixels, "failed to load texture image!")
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                 stagingBuffer, stagingBufferMemory);
-
     void* data;
-    vkMapMemory(m_context.device, stagingBufferMemory, 0, imageSize, 0, &data);
+    Buffer stagingBuffer = beginStagingBuffer(imageSize, &data);
     std::memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(m_context.device, stagingBufferMemory);
 
+    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
     stbi_image_free(pixels);
 
     createImage(m_context, texWidth, texHeight, m_mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
@@ -593,11 +587,11 @@ void Renderer::createTextureImage()
 
     transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_mipLevels);
-    copyBufferToImage(stagingBuffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+
+    copyBufferToImage(stagingBuffer.buffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
     //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
 
-    vkDestroyBuffer(m_context.device, stagingBuffer, nullptr);
-    vkFreeMemory(m_context.device, stagingBufferMemory, nullptr);
+    stagingBuffer.destroy(m_context);
 
     generateMipMaps(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, m_mipLevels);
 }
@@ -681,42 +675,30 @@ void Renderer::createVertexBuffer()
 {
     VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
 
-    Buffer stagingBuffer;
-    createBuffer(stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
     void* data;
-    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
+    Buffer stagingBuffer = beginStagingBuffer(bufferSize, &data);
+
     memcpy(data, m_vertices.data(), (size_t)bufferSize);
-    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
     createBuffer(m_vertexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+         VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
-    copyBuffer(stagingBuffer.buffer, m_vertexBuffer.buffer, bufferSize);
-
-    stagingBuffer.destroy(m_context);
+    endAndCopyStagingBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 }
 
 void Renderer::createIndexBuffer()
 {
     VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
 
-    Buffer stagingBuffer;
-    createBuffer(stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
     void* data;
-    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
+    Buffer stagingBuffer = beginStagingBuffer(bufferSize, &data);
+
     memcpy(data, m_indices.data(), (size_t)bufferSize);
-    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
     createBuffer(m_indexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+         VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
-    copyBuffer(stagingBuffer.buffer, m_indexBuffer.buffer, bufferSize);
-
-    stagingBuffer.destroy(m_context);
+    endAndCopyStagingBuffer(stagingBuffer, m_indexBuffer, bufferSize);
 }
 
 void Renderer::createUniformBuffers()
@@ -724,14 +706,11 @@ void Renderer::createUniformBuffers()
     VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
-        createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                     m_frameResources[i].uniformBuffer, m_frameResources[i].uniformBufferMemory);
+        //TODO: Could be sequential if using memcpy for UBOs
+        createBuffer(m_frameResources[i].uniformBuffer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
-        vkMapMemory(m_context.device, m_frameResources[i].uniformBufferMemory,
-            0, bufferSize, 0, &m_frameResources[i].uniformBufferMapped);
-
-
+        vmaMapMemory(m_context.allocator, m_frameResources[i].uniformBuffer.allocation, &m_frameResources[i].uniformBufferMapped);
     }
 }
 
@@ -767,11 +746,11 @@ void Renderer::createDescriptorSets()
     ASSERT_V(vkAllocateDescriptorSets(m_context.device, &allocInfo, tempBuffer.data()),
         "failed to allocate descriptor sets!")
 
-    for (size_t i = 0; i < m_maxInFlightFrames; i++) {
+    for (int i = 0; i < m_maxInFlightFrames; i++) {
         m_frameResources[i].descriptorSet = tempBuffer[i];
 
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = m_frameResources[i].uniformBuffer;
+        bufferInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
@@ -901,33 +880,6 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     ASSERT_V(vkEndCommandBuffer(commandBuffer),
         "failed to record command buffer! (end)")
-}
-
-void Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-                            VkBuffer& buffer, VkDeviceMemory& bufferMemory)
-{
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    ASSERT_V(vkCreateBuffer(m_context.device, &bufferInfo, nullptr, &buffer),
-        "failed to create buffer!")
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(m_context.device, buffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(m_context, memRequirements.memoryTypeBits, properties);
-
-
-    ASSERT_V(vkAllocateMemory(m_context.device, &allocInfo, nullptr, &bufferMemory),
-        "failed to allocate buffer memory!")
-
-    vkBindBufferMemory(m_context.device, buffer, bufferMemory, 0);
 }
 
 void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
@@ -1176,6 +1128,24 @@ void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texW
                          1, &barrier);
 
     endSingleTimeCommands(commandBuffer);
+}
+
+Buffer Renderer::beginStagingBuffer(VkDeviceSize bufferSize, void** data)
+{
+    Buffer stagingBuffer;
+    createBuffer(stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, data);
+
+    return stagingBuffer;
+}
+
+void Renderer::endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize)
+{
+    copyBuffer(stagingBuffer.buffer, dst.buffer, bufferSize);
+    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
+    stagingBuffer.destroy(m_context);
 }
 
 bool Renderer::isDeviceSuitable(VkPhysicalDevice device)

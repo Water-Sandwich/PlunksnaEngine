@@ -49,9 +49,9 @@ void createImage(const Context& context, uint32_t width, uint32_t height, uint32
                 VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
                 VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
 
-void createImage(const Context& context, uint32_t width, uint32_t height, uint32_t mipLevels,
-                VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, Image& image,
-                VkSampleCountFlagBits numSamples, VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY);
+void createImage(const Context& context, Image& image, uint32_t width, uint32_t height, uint32_t mipLevels,
+                VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+                VkSampleCountFlagBits numSamples, VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
 
 //extensions and layers
