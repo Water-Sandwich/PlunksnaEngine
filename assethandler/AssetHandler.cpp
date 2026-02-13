@@ -4,12 +4,34 @@
 
 #include "AssetHandler.h"
 
+#include <tiny_obj_loader.h>
+
 #include "engine/Exception.h"
 #include "vkrenderer/RendererUtils.h"
+#include "vkrenderer/Vertex.h"
 
 using namespace Plunksna::RenderUtils;
 
 namespace Plunksna {
+
+template<typename T>
+T* getFromUMap(Asset asset, std::unordered_map<Asset, T>& umap)
+{
+    auto it = umap.find(asset);
+    if (it != umap.end())
+        return &it->second;
+
+    LOG_S(eWARNING, "tried to retrieve an unaccounted asset! Asset:" << asset << " Type: " <<typeid(T).name())
+    return nullptr;
+}
+
+template<typename T>
+void removeAsset(Asset asset, std::unordered_map<Asset, T>& umap)
+{
+    umap.erase(asset);
+    umap.push_back(asset);
+}
+
 AssetHandler::AssetHandler()
 {
     initWorkingPath();
@@ -35,27 +57,16 @@ Asset AssetHandler::loadTexture(std::string name)
 
 Texture* AssetHandler::getTexture(Asset tex)
 {
-    auto it = m_textures.find(tex);
-    if (it != m_textures.end())
-        return &it->second;
-
-    LOG_S(eWARNING, "tried to retrieve an unaccounted texture! Asset:" << tex)
-    return nullptr;
+    return getFromUMap(tex, m_textures);
 }
 
 void AssetHandler::freeTextureHost(Asset tex)
 {
     Texture* texture = getTexture(tex);
 
-    if (!texture) {
-        LOG_S(eWARNING, "free called on unaccounted texture")
-        return;
-    }
+    CHECK_R(texture, "free called on unaccounted texture")
 
-    if (!texture->isHostLoaded()) {
-        LOG_S(eWARNING, "free called on host unloaded texture")
-        return;
-    }
+    CHECK_R(texture->isHostLoaded(), "free called on host unloaded texture")
 
     destroyTextureHost(texture);
 }
@@ -64,15 +75,9 @@ void AssetHandler::freeTextureDevice(const Context& context, Asset tex)
 {
     Texture* texture = getTexture(tex);
 
-    if (!texture) {
-        LOG_S(eWARNING, "free called on unaccounted texture")
-        return;
-    }
+    CHECK_R(texture, "free called on unaccounted texture");
 
-    if (!texture->isDeviceLoaded()) {
-        LOG_S(eWARNING, "free called on device unloaded texture")
-        return;
-    }
+    CHECK_R(texture->isDeviceLoaded(), "free called on device unloaded texture")
 
     destroyTextureDevice(context, texture);
 }
@@ -81,10 +86,7 @@ void AssetHandler::destroyTexture(const Context& context, Asset tex)
 {
     Texture* texture = getTexture(tex);
 
-    if (!texture) {
-        LOG_S(eWARNING, "destroy called on unaccounted texture")
-        return;
-    }
+    CHECK_R(texture, "destroy called on unaccounted texture")
 
     if (texture->isHostLoaded())
         destroyTextureHost(texture);
@@ -92,7 +94,94 @@ void AssetHandler::destroyTexture(const Context& context, Asset tex)
     if (texture->isDeviceLoaded())
         destroyTextureDevice(context, texture);
 
-    removeTexture(tex);
+    removeAsset(tex, m_textures);
+}
+
+Asset AssetHandler::loadMesh(std::string name)
+{
+    Asset asset = makeAsset();
+    Mesh& mesh = m_meshes[asset];
+    auto path = g_workingPath / g_meshPath / name;
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err;
+    std::string warn;
+
+    ASSERT(tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str()), err);
+
+    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            Vertex vertex{};
+
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertex.color = {1.0f, 1.0f, 1.0f};
+
+            if (!uniqueVertices.contains(vertex)) {
+                uniqueVertices[vertex] = static_cast<uint32_t>(mesh.vertices.size());
+                mesh.vertices.push_back(vertex);
+            }
+
+            mesh.indices.push_back(uniqueVertices[vertex]);
+        }
+    }
+
+    return asset;
+}
+
+Mesh* AssetHandler::getMesh(Asset tex)
+{
+    return getFromUMap(tex, m_meshes);
+}
+
+void AssetHandler::freeMeshHost(Asset tex)
+{
+    Mesh* mesh = getMesh(tex);
+
+    CHECK_R(mesh, "free called on unaccounted mesh")
+
+    CHECK_R(mesh->isHostLoaded(), "free called on host unloaded mesh")
+
+    destroyMeshHost(mesh);
+}
+
+void AssetHandler::freeMeshDevice(const Context& context, Asset tex)
+{
+    Mesh* mesh = getMesh(tex);
+
+    CHECK_R(mesh, "free called on unaccounted mesh")
+
+    CHECK_R(mesh->isHostLoaded(), "free called on device unloaded mesh")
+
+    destroyMeshDevice(context, mesh);
+}
+
+void AssetHandler::destroyMesh(const Context& context, Asset meshHnd)
+{
+    Mesh* mesh = getMesh(meshHnd);
+
+    CHECK_R(mesh, "destroy called on unaccounted texture")
+
+    if (mesh->isHostLoaded())
+        destroyMeshHost(mesh);
+
+    if (mesh->isDeviceLoaded())
+        destroyMeshDevice(context, mesh);
+
+    removeAsset(meshHnd, m_meshes);
 }
 
 Asset AssetHandler::makeAsset()
@@ -126,12 +215,6 @@ std::filesystem::path AssetHandler::initWorkingPath()
     THROW("Invalid working paths!")
 }
 
-void AssetHandler::removeTexture(Asset asset)
-{
-    m_textures.erase(asset);
-    m_fragments.push_back(asset);
-}
-
 void AssetHandler::destroyTextureHost(Texture* texture)
 {
     stbi_image_free(texture->pixels);
@@ -145,4 +228,18 @@ void AssetHandler::destroyTextureDevice(const Context& context, Texture* texture
     VK_DESTROY(texture->fullView, context.device, vkDestroyImageView)
     texture->mipLevels = 1;
 }
+
+void AssetHandler::destroyMeshHost(Mesh* mesh)
+{
+    //clear doesnt free memory
+    std::vector<Vertex>().swap(mesh->vertices);
+    std::vector<uint32_t>().swap(mesh->indices);
+}
+
+void AssetHandler::destroyMeshDevice(const Context& context, Mesh* mesh)
+{
+    mesh->indexBuffer.destroy(context);
+    mesh->vertexBuffer.destroy(context);
+}
+
 } // Plunksna

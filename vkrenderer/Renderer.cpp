@@ -182,9 +182,6 @@ void Renderer::clean()
         rec.destroyBuffers(m_context);
 
     VK_DESTROY(m_textureSampler, m_context.device, vkDestroySampler)
-    // VK_DESTROY(m_textureImageView, m_context.device, vkDestroyImageView)
-    // m_textureImage.destroy(m_context);
-
     m_assetHandler.destroyTexture(m_context, m_textureAsset);
 
     VK_DESTROY(m_descriptorPool, m_context.device, vkDestroyDescriptorPool)
@@ -200,9 +197,6 @@ void Renderer::clean()
 
     for (auto& rec : m_frameResources)
         rec.destroySync(m_context);
-
-    //VK_DESTROY(m_vertexBuffer, m_context.device, vkDestroyBuffer)
-    //VK_DESTROY(m_vertexBufferMemory, m_context.device, vkFreeMemory)
 
     m_vertexBuffer.destroy(m_context);
     m_indexBuffer.destroy(m_context);
@@ -639,7 +633,7 @@ void Renderer::loadModel()
     std::string warn;
 
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, &warn,
-                          (g_workingPath / g_modelPath / "viking_room.obj").c_str()))
+                          (g_workingPath / g_meshPath / "viking_room.obj").c_str()))
     {
         THROW(err)
     }

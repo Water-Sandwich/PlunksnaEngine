@@ -9,20 +9,30 @@
 #include <vector>
 
 #include "Asset.h"
-#include "Buffer.h"
-#include "Vertex.h"
+#include "vkrenderer/Buffer.h"
+#include "vkrenderer/Vertex.h"
 
 namespace Plunksna {
 
 struct Mesh
 {
-    Asset handle = NULL_ASSET;
-
+    //host
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
+    //device
     Buffer vertexBuffer;
     Buffer indexBuffer;
+
+    bool isHostLoaded() const
+    {
+        return !vertices.empty() && !indices.empty();
+    }
+
+    bool isDeviceLoaded() const
+    {
+        return vertexBuffer.buffer != VK_NULL_HANDLE && indexBuffer.buffer != VK_NULL_HANDLE;
+    }
 };
 
 }
