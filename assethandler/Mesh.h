@@ -4,16 +4,25 @@
 
 #ifndef MESH_H
 #define MESH_H
+
 #include <cstdint>
+#include <vector>
+
+#include "Asset.h"
+#include "Buffer.h"
+#include "Vertex.h"
 
 namespace Plunksna {
 
-using Asset = uint32_t;
-
 struct Mesh
 {
-    Asset handle;
+    Asset handle = NULL_ASSET;
 
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
+    Buffer vertexBuffer;
+    Buffer indexBuffer;
 };
 
 }

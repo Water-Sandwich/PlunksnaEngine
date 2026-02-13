@@ -8,7 +8,7 @@
 #include "Log.h"
 #include "Random.h"
 #include "Mouse.h"
-#include "Renderer.h"
+#include "vkrenderer/Renderer.h"
 
 #include <iostream>
 #include <thread>
@@ -90,7 +90,7 @@ void Engine::handleEvents()
 
 
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags)
-    : m_window(title, size, flags)
+    : m_window(title, size, flags), m_renderer(m_assetHandler)
 {
     m_renderer.init(m_window);
 
@@ -142,7 +142,8 @@ void Engine::run()
 
 Engine::~Engine()
 {
-    LOG("delete")
+    LOG("Destroying engine")
+    m_renderer.clean();
 }
 
 } //Plunksna

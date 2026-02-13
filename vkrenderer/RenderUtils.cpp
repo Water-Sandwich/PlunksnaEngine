@@ -2,11 +2,12 @@
 // Created by d on 1/28/26.
 //
 
+#include <cmath>
 #include <fstream>
 #include <set>
 #include <SDL3/SDL_vulkan.h>
 
-#include "Exception.h"
+#include "engine/Exception.h"
 #include "RendererUtils.h"
 
 namespace Plunksna::RenderUtils {
@@ -109,6 +110,11 @@ void createImage(const Context& context, Image& image, uint32_t width, uint32_t 
         ),
         "failed to create image with VMA!"
     );
+}
+
+uint32_t getMipLevels(uint32_t width, uint32_t height)
+{
+    return static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 }
 
 uint32_t findMemoryType(const Context& context, uint32_t typeFilter, VkMemoryPropertyFlags properties)

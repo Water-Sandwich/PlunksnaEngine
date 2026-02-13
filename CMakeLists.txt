@@ -39,7 +39,6 @@ function(add_folders)
     set(SRC_FOLDERS ${SRC_FILES} PARENT_SCOPE)
 endfunction()
 
-set(SRC_FOLDERS)
 
 find_or_fetch(
         SDL3
@@ -64,6 +63,7 @@ find_or_fetch(
 
 find_package(Vulkan REQUIRED)
 
+set(SRC_FOLDERS)
 add_folders(
         engine/
         ecs/
@@ -74,9 +74,6 @@ add_folders(
 set(SOURCE_FILES
         main.cpp
         ${SRC_FOLDERS}
-        assethandler/Mesh.h
-        vkrenderer/Image.h
-        vkrenderer/Buffer.h
 )
 
 add_executable(Plunksna ${SOURCE_FILES})
@@ -84,10 +81,7 @@ add_executable(Plunksna ${SOURCE_FILES})
 target_link_libraries(Plunksna PRIVATE SDL3 glm Vulkan::Vulkan)
 
 target_include_directories(Plunksna PRIVATE
-        ${CMAKE_SOURCE_DIR}/engine
-        ${CMAKE_SOURCE_DIR}/ecs
-        ${CMAKE_SOURCE_DIR}/vkrenderer
-        ${CMAKE_SOURCE_DIR}/assethandler
+        ${CMAKE_SOURCE_DIR}
 )
 
 add_subdirectory(tests)

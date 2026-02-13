@@ -11,9 +11,9 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <set>
 
-#include "Exception.h"
-#include "Log.h"
-#include "Window.h"
+#include "engine/Exception.h"
+#include "engine/Log.h"
+#include "engine/Window.h"
 
 #include <fstream>
 #include <chrono>
@@ -35,12 +35,9 @@ using namespace Plunksna::RenderUtils;
 
 namespace Plunksna {
 
-
-Renderer::Renderer() : m_swapChain(m_context) {}
-
-Renderer::~Renderer()
+Renderer::Renderer(AssetHandler& assetHandler) : m_swapChain(m_context), m_assetHandler(assetHandler)
 {
-    clean();
+
 }
 
 void Renderer::createInstance()
@@ -185,8 +182,10 @@ void Renderer::clean()
         rec.destroyBuffers(m_context);
 
     VK_DESTROY(m_textureSampler, m_context.device, vkDestroySampler)
-    VK_DESTROY(m_textureImageView, m_context.device, vkDestroyImageView)
-    m_textureImage.destroy(m_context);
+    // VK_DESTROY(m_textureImageView, m_context.device, vkDestroyImageView)
+    // m_textureImage.destroy(m_context);
+
+    m_assetHandler.destroyTexture(m_context, m_textureAsset);
 
     VK_DESTROY(m_descriptorPool, m_context.device, vkDestroyDescriptorPool)
     VK_DESTROY(m_descriptorSetLayout, m_context.device, vkDestroyDescriptorSetLayout)
@@ -564,43 +563,43 @@ void Renderer::createSyncObjects()
 
 void Renderer::createTextureImage()
 {
-    int texWidth, texHeight, texChannels;
-    auto path = (g_texturePath / "viking_room.png").string();
-    stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    VkDeviceSize imageSize = texWidth * texHeight * 4;
+    m_textureAsset = m_assetHandler.loadTexture("viking_room.png");
+    m_texture = m_assetHandler.getTexture(m_textureAsset);
 
-    m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+    uint32_t texWidth = m_texture->width();
+    uint32_t texHeight = m_texture->height();
+    VkDeviceSize imageSize = m_texture->getSize() * 4;
 
-    ASSERT(pixels, "failed to load texture image!")
+    m_texture->mipLevels = getMipLevels(texWidth, texHeight);
 
     void* data;
     Buffer stagingBuffer = beginStagingBuffer(imageSize, &data);
-    std::memcpy(data, pixels, static_cast<size_t>(imageSize));
+
+    std::memcpy(data, m_texture->pixels, static_cast<size_t>(imageSize));
 
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
-    stbi_image_free(pixels);
 
-    // createImage(m_context, texWidth, texHeight, m_mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-    //             VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-    //             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
+    m_assetHandler.freeTextureHost(m_textureAsset);
 
-    createImage(m_context, m_textureImage, texWidth, texHeight, m_mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+    //image layout is undefined
+    createImage(m_context, m_texture->image, texWidth, texHeight, m_texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-    transitionImageLayout(m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_mipLevels);
+    //image layout to source
+    transitionImageLayout(m_texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture->mipLevels);
 
-    copyBufferToImage(stagingBuffer.buffer, m_textureImage.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
+    copyBufferToImage(stagingBuffer.buffer, m_texture->image.image, texWidth, texHeight);
 
     stagingBuffer.destroy(m_context);
 
-    generateMipMaps(m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, m_mipLevels);
+    //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
+    generateMipMaps(m_texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, m_texture->mipLevels);
 }
 
 void Renderer::createTextureImageView()
 {
-    m_textureImageView = createImageView(m_context, m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, m_mipLevels);
+    m_texture->fullView = createImageView(m_context, m_texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, m_texture->mipLevels);
 }
 
 void Renderer::createTextureSampler()
@@ -640,7 +639,8 @@ void Renderer::loadModel()
     std::string warn;
 
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, &warn,
-                          (g_modelPath / "viking_room.obj").c_str())) {
+                          (g_workingPath / g_modelPath / "viking_room.obj").c_str()))
+    {
         THROW(err)
     }
 
@@ -758,7 +758,7 @@ void Renderer::createDescriptorSets()
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = m_textureImageView;
+        imageInfo.imageView = m_texture->fullView;
         imageInfo.sampler = m_textureSampler;
 
         std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
@@ -847,7 +847,6 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
-
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
@@ -951,6 +950,7 @@ void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
 
     VkBufferCopy copyRegion{};
     copyRegion.size = size;
+
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
     endSingleTimeCommands(commandBuffer);
@@ -1012,7 +1012,9 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
 
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+        newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
@@ -1020,7 +1022,8 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
         destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-        newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
@@ -1050,9 +1053,9 @@ void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texW
     VkFormatProperties formatProperties;
     vkGetPhysicalDeviceFormatProperties(m_context.physicalDevice, imageFormat, &formatProperties);
 
-    if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-        THROW("texture image format does not support linear blitting!");
-    }
+
+    ASSERT(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT,
+        "texture image format does not support linear blitting!")
 
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 

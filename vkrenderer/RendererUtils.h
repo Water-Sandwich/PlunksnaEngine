@@ -9,8 +9,8 @@
 #include <vector>
 #include <string>
 #include "Context.h"
-#include "Log.h"
-#include "Window.h"
+#include "engine/Log.h"
+#include "engine/Window.h"
 #include "Image.h"
 
 namespace Plunksna::RenderUtils {
@@ -48,6 +48,7 @@ void createImage(const Context& context, Image& image, uint32_t width, uint32_t 
                 VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
                 VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
 
+uint32_t getMipLevels(uint32_t width, uint32_t height);
 
 //extensions and layers
 std::vector<VkLayerProperties> getLayers();

@@ -8,6 +8,7 @@
 
 #include <exception>
 #include <string>
+#include <sstream>
 #include "Log.h"
 
 namespace Plunksna {
@@ -24,8 +25,10 @@ public:
 }
 
 #define THROW(msg)                  throw Plunksna::Exception(msg);
+#define THROW_SS(msg)               std::stringstream ss; ss << msg; throw Plunksna::Exception(ss.str());
 
 #define ASSERT(exp, msg)            if(!(exp)) {THROW(msg);}
+#define ASSERT_SS(exp, msg)        if(!(exp)) {THROW_SS(msg);}
 #define ASSERT_V(res1, msg)         if((res1) != VK_SUCCESS) {THROW(msg);}
 
 

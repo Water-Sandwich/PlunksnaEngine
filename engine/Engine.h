@@ -13,9 +13,10 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Components.h"
-#include "Renderer.h"
+#include "vkrenderer/Renderer.h"
 #include "Window.h"
-#include "../ecs/Registry.h"
+#include "assethandler/AssetHandler.h"
+#include "ecs/Registry.h"
 
 namespace Plunksna {
 
@@ -41,6 +42,7 @@ private:
 private:
     Window m_window;
     Renderer m_renderer;
+    AssetHandler m_assetHandler;
 
     TimePoint m_startTime;
     TimePoint m_lastTime;

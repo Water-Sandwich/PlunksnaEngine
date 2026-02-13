@@ -9,7 +9,7 @@
 
 #include "Entity.h"
 #include "PaginatedVector.h"
-#include "Result.h"
+#include "engine/Result.h"
 
 namespace Plunksna {
 

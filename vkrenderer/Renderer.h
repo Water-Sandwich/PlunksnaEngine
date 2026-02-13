@@ -12,7 +12,7 @@
 #include <vulkan/vulkan_core.h>
 #include <filesystem>
 
-#include "Window.h"
+#include "engine/Window.h"
 
 #include <bits/chrono.h>
 #include <glm/glm.hpp>
@@ -23,6 +23,7 @@
 #include "SwapChain.h"
 #include "Vertex.h"
 #include "Buffer.h"
+#include "assethandler/AssetHandler.h"
 
 namespace Plunksna {
 #ifdef NDEBUG
@@ -44,27 +45,22 @@ struct UniformBufferObject
 //====================RENDERER===============
 //===========================================
 
-const std::filesystem::path g_workingPath = std::filesystem::current_path().parent_path();
-const std::filesystem::path g_modelPath = g_workingPath / "models";
-const std::filesystem::path g_texturePath = g_workingPath / "textures";
 
 class Renderer
 {
 public:
-    //=========BASE========
-    Renderer();
-    ~Renderer();
-
+    Renderer() = delete;
     Renderer(const Renderer&) = delete;
     Renderer(Renderer&&) = delete;
+
+    explicit Renderer(AssetHandler& assetHandler);
+    ~Renderer() = default;
 
     VkInstance init(const Window& window);
     void draw(const Window& window);
     void clean();
 
     void resizeNotif();
-
-    //======LAYERS AND EXTENSIONS========
 
 private:
     inline static const std::vector<const char*> s_validationLayers = {
@@ -95,11 +91,13 @@ private:
 
     void updateUniformBuffer(uint32_t currentImage);
 
+    //asset
     //textures
     void createTextureImage();
     void createTextureImageView();
     void createTextureSampler();
 
+    //asset
     //3d
     void loadModel();
     void createVertexBuffer();
@@ -112,7 +110,8 @@ private:
     //buffers and commands
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-    void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = {});
+    void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+        VmaAllocationCreateFlags flags = {});
 
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
@@ -122,6 +121,7 @@ private:
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
                                uint32_t mipLevels);
+    //asset
     void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
     Buffer beginStagingBuffer(VkDeviceSize bufferSize, void** data);
@@ -134,6 +134,7 @@ public:
 private:
     Context m_context;
     SwapChain m_swapChain;
+    AssetHandler& m_assetHandler;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;
@@ -157,10 +158,13 @@ private:
     std::vector<uint32_t> m_indices;
 
     //texture
-    Image m_textureImage;
-    uint32_t m_mipLevels;
-    VkImageView m_textureImageView;
+    // Image m_textureImage;
+    // uint32_t m_mipLevels;
+    // VkImageView m_textureImageView;
+    Asset m_textureAsset = NULL_ASSET;
+    Texture* m_texture = nullptr;
     VkSampler m_textureSampler;
+
 
     float m_queuePriority = 1.f;
     bool m_verticalSync = true;

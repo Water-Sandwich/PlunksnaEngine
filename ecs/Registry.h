@@ -11,7 +11,7 @@
 
 #include "ComponentStore.h"
 #include "Filter.h"
-#include "Result.h"
+#include "engine/Result.h"
 
 namespace Plunksna {
 
