@@ -119,6 +119,7 @@ VkInstance Renderer::init(const Window& window)
     loadModel();
     createVertexBuffer();
     createIndexBuffer();
+    m_assetHandler.freeMeshHost(m_mesh); //?????
 
     //frame resources
     createDescriptorPools();
@@ -159,7 +160,8 @@ void Renderer::draw(const Window& window)
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    ASSERT_V(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, currentFrame.frameInFlightFence), "failed to submit draw command buffer!")
+    ASSERT_V(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, currentFrame.frameInFlightFence),
+        "failed to submit draw command buffer!")
 
     result = m_swapChain.present(m_presentQueue, imageIndex);
 
@@ -198,8 +200,7 @@ void Renderer::clean()
     for (auto& rec : m_frameResources)
         rec.destroySync(m_context);
 
-    m_vertexBuffer.destroy(m_context);
-    m_indexBuffer.destroy(m_context);
+    m_assetHandler.destroyMesh(m_context, m_mesh);
 
     vmaDestroyAllocator(m_context.allocator);
 
@@ -292,7 +293,7 @@ void Renderer::createGraphicsPipeline()
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &bindingsDesc; // Optional
-    vertexInputInfo.vertexAttributeDescriptionCount = (uint32_t)attribDesc.size();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribDesc.size());
     vertexInputInfo.pVertexAttributeDescriptions = attribDesc.data(); // Optional
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -303,8 +304,8 @@ void Renderer::createGraphicsPipeline()
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)m_swapChain.width();
-    viewport.height = (float)m_swapChain.height();
+    viewport.width = static_cast<float>(m_swapChain.width());
+    viewport.height = static_cast<float>(m_swapChain.height());
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
@@ -528,7 +529,7 @@ void Renderer::createCommandBuffers()
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = m_commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t)tempBuffer.size();
+    allocInfo.commandBufferCount = static_cast<uint32_t>(tempBuffer.size());
 
     ASSERT_V(vkAllocateCommandBuffers(m_context.device, &allocInfo, tempBuffer.data()),
         "failed to allocate command buffers!")
@@ -558,42 +559,43 @@ void Renderer::createSyncObjects()
 void Renderer::createTextureImage()
 {
     m_textureAsset = m_assetHandler.loadTexture("viking_room.png");
-    m_texture = m_assetHandler.getTexture(m_textureAsset);
+    Texture* texture = m_assetHandler.getTexture(m_textureAsset);
 
-    uint32_t texWidth = m_texture->width();
-    uint32_t texHeight = m_texture->height();
-    VkDeviceSize imageSize = m_texture->getSize() * 4;
+    uint32_t texWidth = texture->width();
+    uint32_t texHeight = texture->height();
+    VkDeviceSize imageSize = texture->getSize() * 4;
 
-    m_texture->mipLevels = getMipLevels(texWidth, texHeight);
+    texture->mipLevels = getMipLevels(texWidth, texHeight);
 
     void* data;
     Buffer stagingBuffer = beginStagingBuffer(imageSize, &data);
 
-    std::memcpy(data, m_texture->pixels, static_cast<size_t>(imageSize));
+    std::memcpy(data, texture->pixels, static_cast<size_t>(imageSize));
 
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
     m_assetHandler.freeTextureHost(m_textureAsset);
 
     //image layout is undefined
-    createImage(m_context, m_texture->image, texWidth, texHeight, m_texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+    createImage(m_context, texture->image, texWidth, texHeight, texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
     //image layout to source
-    transitionImageLayout(m_texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture->mipLevels);
+    transitionImageLayout(texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture->mipLevels);
 
-    copyBufferToImage(stagingBuffer.buffer, m_texture->image.image, texWidth, texHeight);
+    copyBufferToImage(stagingBuffer.buffer, texture->image.image, texWidth, texHeight);
 
     stagingBuffer.destroy(m_context);
 
     //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
-    generateMipMaps(m_texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, m_texture->mipLevels);
+    generateMipMaps(texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, texture->mipLevels);
 }
 
-void Renderer::createTextureImageView()
+void Renderer::createTextureImageView() const
 {
-    m_texture->fullView = createImageView(m_context, m_texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, m_texture->mipLevels);
+    Texture* texture = m_assetHandler.getTexture(m_textureAsset);
+    texture->fullView = createImageView(m_context, texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texture->mipLevels);
 }
 
 void Renderer::createTextureSampler()
@@ -626,75 +628,39 @@ void Renderer::createTextureSampler()
 
 void Renderer::loadModel()
 {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string err;
-    std::string warn;
-
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, &warn,
-                          (g_workingPath / g_meshPath / "viking_room.obj").c_str()))
-    {
-        THROW(err)
-    }
-
-    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
-
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{};
-
-            vertex.pos = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
-
-            vertex.texCoord = {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                attrib.texcoords[2 * index.texcoord_index + 1]
-            };
-
-            vertex.color = {1.0f, 1.0f, 1.0f};
-
-            if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(m_vertices.size());
-                m_vertices.push_back(vertex);
-            }
-
-            m_indices.push_back(uniqueVertices[vertex]);
-        }
-    }
+    m_mesh = m_assetHandler.loadMesh("viking_room.obj");
 }
 
 void Renderer::createVertexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
+    Mesh* mesh = m_assetHandler.getMesh(m_mesh);
+    VkDeviceSize bufferSize = sizeof(mesh->vertices[0]) * mesh->vertices.size();
 
     void* data;
     Buffer stagingBuffer = beginStagingBuffer(bufferSize, &data);
 
-    memcpy(data, m_vertices.data(), (size_t)bufferSize);
+    memcpy(data, mesh->vertices.data(), bufferSize);
 
-    createBuffer(m_vertexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    createBuffer(mesh->vertexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
-    endAndCopyStagingBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
+    endAndCopyStagingBuffer(stagingBuffer, mesh->vertexBuffer, bufferSize);
 }
 
 void Renderer::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
+    Mesh* mesh = m_assetHandler.getMesh(m_mesh);
+    VkDeviceSize bufferSize = sizeof(mesh->indices[0]) * mesh->indices.size();
 
     void* data;
     Buffer stagingBuffer = beginStagingBuffer(bufferSize, &data);
 
-    memcpy(data, m_indices.data(), (size_t)bufferSize);
+    memcpy(data, mesh->indices.data(), (size_t)bufferSize);
 
-    createBuffer(m_indexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+    createBuffer(mesh->indexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
-    endAndCopyStagingBuffer(stagingBuffer, m_indexBuffer, bufferSize);
+    endAndCopyStagingBuffer(stagingBuffer, mesh->indexBuffer, bufferSize);
 }
 
 void Renderer::createUniformBuffers()
@@ -750,9 +716,11 @@ void Renderer::createDescriptorSets()
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
+        Texture* texture = m_assetHandler.getTexture(m_textureAsset);
+
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = m_texture->fullView;
+        imageInfo.imageView = texture->fullView;
         imageInfo.sampler = m_textureSampler;
 
         std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
@@ -787,7 +755,7 @@ void Renderer::createFrameResources()
     createSyncObjects();
 }
 
-void Renderer::updateUniformBuffer(uint32_t currentImage)
+void Renderer::updateUniformBuffer(uint32_t currentImage) const
 {
     //TODO: GET RID OF TIME!
     static auto startTime = std::chrono::high_resolution_clock::now();
@@ -808,7 +776,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
 
     ubo.proj = glm::perspective(
         glm::radians(45.0f),
-        (float)m_swapChain.width() / (float)m_swapChain.height(),
+        static_cast<float>(m_swapChain.width()) / static_cast<float>(m_swapChain.height()),
         0.1f,
         10.0f);
 
@@ -818,7 +786,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
 }
 
 
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) const
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -845,11 +813,13 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 
-    VkBuffer vertexBuffers[] = {m_vertexBuffer.buffer};
+    Mesh* mesh = m_assetHandler.getMesh(m_mesh);
+
+    VkBuffer vertexBuffers[] = {mesh->vertexBuffer.buffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -868,8 +838,8 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
 
-    //vkCmdDraw(commandBuffer, static_cast<uint32_t>(m_vertices.size()), 1, 0, 0);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
+    //vkCmdDraw(commandBuffer, (mesh->verticesSize), 1, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, (mesh->indicesSize), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -878,7 +848,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 }
 
 void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
-    VmaAllocationCreateFlags flags)
+    VmaAllocationCreateFlags flags) const
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -903,7 +873,7 @@ void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlag
     );
 }
 
-VkCommandBuffer Renderer::beginSingleTimeCommands()
+VkCommandBuffer Renderer::beginSingleTimeCommands() const
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -923,7 +893,7 @@ VkCommandBuffer Renderer::beginSingleTimeCommands()
     return commandBuffer;
 }
 
-void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer)
+void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) const
 {
     vkEndCommandBuffer(commandBuffer);
 
@@ -938,7 +908,7 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer)
     vkFreeCommandBuffers(m_context.device, m_transientCommandPool, 1, &commandBuffer);
 }
 
-void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -950,7 +920,7 @@ void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
     endSingleTimeCommands(commandBuffer);
 }
 
-void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -984,7 +954,7 @@ void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
 }
 
 void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-                                     uint32_t mipLevels)
+                                     uint32_t mipLevels) const
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -1041,7 +1011,7 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 }
 
 void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight,
-                               uint32_t mipLevels)
+                               uint32_t mipLevels) const
 {
     // Check if image format supports linear blitting
     VkFormatProperties formatProperties;
@@ -1129,7 +1099,7 @@ void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texW
     endSingleTimeCommands(commandBuffer);
 }
 
-Buffer Renderer::beginStagingBuffer(VkDeviceSize bufferSize, void** data)
+Buffer Renderer::beginStagingBuffer(VkDeviceSize bufferSize, void** data) const
 {
     Buffer stagingBuffer;
     createBuffer(stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
@@ -1140,14 +1110,14 @@ Buffer Renderer::beginStagingBuffer(VkDeviceSize bufferSize, void** data)
     return stagingBuffer;
 }
 
-void Renderer::endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize)
+void Renderer::endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize) const
 {
     copyBuffer(stagingBuffer.buffer, dst.buffer, bufferSize);
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
     stagingBuffer.destroy(m_context);
 }
 
-bool Renderer::isDeviceSuitable(VkPhysicalDevice device)
+bool Renderer::isDeviceSuitable(VkPhysicalDevice device) const
 {
     auto indices = m_swapChain.getQueueFamilies(device);
 

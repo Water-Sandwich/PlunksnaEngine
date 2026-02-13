@@ -20,6 +20,9 @@ struct Mesh
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
+    uint32_t verticesSize;
+    uint32_t indicesSize;
+
     //device
     Buffer vertexBuffer;
     Buffer indexBuffer;

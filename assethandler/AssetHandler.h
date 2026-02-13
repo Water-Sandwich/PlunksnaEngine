@@ -4,7 +4,7 @@
 
 #ifndef ASSETHANDLER_H
 #define ASSETHANDLER_H
-#include <cstdint>
+
 #include <filesystem>
 #include <unordered_map>
 
@@ -39,24 +39,24 @@ public:
     //load texture from disk to ram
     Asset loadTexture(std::string name);
     //get texture from handle
-    Texture* getTexture(Asset tex);
+    Texture* getTexture(Asset texHnd);
     //destroy cpu resources
-    void freeTextureHost(Asset tex);
+    void freeTextureHost(Asset texHnd);
     //destroy gpu resources
-    void freeTextureDevice(const Context& context, Asset tex);
+    void freeTextureDevice(const Context& context, Asset texHnd);
     //destroy the entire texture;
-    void destroyTexture(const Context& context, Asset tex);
+    void destroyTexture(const Context& context, Asset texHnd);
 
     //====MESHES======
 
     //load Mesh from disk to ram
     Asset loadMesh(std::string name);
     //get Mesh from handle
-    Mesh* getMesh(Asset tex);
+    Mesh* getMesh(Asset meshHnd);
     //destroy cpu resources
-    void freeMeshHost(Asset tex);
+    void freeMeshHost(Asset meshHnd);
     //destroy gpu resources
-    void freeMeshDevice(const Context& context, Asset tex);
+    void freeMeshDevice(const Context& context, Asset meshHnd);
     //destroy the entire Mesh;
     void destroyMesh(const Context& context, Asset meshHnd);
 

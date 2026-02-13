@@ -89,12 +89,12 @@ private:
     void createUniformBuffers();
     void createDescriptorSets();
 
-    void updateUniformBuffer(uint32_t currentImage);
+    void updateUniformBuffer(uint32_t currentImage) const;
 
     //asset
     //textures
     void createTextureImage();
-    void createTextureImageView();
+    void createTextureImageView() const;
     void createTextureSampler();
 
     //asset
@@ -105,28 +105,28 @@ private:
 
     //init device
     void selectDevice(const Window& window);
-    bool isDeviceSuitable(VkPhysicalDevice device);
+    bool isDeviceSuitable(VkPhysicalDevice device) const;
 
     //buffers and commands
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) const;
 
     void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
-        VmaAllocationCreateFlags flags = {});
+        VmaAllocationCreateFlags flags = {}) const;
 
-    VkCommandBuffer beginSingleTimeCommands();
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+    VkCommandBuffer beginSingleTimeCommands() const;
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer) const;
 
-    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const;
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const;
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-                               uint32_t mipLevels);
+                               uint32_t mipLevels) const;
     //asset
-    void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+    void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) const;
 
-    Buffer beginStagingBuffer(VkDeviceSize bufferSize, void** data);
+    Buffer beginStagingBuffer(VkDeviceSize bufferSize, void** data) const;
 
-    void endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize);
+    void endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize) const;
 
 public:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
@@ -149,20 +149,13 @@ private:
     VkDescriptorPool m_descriptorPool;
     std::vector<FrameResource> m_frameResources;
 
-    //TODO: make models and textures managed by an asset manager
+    //assets
+    
     //model
-    Buffer m_vertexBuffer;
-    Buffer m_indexBuffer;
-
-    std::vector<Vertex> m_vertices;
-    std::vector<uint32_t> m_indices;
+    Asset m_mesh;
 
     //texture
-    // Image m_textureImage;
-    // uint32_t m_mipLevels;
-    // VkImageView m_textureImageView;
     Asset m_textureAsset = NULL_ASSET;
-    Texture* m_texture = nullptr;
     VkSampler m_textureSampler;
 
 

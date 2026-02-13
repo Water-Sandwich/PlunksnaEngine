@@ -25,13 +25,6 @@ T* getFromUMap(Asset asset, std::unordered_map<Asset, T>& umap)
     return nullptr;
 }
 
-template<typename T>
-void removeAsset(Asset asset, std::unordered_map<Asset, T>& umap)
-{
-    umap.erase(asset);
-    umap.push_back(asset);
-}
-
 AssetHandler::AssetHandler()
 {
     initWorkingPath();
@@ -55,14 +48,14 @@ Asset AssetHandler::loadTexture(std::string name)
     return asset;
 }
 
-Texture* AssetHandler::getTexture(Asset tex)
+Texture* AssetHandler::getTexture(Asset texHnd)
 {
-    return getFromUMap(tex, m_textures);
+    return getFromUMap(texHnd, m_textures);
 }
 
-void AssetHandler::freeTextureHost(Asset tex)
+void AssetHandler::freeTextureHost(Asset texHnd)
 {
-    Texture* texture = getTexture(tex);
+    Texture* texture = getTexture(texHnd);
 
     CHECK_R(texture, "free called on unaccounted texture")
 
@@ -71,9 +64,9 @@ void AssetHandler::freeTextureHost(Asset tex)
     destroyTextureHost(texture);
 }
 
-void AssetHandler::freeTextureDevice(const Context& context, Asset tex)
+void AssetHandler::freeTextureDevice(const Context& context, Asset texHnd)
 {
-    Texture* texture = getTexture(tex);
+    Texture* texture = getTexture(texHnd);
 
     CHECK_R(texture, "free called on unaccounted texture");
 
@@ -82,9 +75,9 @@ void AssetHandler::freeTextureDevice(const Context& context, Asset tex)
     destroyTextureDevice(context, texture);
 }
 
-void AssetHandler::destroyTexture(const Context& context, Asset tex)
+void AssetHandler::destroyTexture(const Context& context, Asset texHnd)
 {
-    Texture* texture = getTexture(tex);
+    Texture* texture = getTexture(texHnd);
 
     CHECK_R(texture, "destroy called on unaccounted texture")
 
@@ -94,7 +87,8 @@ void AssetHandler::destroyTexture(const Context& context, Asset tex)
     if (texture->isDeviceLoaded())
         destroyTextureDevice(context, texture);
 
-    removeAsset(tex, m_textures);
+    m_textures.erase(texHnd);
+    m_fragments.push_back(texHnd);
 }
 
 Asset AssetHandler::loadMesh(std::string name)
@@ -139,17 +133,20 @@ Asset AssetHandler::loadMesh(std::string name)
         }
     }
 
+    mesh.verticesSize = mesh.vertices.size();
+    mesh.indicesSize = mesh.indices.size();
+
     return asset;
 }
 
-Mesh* AssetHandler::getMesh(Asset tex)
+Mesh* AssetHandler::getMesh(Asset meshHnd)
 {
-    return getFromUMap(tex, m_meshes);
+    return getFromUMap(meshHnd, m_meshes);
 }
 
-void AssetHandler::freeMeshHost(Asset tex)
+void AssetHandler::freeMeshHost(Asset meshHnd)
 {
-    Mesh* mesh = getMesh(tex);
+    Mesh* mesh = getMesh(meshHnd);
 
     CHECK_R(mesh, "free called on unaccounted mesh")
 
@@ -158,9 +155,9 @@ void AssetHandler::freeMeshHost(Asset tex)
     destroyMeshHost(mesh);
 }
 
-void AssetHandler::freeMeshDevice(const Context& context, Asset tex)
+void AssetHandler::freeMeshDevice(const Context& context, Asset meshHnd)
 {
-    Mesh* mesh = getMesh(tex);
+    Mesh* mesh = getMesh(meshHnd);
 
     CHECK_R(mesh, "free called on unaccounted mesh")
 
@@ -181,7 +178,8 @@ void AssetHandler::destroyMesh(const Context& context, Asset meshHnd)
     if (mesh->isDeviceLoaded())
         destroyMeshDevice(context, mesh);
 
-    removeAsset(meshHnd, m_meshes);
+    m_meshes.erase(meshHnd);
+    m_fragments.push_back(meshHnd);
 }
 
 Asset AssetHandler::makeAsset()
