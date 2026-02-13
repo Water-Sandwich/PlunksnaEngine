@@ -11,6 +11,7 @@
 #include "Asset.h"
 #include "Texture.h"
 #include "Mesh.h"
+#include "ShaderModule.h"
 
 namespace Plunksna {
 
@@ -21,10 +22,12 @@ const std::array g_workingPaths = {
 
 const std::filesystem::path g_meshPath = "models";
 const std::filesystem::path g_texturePath = "textures";
+const std::filesystem::path g_shaderPath = "shaders";
 
 const std::array g_assetFolders = {
     g_meshPath,
-    g_texturePath
+    g_texturePath,
+    g_shaderPath
 };
 
 inline std::filesystem::path g_workingPath;
@@ -60,23 +63,41 @@ public:
     //destroy the entire Mesh;
     void destroyMesh(const Context& context, Asset meshHnd);
 
+    //====SHADERS====
+
+    //load shader from disk
+    Asset loadShader(const Context& context, std::string name);
+    //get shader from handle
+    ShaderModule* getShader(Asset shader);
+    //destroy cpu shader
+    void freeShaderHost(Asset shader);
+    //destroy device shader
+    void freeShaderDevice(const Context& context, Asset shader);
+    //destroy shader entirely
+    void destroyShaderModule(const Context& context, Asset shader);
+
 private:
     Asset makeAsset();
     std::filesystem::path initWorkingPath();
 
     //textures
     //destroy without checks
-    void destroyTextureHost(Texture* texture);
-    void destroyTextureDevice(const Context& context, Texture* texture);
+    static void destroyTextureHost(Texture* texture);
+    static void destroyTextureDevice(const Context& context, Texture* texture);
 
     //meshes
     //destroy without checks
-    void destroyMeshHost(Mesh* mesh);
-    void destroyMeshDevice(const Context& context, Mesh* mesh);
+    static void destroyMeshHost(Mesh* mesh);
+    static void destroyMeshDevice(const Context& context, Mesh* mesh);
+
+    //shader
+    static void destroyShaderHost(ShaderModule* mesh);
+    static void destroyShaderDevice(const Context& context, ShaderModule* mesh);
 
 private:
-    std::unordered_map<Asset, Texture>  m_textures;
-    std::unordered_map<Asset, Mesh>     m_meshes;
+    std::unordered_map<Asset, Texture>      m_textures;
+    std::unordered_map<Asset, Mesh>         m_meshes;
+    std::unordered_map<Asset, ShaderModule> m_shaders;
 
     std::vector<Asset> m_fragments;
     Asset m_maxAsset = 0;

@@ -266,22 +266,25 @@ void Renderer::createDescriptorSetLayout()
 
 void Renderer::createGraphicsPipeline()
 {
-    auto vertShaderCode = readFile("../shaders/vertShader.spv");
-    auto fragShaderCode = readFile("../shaders/fragShader.spv");
+    Asset vertShaderHnd = m_assetHandler.loadShader(m_context, "vertShader.spv");
+    Asset fragShaderHnd = m_assetHandler.loadShader(m_context, "fragShader.spv");
 
-    VkShaderModule vertShaderModule = createShaderModule(m_context, vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(m_context, fragShaderCode);
+    ShaderModule* vertShader = m_assetHandler.getShader(vertShaderHnd);
+    ShaderModule* fragShader = m_assetHandler.getShader(fragShaderHnd);
+
+    m_assetHandler.freeShaderHost(vertShaderHnd);
+    m_assetHandler.freeShaderHost(fragShaderHnd);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertShaderStageInfo.module = vertShaderModule;
+    vertShaderStageInfo.module = vertShader->shaderModule;
     vertShaderStageInfo.pName = "main";
 
     VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
     fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragShaderStageInfo.module = fragShaderModule;
+    fragShaderStageInfo.module = fragShader->shaderModule;
     fragShaderStageInfo.pName = "main";
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
@@ -424,8 +427,8 @@ void Renderer::createGraphicsPipeline()
     ASSERT_V(vkCreateGraphicsPipelines(m_context.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline),
         "failed to create graphics pipeline!")
 
-    vkDestroyShaderModule(m_context.device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(m_context.device, vertShaderModule, nullptr);
+    m_assetHandler.destroyShaderModule(m_context, vertShaderHnd);
+    m_assetHandler.destroyShaderModule(m_context, fragShaderHnd);
 }
 
 void Renderer::createRenderPass()

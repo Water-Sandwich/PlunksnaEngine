@@ -150,7 +150,7 @@ private:
     std::vector<FrameResource> m_frameResources;
 
     //assets
-    
+
     //model
     Asset m_mesh;
 

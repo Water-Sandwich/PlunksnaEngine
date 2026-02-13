@@ -35,6 +35,8 @@ AssetHandler::~AssetHandler()
     LOG("Asset handler destroyed")
 }
 
+//TEXTURES
+
 Asset AssetHandler::loadTexture(std::string name)
 {
     Asset asset = makeAsset();
@@ -90,6 +92,22 @@ void AssetHandler::destroyTexture(const Context& context, Asset texHnd)
     m_textures.erase(texHnd);
     m_fragments.push_back(texHnd);
 }
+
+void AssetHandler::destroyTextureHost(Texture* texture)
+{
+    stbi_image_free(texture->pixels);
+    texture->pixels = nullptr;
+    texture->extents = {0,0,0};
+}
+
+void AssetHandler::destroyTextureDevice(const Context& context, Texture* texture)
+{
+    texture->image.destroy(context);
+    VK_DESTROY(texture->fullView, context.device, vkDestroyImageView)
+    texture->mipLevels = 1;
+}
+
+//MESHES
 
 Asset AssetHandler::loadMesh(std::string name)
 {
@@ -182,6 +200,88 @@ void AssetHandler::destroyMesh(const Context& context, Asset meshHnd)
     m_fragments.push_back(meshHnd);
 }
 
+void AssetHandler::destroyMeshHost(Mesh* mesh)
+{
+    //clear doesnt free memory
+    std::vector<Vertex>().swap(mesh->vertices);
+    std::vector<uint32_t>().swap(mesh->indices);
+}
+
+void AssetHandler::destroyMeshDevice(const Context& context, Mesh* mesh)
+{
+    mesh->indexBuffer.destroy(context);
+    mesh->vertexBuffer.destroy(context);
+}
+
+//SHADERS
+
+Asset AssetHandler::loadShader(const Context& context, std::string name)
+{
+    Asset asset = makeAsset();
+    ShaderModule& shaderModule = m_shaders[asset];
+    auto path = g_workingPath / g_shaderPath / name;
+
+    shaderModule.byteCode = readFile(path.string());
+    shaderModule.shaderModule = createShaderModule(context, shaderModule.byteCode);
+
+    return asset;
+}
+
+ShaderModule* AssetHandler::getShader(Asset shader)
+{
+    return getFromUMap(shader, m_shaders);
+}
+
+void AssetHandler::freeShaderHost(Asset shader)
+{
+    ShaderModule* shaderMod = getShader(shader);
+
+    CHECK_R(shaderMod, "Called host free on unloaded shader module");
+
+    CHECK_R(shaderMod->isHostLoaded(), "Called host free on unloaded shader bytecode")
+
+    destroyShaderHost(shaderMod);
+}
+
+void AssetHandler::freeShaderDevice(const Context& context, Asset shader)
+{
+    ShaderModule* shaderMod = getShader(shader);
+
+    CHECK_R(shaderMod, "Called host free on unloaded shader module");
+
+    CHECK_R(shaderMod->isDeviceLoaded(), "Called host free on unloaded VkShaderModule")
+
+    destroyShaderDevice(context, shaderMod);
+}
+
+void AssetHandler::destroyShaderModule(const Context& context, Asset shader)
+{
+    ShaderModule* shaderMod = getShader(shader);
+
+    CHECK_R(shaderMod, "destroy called on unaccounted texture")
+
+    if (shaderMod->isHostLoaded())
+        destroyShaderHost(shaderMod);
+
+    if (shaderMod->isDeviceLoaded())
+        destroyShaderDevice(context, shaderMod);
+
+    m_shaders.erase(shader);
+    m_fragments.push_back(shader);
+}
+
+void AssetHandler::destroyShaderHost(ShaderModule* mesh)
+{
+    std::vector<char>().swap(mesh->byteCode);
+}
+
+void AssetHandler::destroyShaderDevice(const Context& context, ShaderModule* mesh)
+{
+    vkDestroyShaderModule(context.device, mesh->shaderModule, nullptr);
+}
+
+//OTHER
+
 Asset AssetHandler::makeAsset()
 {
     if (m_fragments.empty()) {
@@ -211,33 +311,6 @@ std::filesystem::path AssetHandler::initWorkingPath()
     }
 
     THROW("Invalid working paths!")
-}
-
-void AssetHandler::destroyTextureHost(Texture* texture)
-{
-    stbi_image_free(texture->pixels);
-    texture->pixels = nullptr;
-    texture->extents = {0,0,0};
-}
-
-void AssetHandler::destroyTextureDevice(const Context& context, Texture* texture)
-{
-    texture->image.destroy(context);
-    VK_DESTROY(texture->fullView, context.device, vkDestroyImageView)
-    texture->mipLevels = 1;
-}
-
-void AssetHandler::destroyMeshHost(Mesh* mesh)
-{
-    //clear doesnt free memory
-    std::vector<Vertex>().swap(mesh->vertices);
-    std::vector<uint32_t>().swap(mesh->indices);
-}
-
-void AssetHandler::destroyMeshDevice(const Context& context, Mesh* mesh)
-{
-    mesh->indexBuffer.destroy(context);
-    mesh->vertexBuffer.destroy(context);
 }
 
 } // Plunksna
