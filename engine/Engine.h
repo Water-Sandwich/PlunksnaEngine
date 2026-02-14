@@ -39,7 +39,12 @@ private:
     void render();
     void handleEvents();
 
+    void moveCamera(float delta_ms);
+    void rotateCamera();
+
 private:
+    Registry m_registry;
+
     Window m_window;
     Renderer m_renderer;
     AssetHandler m_assetHandler;
@@ -50,10 +55,6 @@ private:
     float m_maxFPS;
     float m_maxFrameTime_ms;
     float m_deltaTime_ms;
-
-    Registry m_registry;
-    Filter<Transform2, RColorRGBA>* m_renderFilter;
-    Filter<Transform2, Player>* m_player;
 
 public:
     bool m_isRunning = true;

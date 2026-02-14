@@ -23,6 +23,7 @@
 #include "SwapChain.h"
 #include "Vertex.h"
 #include "Buffer.h"
+#include "Camera.h"
 #include "assethandler/AssetHandler.h"
 
 namespace Plunksna {
@@ -60,6 +61,8 @@ public:
     void draw(const Window& window);
     void clean();
 
+    Camera* getCamera();
+
     void resizeNotif();
 
 private:
@@ -89,7 +92,7 @@ private:
     void createUniformBuffers();
     void createDescriptorSets();
 
-    void updateUniformBuffer(uint32_t currentImage) const;
+    void updateUniformBuffer(uint32_t currentImage);
 
     //asset
     //textures
@@ -148,6 +151,8 @@ private:
 
     VkDescriptorPool m_descriptorPool;
     std::vector<FrameResource> m_frameResources;
+
+    Camera m_camera;
 
     //assets
 

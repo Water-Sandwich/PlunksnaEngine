@@ -2,6 +2,7 @@
 // Created by d on 5/11/25.
 //
 
+
 #include "Engine.h"
 #include "Components.h"
 #include "Keyboard.h"
@@ -13,34 +14,13 @@
 #include <iostream>
 #include <thread>
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_enum_string_helper.h>
 
 namespace Plunksna {
 
-void updatePlayer(float delta_ms, Transform2& transform)
-{
-    //LOG(delta_ms)
-
-    if (g_keyboard.get(SDL_SCANCODE_W))
-        transform.position.y -= (1 * delta_ms);
-    if (g_keyboard.get(SDL_SCANCODE_S))
-        transform.position.y += (1 * delta_ms);
-    if (g_keyboard.get(SDL_SCANCODE_A))
-        transform.position.x -= (1 * delta_ms);
-    if (g_keyboard.get(SDL_SCANCODE_D))
-        transform.position.x += (1 * delta_ms);
-}
-
 void Engine::tick(float delta_ms)
 {
-    m_renderFilter->foreach([&](Transform2& transform2, RColorRGBA& color) {
-        color.r = g_random.randomInt(0, 255);
-        color.g = g_random.randomInt(0, 255);
-        color.b = g_random.randomInt(0, 255);
-
-        transform2.position.x = g_random.randomInt(0, 640);
-        transform2.position.y = g_random.randomInt(0, 480);
-    });
+    rotateCamera();
+    moveCamera(delta_ms);
 }
 
 void Engine::render()
@@ -88,6 +68,62 @@ void Engine::handleEvents()
     }
 }
 
+void Engine::moveCamera(float delta_ms)
+{
+    Camera* camera = m_renderer.getCamera();
+    float speed = 0.005;
+
+    glm::vec3 inputDir(0);
+
+    if (g_keyboard.get(SDL_SCANCODE_W))
+        inputDir.x += 1;
+    if (g_keyboard.get(SDL_SCANCODE_S))
+        inputDir.x -= 1;
+    if (g_keyboard.get(SDL_SCANCODE_A))
+        inputDir.y += 1;
+    if (g_keyboard.get(SDL_SCANCODE_D))
+        inputDir.y -= 1;
+    if (g_keyboard.get(SDL_SCANCODE_SPACE))
+        inputDir.z += 1;
+    if (g_keyboard.get(SDL_SCANCODE_LCTRL))
+        inputDir.z -= 1;
+
+    if (glm::length(inputDir) == 0)
+        return;
+
+    inputDir = glm::normalize(inputDir);
+
+    glm::vec3 forward = camera->m_direction;
+    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0,0,1)));
+    glm::vec3 up = glm::normalize(glm::cross(right, forward));
+
+    inputDir = (forward * inputDir.x) + (-right * inputDir.y) + (up * inputDir.z);
+
+    camera->m_position += inputDir * delta_ms * speed;
+}
+
+void Engine::rotateCamera()
+{
+    if (!g_mouse.get(SDL_BUTTON_RIGHT))
+        return;
+
+    Camera* camera = m_renderer.getCamera();
+    float sensitivity = 0.005;
+
+    glm::vec2 delta = g_mouse.getMouseDelta();
+
+    glm::vec3 forward = camera->m_direction;
+    glm::vec3 up(0,0,1);
+    glm::vec3 right = glm::normalize(glm::cross(forward, up));
+
+    glm::quat yaw = glm::angleAxis(-delta.x * sensitivity, up);
+    glm::quat pitch = glm::angleAxis(-delta.y * sensitivity, right);
+
+    glm::quat finalRot = pitch * yaw;
+    forward = finalRot * forward;
+
+    camera->m_direction = forward;
+}
 
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags)
     : m_window(title, size, flags), m_renderer(m_assetHandler)
@@ -103,18 +139,7 @@ Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
 
 void Engine::init()
 {
-    LOG("init");
-
-    m_renderFilter = m_registry.makeFilter<Transform2, RColorRGBA>();
-    m_player = m_registry.makeFilter<Transform2, Player>();
-
-    for (int i = 0 ; i < 1; i++) {
-        auto e = m_registry.makeEntity();
-        glm::vec2 pos = {g_random.randomInt(0, 640), g_random.randomInt(0, 480)};
-        m_registry.add<Transform2>(e, pos, glm::vec2(10,10));
-        m_registry.add<RColorRGBA>(e, 255,255,255,255);
-        //m_registry.add<Player>(e);
-    }
+    LOG("Engine init");
 }
 
 void Engine::run()

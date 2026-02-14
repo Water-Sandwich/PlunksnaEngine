@@ -35,7 +35,8 @@ using namespace Plunksna::RenderUtils;
 
 namespace Plunksna {
 
-Renderer::Renderer(AssetHandler& assetHandler) : m_swapChain(m_context), m_assetHandler(assetHandler)
+Renderer::Renderer(AssetHandler& assetHandler) :
+m_swapChain(m_context), m_assetHandler(assetHandler), m_camera({-2,0,0}, glm::normalize(glm::vec3(2,0,0)))
 {
 
 }
@@ -105,6 +106,7 @@ VkInstance Renderer::init(const Window& window)
     createLogicalDevice(window);
     createAllocator();
     m_swapChain.init(window, m_verticalSync);
+    m_camera.resize((float)m_swapChain.width() / (float)m_swapChain.height());
 
     createRenderPass();
     createDescriptorSetLayout();
@@ -216,6 +218,11 @@ void Renderer::clean()
         vkDestroyInstance(m_context.instance, nullptr);
         m_context.instance = VK_NULL_HANDLE;
     }
+}
+
+Camera* Renderer::getCamera()
+{
+    return &m_camera;
 }
 
 void Renderer::resizeNotif()
@@ -758,8 +765,10 @@ void Renderer::createFrameResources()
     createSyncObjects();
 }
 
-void Renderer::updateUniformBuffer(uint32_t currentImage) const
+void Renderer::updateUniformBuffer(uint32_t currentImage)
 {
+    m_camera.resize((float)m_swapChain.width() / (float)m_swapChain.height());
+
     //TODO: GET RID OF TIME!
     static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -769,21 +778,12 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) const
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(
         glm::mat4(1.0f),
-        time * glm::radians(90.0f),
+        glm::radians(180.0f),
         glm::vec3(0.0f, 0.0f, 1.0f));
 
-    ubo.view = glm::lookAt(
-        glm::vec3(2.0f, 2.0f, 2.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = m_camera.getView();
 
-    ubo.proj = glm::perspective(
-        glm::radians(45.0f),
-        static_cast<float>(m_swapChain.width()) / static_cast<float>(m_swapChain.height()),
-        0.1f,
-        10.0f);
-
-    ubo.proj[1][1] *= -1;
+    ubo.proj = m_camera.getPerspective();
 
     memcpy(m_frameResources[currentImage].uniformBufferMapped, &ubo, sizeof(ubo));
 }
@@ -841,7 +841,6 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
 
-    //vkCmdDraw(commandBuffer, (mesh->verticesSize), 1, 0, 0);
     vkCmdDrawIndexed(commandBuffer, (mesh->indicesSize), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);

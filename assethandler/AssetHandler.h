@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "Asset.h"
+#include "AssetType.h"
 #include "Texture.h"
 #include "Mesh.h"
 #include "ShaderModule.h"
@@ -98,6 +99,9 @@ private:
     std::unordered_map<Asset, Texture>      m_textures;
     std::unordered_map<Asset, Mesh>         m_meshes;
     std::unordered_map<Asset, ShaderModule> m_shaders;
+
+    //for later
+    //std::unordered_map<Asset, AssetType>    m_assetTypes;
 
     std::vector<Asset> m_fragments;
     Asset m_maxAsset = 0;

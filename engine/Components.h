@@ -28,16 +28,6 @@ struct RColorRGBA
     Uint8 r,g,b,a;
 };
 
-struct RTexture
-{
-    SDL_Texture* texture;
-};
-
-struct Player
-{
-    unsigned char id;
-};
-
 }
 
 #endif //COMPONENTS_H

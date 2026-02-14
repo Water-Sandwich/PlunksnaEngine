@@ -74,6 +74,8 @@ add_folders(
 set(SOURCE_FILES
         main.cpp
         ${SRC_FOLDERS}
+        vkrenderer/Camera.cpp
+        vkrenderer/Camera.h
 )
 
 add_executable(Plunksna ${SOURCE_FILES})
