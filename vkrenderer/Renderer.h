@@ -33,14 +33,20 @@ static const bool s_enableValidationLayers = false;
 static const bool s_enableValidationLayers = true;
 #endif
 
-
-struct UniformBufferObject
+struct CameraUBO
 {
-    glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
 };
 
+struct ModelUBO
+{
+    glm::mat4 model;
+
+    //camera
+    // glm::mat4 view;
+    // glm::mat4 proj;
+};
 
 //===========================================
 //====================RENDERER===============
@@ -171,7 +177,7 @@ private:
     int m_currentFrame = 0;
 
     bool m_hasResized = false;
-
+    const int MAX_OBJECTS = 1;
 private:
     //=======DEBUG=========
 

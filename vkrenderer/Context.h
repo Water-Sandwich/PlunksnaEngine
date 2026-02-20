@@ -35,6 +35,7 @@ struct Context
 
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
     VkBool32 sampleShading = VK_FALSE;
+    VkPhysicalDeviceProperties physicalDeviceProperties;
 };
 
 }

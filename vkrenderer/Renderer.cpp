@@ -31,6 +31,8 @@
 
 #include "RendererUtils.h"
 
+#define SIZE(type) alignedSize(sizeof(type), m_context.physicalDeviceProperties.limits.minUniformBufferOffsetAlignment)
+
 using namespace Plunksna::RenderUtils;
 
 namespace Plunksna {
@@ -38,7 +40,6 @@ namespace Plunksna {
 Renderer::Renderer(AssetHandler& assetHandler) :
 m_swapChain(m_context), m_assetHandler(assetHandler), m_camera({-2,0,0}, glm::normalize(glm::vec3(2,0,0)))
 {
-
 }
 
 void Renderer::createInstance()
@@ -238,6 +239,8 @@ void Renderer::selectDevice(const Window& window)
         if (isDeviceSuitable(device)) {
             m_context.physicalDevice = device;
             m_context.msaaSamples = getMaxMSAA(device);
+
+            vkGetPhysicalDeviceProperties(m_context.physicalDevice, &m_context.physicalDeviceProperties);
             break;
         }
     }
@@ -247,21 +250,28 @@ void Renderer::selectDevice(const Window& window)
 
 void Renderer::createDescriptorSetLayout()
 {
-    VkDescriptorSetLayoutBinding uboLayoutBinding{};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+    VkDescriptorSetLayoutBinding cameraUBOLayout{};
+    cameraUBOLayout.binding = 0;
+    cameraUBOLayout.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    cameraUBOLayout.descriptorCount = 1;
+    cameraUBOLayout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    cameraUBOLayout.pImmutableSamplers = nullptr; // Optional
+
+    VkDescriptorSetLayoutBinding modelUBOLayout{};
+    modelUBOLayout.binding = 1;
+    modelUBOLayout.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    modelUBOLayout.descriptorCount = 1;
+    modelUBOLayout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    modelUBOLayout.pImmutableSamplers = nullptr; // Optional
 
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-    samplerLayoutBinding.binding = 1;
-    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.binding = 2;
     samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.descriptorCount = 1;
     samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
 
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings = {cameraUBOLayout, modelUBOLayout , samplerLayoutBinding};
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -363,8 +373,8 @@ void Renderer::createGraphicsPipeline()
     multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
-        | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
+                                        | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
     colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
     colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
@@ -407,7 +417,8 @@ void Renderer::createGraphicsPipeline()
     depthStencil.front = {}; // Optional
     depthStencil.back = {}; // Optional
 
-    ASSERT_V(vkCreatePipelineLayout(m_context.device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout), "failed to create pipeline layout!")
+    ASSERT_V(vkCreatePipelineLayout(m_context.device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout),
+        "failed to create pipeline layout!")
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -568,7 +579,7 @@ void Renderer::createSyncObjects()
 
 void Renderer::createTextureImage()
 {
-    m_textureAsset = m_assetHandler.loadTexture("viking_room.png");
+    m_textureAsset = m_assetHandler.loadTexture("obama_prism.jpg");
     Texture* texture = m_assetHandler.getTexture(m_textureAsset);
 
     uint32_t texWidth = texture->width();
@@ -638,7 +649,7 @@ void Renderer::createTextureSampler()
 
 void Renderer::loadModel()
 {
-    m_mesh = m_assetHandler.loadMesh("viking_room.obj");
+    m_mesh = m_assetHandler.loadMesh("obama_prism.obj");
 }
 
 void Renderer::createVertexBuffer()
@@ -675,7 +686,8 @@ void Renderer::createIndexBuffer()
 
 void Renderer::createUniformBuffers()
 {
-    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+    //TODO, suballocate UBOs
+    VkDeviceSize bufferSize = SIZE(CameraUBO) + sizeof(ModelUBO);
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
         //TODO: Could be sequential if using memcpy for UBOs
@@ -688,11 +700,13 @@ void Renderer::createUniformBuffers()
 
 void Renderer::createDescriptorPools()
 {
-    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    std::array<VkDescriptorPoolSize, 3> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(m_maxInFlightFrames);
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(m_maxInFlightFrames);
+    poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(m_maxInFlightFrames);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -721,10 +735,15 @@ void Renderer::createDescriptorSets()
     for (int i = 0; i < m_maxInFlightFrames; i++) {
         m_frameResources[i].descriptorSet = tempBuffer[i];
 
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(UniformBufferObject);
+        VkDescriptorBufferInfo cameraUBOInfo{};
+        cameraUBOInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
+        cameraUBOInfo.offset = 0;
+        cameraUBOInfo.range = sizeof(CameraUBO);
+
+        VkDescriptorBufferInfo modelUBOInfo{};
+        modelUBOInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
+        modelUBOInfo.offset = sizeof(CameraUBO);
+        modelUBOInfo.range = sizeof(ModelUBO) * MAX_OBJECTS;
 
         Texture* texture = m_assetHandler.getTexture(m_textureAsset);
 
@@ -733,7 +752,7 @@ void Renderer::createDescriptorSets()
         imageInfo.imageView = texture->fullView;
         imageInfo.sampler = m_textureSampler;
 
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = m_frameResources[i].descriptorSet;
@@ -741,15 +760,23 @@ void Renderer::createDescriptorSets()
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
+        descriptorWrites[0].pBufferInfo = &cameraUBOInfo;
 
         descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[1].dstSet = m_frameResources[i].descriptorSet;
         descriptorWrites[1].dstBinding = 1;
         descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &imageInfo;
+        descriptorWrites[1].pBufferInfo = &modelUBOInfo;
+
+        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[2].dstSet = m_frameResources[i].descriptorSet;
+        descriptorWrites[2].dstBinding = 2;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pImageInfo = &imageInfo;
 
         vkUpdateDescriptorSets(m_context.device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
     }
@@ -769,23 +796,23 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
 {
     m_camera.resize((float)m_swapChain.width() / (float)m_swapChain.height());
 
-    //TODO: GET RID OF TIME!
-    static auto startTime = std::chrono::high_resolution_clock::now();
+    CameraUBO camUBO{
+        .view = m_camera.getView(),
+        .proj = m_camera.getPerspective()
+    };
 
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(
+    ModelUBO modelUBO{};
+    modelUBO.model = glm::rotate(
         glm::mat4(1.0f),
-        glm::radians(180.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::radians(90.0f),
+        glm::vec3(1.0f, 0.0f, 0.0f));
 
-    ubo.view = m_camera.getView();
+    auto* buffer = static_cast<std::byte*>(
+        m_frameResources[currentImage].uniformBufferMapped
+    );
 
-    ubo.proj = m_camera.getPerspective();
-
-    memcpy(m_frameResources[currentImage].uniformBufferMapped, &ubo, sizeof(ubo));
+    memcpy(buffer, &camUBO, sizeof(CameraUBO));
+    memcpy(buffer + SIZE(CameraUBO), &modelUBO, sizeof(ModelUBO));
 }
 
 

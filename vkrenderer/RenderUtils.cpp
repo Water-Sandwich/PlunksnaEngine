@@ -234,6 +234,11 @@ VkSampleCountFlagBits getMaxMSAA(VkPhysicalDevice device)
     return VK_SAMPLE_COUNT_1_BIT;
 }
 
+VkDeviceSize alignedSize(VkDeviceSize size, VkDeviceSize alignment)
+{
+    return (size + alignment - 1) & ~(alignment - 1);
+}
+
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices;

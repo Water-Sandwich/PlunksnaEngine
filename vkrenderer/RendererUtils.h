@@ -75,6 +75,8 @@ std::vector<VkPhysicalDevice> getPhysicalDevices(const Context& context);
 
 VkSampleCountFlagBits getMaxMSAA(VkPhysicalDevice device);
 
+VkDeviceSize alignedSize(VkDeviceSize size, VkDeviceSize alignment);
+
 //swapchain
 VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 
