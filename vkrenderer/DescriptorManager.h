@@ -9,10 +9,11 @@
 #include <vector>
 
 #include "Context.h"
+#include "utils/Types.h"
 
 namespace Plunksna {
 
-using Descriptor = uint32_t;
+using Descriptor = u32;
 constexpr Descriptor NULL_DESCRIPTOR = std::numeric_limits<Descriptor>::max();
 
 class DescriptorManager {
@@ -38,8 +39,8 @@ private:
         VkDescriptorSetLayout layout = VK_NULL_HANDLE;
         std::vector<VkDescriptorSet> sets;
 
-        uint32_t maxSets;
-        uint32_t maxTotalBuildStages;
+        u32 maxSets;
+        u32 maxTotalBuildStages;
 
         std::vector<DescriptorBindingBuild> layoutBuildStages;
         std::vector<DescriptorSetBuild> setBuildStages;
@@ -51,33 +52,33 @@ public:
 
     VkDescriptorPool getPool(Descriptor desc) const;
     VkDescriptorSetLayout getLayout(Descriptor desc) const;
-    VkDescriptorSet getSet(Descriptor desc, int index) const;
+    VkDescriptorSet getSet(Descriptor desc, i32 index) const;
 
     VkDescriptorPool* getPoolPtr(Descriptor desc);
     VkDescriptorSetLayout* getLayoutPtr(Descriptor desc);
-    VkDescriptorSet* getSetPtr(Descriptor desc, int index);
+    VkDescriptorSet* getSetPtr(Descriptor desc, i32 index);
 
     //start to build a descriptor pack, returns a handle to the current build queue
     Descriptor beginBuild();
     //add a binding, returns bind point
-    uint32_t pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages);
+    u32 pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages);
     //submit the queue and build the pool and layout and allocates descriptor sets, returns finished layout
-    VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc, uint32_t maxSets);
+    VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc, u32 maxSets);
 
     //push a buffer to the descriptor set queue build, returns the binding point
-    uint32_t pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info);
+    u32 pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info);
     //push an image to the descriptor set queue build, returns the binding point
-    uint32_t pushImageInfo(Descriptor desc, VkDescriptorImageInfo info);
+    u32 pushImageInfo(Descriptor desc, VkDescriptorImageInfo info);
     //prepare descriptor set writes
-    VkDescriptorSet pushSetWrite(Descriptor desc, int setNum);
+    VkDescriptorSet pushSetWrite(Descriptor desc, i32 setNum);
     //initialize all descriptor sets
     void createDescriptorSets(const Context& context, Descriptor desc);
 
     void clean(const Context& context);
 private:
-    void createPool(const Context& context, Descriptor desc, uint32_t maxSets);
+    void createPool(const Context& context, Descriptor desc, u32 maxSets);
     void createLayout(const Context& context, Descriptor desc);
-    void allocateSets(const Context& context, Descriptor desc, uint32_t maxSets);
+    void allocateSets(const Context& context, Descriptor desc, u32 maxSets);
 
     static constexpr bool isBufferDescriptor(VkDescriptorType type);
     static constexpr bool isImageDescriptor(VkDescriptorType type);

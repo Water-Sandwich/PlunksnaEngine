@@ -7,6 +7,7 @@
 
 #include <glm/vec2.hpp>
 #include <SDL3/SDL_mouse.h>
+#include <utils/Types.h>
 
 namespace Plunksna {
 
@@ -18,16 +19,16 @@ public:
     void swap() noexcept;
 
     //return true if mouse button is down
-    bool get(Uint8 button) const;
+    bool get(u8 button) const;
 
     //returns if down last frame
-    bool getPrevious(Uint8 button) const;
+    bool getPrevious(u8 button) const;
 
     //returns if button was JUST down
-    bool getPressed(Uint8 button) const;
+    bool getPressed(u8 button) const;
 
     //returns if button was JUST up
-    bool getReleased(Uint8 button) const;
+    bool getReleased(u8 button) const;
 
     //get change in mouse from last frame
     glm::vec2 getMouseDelta() const;
@@ -38,13 +39,13 @@ public:
     //get position of mouse within desktop
     glm::vec2 getMouseGlobal() const;
 
-    void setScroll(float scroll);
+    void setScroll(f32 scroll);
 
-    float getScroll() const;
+    f32 getScroll() const;
 
-    float getScrollFrame() const;
+    f32 getScrollFrame() const;
 
-    float getScrollTotal() const;
+    f32 getScrollTotal() const;
 
 private:
     unsigned char getOtherIndex() const;
@@ -52,9 +53,9 @@ private:
 private:
     glm::vec2 m_deltaMouse, m_globalMouse, m_windowMouse;
     SDL_MouseButtonFlags m_states[2];
-    float m_scroll;
-    float m_scrollTotal;
-    float m_scrollFrame;
+    f32 m_scroll;
+    f32 m_scrollTotal;
+    f32 m_scrollFrame;
     unsigned char m_stateIndex = 0;
 };
 

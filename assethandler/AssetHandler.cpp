@@ -123,7 +123,7 @@ Asset AssetHandler::loadMesh(std::string name)
 
     ASSERT(tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str()), err);
 
-    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+    std::unordered_map<Vertex, i32> uniqueVertices{};
 
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
@@ -143,7 +143,7 @@ Asset AssetHandler::loadMesh(std::string name)
             vertex.color = {1.0f, 1.0f, 1.0f};
 
             if (!uniqueVertices.contains(vertex)) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(mesh.vertices.size());
+                uniqueVertices[vertex] = static_cast<i32>(mesh.vertices.size());
                 mesh.vertices.push_back(vertex);
             }
 
@@ -204,7 +204,7 @@ void AssetHandler::destroyMeshHost(Mesh* mesh)
 {
     //clear doesnt free memory
     std::vector<Vertex>().swap(mesh->vertices);
-    std::vector<uint32_t>().swap(mesh->indices);
+    std::vector<i32>().swap(mesh->indices);
 }
 
 void AssetHandler::destroyMeshDevice(const Context& context, Mesh* mesh)

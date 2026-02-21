@@ -46,7 +46,7 @@ public:
 
     //create a filter, pre-existing components will not be included in the filter
     template<typename... Components>
-    Filter<Components...>* makeFilter(typename Filter<Components...>::FilterFunction func = nullptr, int priority = 0, std::size_t reserveSize = FILTER_RESERVE_SIZE);
+    Filter<Components...>* makeFilter(typename Filter<Components...>::FilterFunction func = nullptr, i32 priority = 0, std::size_t reserveSize = FILTER_RESERVE_SIZE);
 
     //get total amount of entities
     std::size_t totalCount() const;

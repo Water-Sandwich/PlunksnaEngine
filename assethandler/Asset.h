@@ -4,11 +4,13 @@
 
 #ifndef ASSET_H
 #define ASSET_H
+
 #include <limits>
+#include "utils/Types.h"
 
 namespace Plunksna {
 
-using Asset = uint32_t;
+using Asset = i32;
 constexpr Asset NULL_ASSET = std::numeric_limits<Asset>::max();
 
 }

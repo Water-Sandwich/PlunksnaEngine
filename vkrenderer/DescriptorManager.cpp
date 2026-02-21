@@ -18,7 +18,7 @@ VkDescriptorSetLayout DescriptorManager::getLayout(Descriptor desc) const
     return m_descriptors[desc].layout;
 }
 
-VkDescriptorSet DescriptorManager::getSet(Descriptor desc, int index) const
+VkDescriptorSet DescriptorManager::getSet(Descriptor desc, i32 index) const
 {
     return m_descriptors[desc].sets[index];
 }
@@ -33,7 +33,7 @@ VkDescriptorSetLayout* DescriptorManager::getLayoutPtr(Descriptor desc)
     return &m_descriptors[desc].layout;
 }
 
-VkDescriptorSet* DescriptorManager::getSetPtr(Descriptor desc, int index)
+VkDescriptorSet* DescriptorManager::getSetPtr(Descriptor desc, i32 index)
 {
     return &m_descriptors[desc].sets[index];
 }
@@ -44,13 +44,13 @@ Descriptor DescriptorManager::beginBuild()
     return m_descriptors.size() - 1;
 }
 
-uint32_t DescriptorManager::pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages)
+u32 DescriptorManager::pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages)
 {
     m_descriptors[desc].layoutBuildStages.push_back(DescriptorBindingBuild(type, stages));
     return m_descriptors[desc].layoutBuildStages.size() - 1;
 }
 
-VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Descriptor desc, uint32_t maxSets)
+VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Descriptor desc, u32 maxSets)
 {
     ASSERT(desc < m_descriptors.size(),
         "Trying to access an uninitialized descriptor pack! desc: " << desc <<
@@ -65,7 +65,7 @@ VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Des
     return getLayout(desc);
 }
 
-uint32_t DescriptorManager::pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info)
+u32 DescriptorManager::pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info)
 {
     auto& pack = m_descriptors[desc];
     auto index = pack.setBuildStages.size() % pack.layoutBuildStages.size();
@@ -85,7 +85,7 @@ uint32_t DescriptorManager::pushBufferInfo(Descriptor desc, VkDescriptorBufferIn
     return index;
 }
 
-uint32_t DescriptorManager::pushImageInfo(Descriptor desc, VkDescriptorImageInfo info)
+u32 DescriptorManager::pushImageInfo(Descriptor desc, VkDescriptorImageInfo info)
 {
     auto& pack = m_descriptors[desc];
     auto index = pack.setBuildStages.size() % pack.layoutBuildStages.size();;
@@ -105,7 +105,7 @@ uint32_t DescriptorManager::pushImageInfo(Descriptor desc, VkDescriptorImageInfo
     return index;
 }
 
-VkDescriptorSet DescriptorManager::pushSetWrite(Descriptor desc, int setNum)
+VkDescriptorSet DescriptorManager::pushSetWrite(Descriptor desc, i32 setNum)
 {
     auto& pack = m_descriptors[desc];
 
@@ -123,7 +123,7 @@ VkDescriptorSet DescriptorManager::pushSetWrite(Descriptor desc, int setNum)
 
     //pack.setWrites.reserve(pack.setBuildStages.size());
 
-    for (uint32_t i = 0; i < pack.layoutBuildStages.size(); i++) {
+    for (u32 i = 0; i < pack.layoutBuildStages.size(); i++) {
         auto& layoutBuild = pack.layoutBuildStages[i];
         auto& setBuild = pack.setBuildStages[i];
 
@@ -168,7 +168,7 @@ void DescriptorManager::clean(const Context& context)
     m_descriptors.clear();
 }
 
-void DescriptorManager::createPool(const Context& context, Descriptor desc, uint32_t maxSets)
+void DescriptorManager::createPool(const Context& context, Descriptor desc, u32 maxSets)
 {
     auto& buildQueue = m_descriptors[desc].layoutBuildStages;
     m_descriptors[desc].maxSets = maxSets;
@@ -187,7 +187,7 @@ void DescriptorManager::createPool(const Context& context, Descriptor desc, uint
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.poolSizeCount = static_cast<u32>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = maxSets;
 
@@ -203,7 +203,7 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     bindings.reserve(buildQueue.size());
 
-    for (uint32_t i = 0; i < buildQueue.size(); i++) {
+    for (u32 i = 0; i < buildQueue.size(); i++) {
         VkDescriptorSetLayoutBinding bind {
             .binding = i,
             .descriptorType = buildQueue[i].type,
@@ -217,14 +217,14 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.bindingCount = static_cast<u32>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
     ASSERT_V(vkCreateDescriptorSetLayout(context.device, &layoutInfo, nullptr, &m_descriptors[desc].layout),
         "failed to create descriptor set layout!")
 }
 
-void DescriptorManager::allocateSets(const Context& context, Descriptor desc, uint32_t maxSets)
+void DescriptorManager::allocateSets(const Context& context, Descriptor desc, u32 maxSets)
 {
     auto& pack = m_descriptors[desc];
     std::vector layouts(maxSets, pack.layout);

@@ -14,7 +14,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 target) :
 
 }
 
-void Camera::resize(float aspect)
+void Camera::resize(f32 aspect)
 {
     m_aspect = aspect;
 }

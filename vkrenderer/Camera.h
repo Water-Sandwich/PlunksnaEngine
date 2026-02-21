@@ -6,6 +6,7 @@
 #define CAMERA_H
 #include <glm/fwd.hpp>
 #include <glm/vec3.hpp>
+#include "utils/Types.h"
 
 namespace Plunksna {
 
@@ -14,7 +15,7 @@ public:
     Camera(glm::vec3 position, glm::vec3 target);
     ~Camera() = default;
 
-    void resize(float aspect);
+    void resize(f32 aspect);
     glm::mat4 getView() const;
     glm::mat4 getPerspective() const;
 
@@ -25,12 +26,12 @@ public:
     glm::vec3 m_direction;
 
     //vertical FoV
-    float m_fovY = 70;
-    float m_nearClip = 0.1f;
-    float m_farClip = 1000.0f;
+    f32 m_fovY = 70;
+    f32 m_nearClip = 0.1f;
+    f32 m_farClip = 1000.0f;
 
 private:
-    float m_aspect = 4.0/3.0f;
+    f32 m_aspect = 4.0/3.0f;
 };
 
 } // Plunksna

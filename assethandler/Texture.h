@@ -20,7 +20,7 @@ struct Texture
     //device
     Image image;
     VkImageView fullView = VK_NULL_HANDLE;
-    uint32_t mipLevels = 1;
+    i32 mipLevels = 1;
 
     bool isHostLoaded() const
     {
@@ -32,17 +32,17 @@ struct Texture
         return image.image != VK_NULL_HANDLE;
     }
 
-    uint32_t width() const
+    i32 width() const
     {
         return extents.x;
     }
 
-    uint32_t height() const
+    i32 height() const
     {
         return extents.y;
     }
 
-    uint32_t depth() const
+    i32 depth() const
     {
         return extents.z;
     }

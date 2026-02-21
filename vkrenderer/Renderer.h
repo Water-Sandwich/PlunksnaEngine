@@ -26,6 +26,7 @@
 #include "Camera.h"
 #include "DescriptorManager.h"
 #include "assethandler/AssetHandler.h"
+#include "utils/Types.h"
 
 namespace Plunksna {
 #ifdef NDEBUG
@@ -102,7 +103,7 @@ private:
     void createUniformBuffers();
 
     void createModelUBOs();
-    void updateUniformBuffer(uint32_t currentImage);
+    void updateUniformBuffer(u32 currentImage);
 
     //asset
     //textures
@@ -121,7 +122,7 @@ private:
     bool isDeviceSuitable(VkPhysicalDevice device) const;
 
     //buffers and commands
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) const;
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex) const;
 
     void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
         VmaAllocationCreateFlags flags = {}) const;
@@ -130,12 +131,12 @@ private:
     void endSingleTimeCommands(VkCommandBuffer commandBuffer) const;
 
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const;
-    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const;
+    void copyBufferToImage(VkBuffer buffer, VkImage image, u32 width, u32 height) const;
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-                               uint32_t mipLevels) const;
+                               u32 mipLevels) const;
     //asset
-    void generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) const;
+    void generateMipMaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels) const;
 
     Buffer beginStagingBuffer(VkDeviceSize bufferSize, void** data) const;
 
@@ -172,15 +173,15 @@ private:
     VkSampler m_textureSampler;
 
     //instances
-    const int MAX_OBJECTS_UBO = 16384;
+    const i32 MAX_OBJECTS_UBO = 16384;
     std::vector<ModelUBO> m_modelUBOs;
 
 
-    float m_queuePriority = 1.f;
+    f32 m_queuePriority = 1.f;
     bool m_verticalSync = false;
 
-    int m_maxInFlightFrames = 2;
-    int m_currentFrame = 0;
+    i32 m_maxInFlightFrames = 2;
+    i32 m_currentFrame = 0;
 
     bool m_hasResized = false;
 private:

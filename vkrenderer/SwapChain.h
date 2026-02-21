@@ -13,6 +13,7 @@
 #include "RendererUtils.h"
 #include "engine/Window.h"
 #include "Image.h"
+#include "utils/Types.h"
 
 namespace Plunksna {
 
@@ -34,18 +35,18 @@ public:
     void cleanSurface();
 
     //draw
-    VkResult fetch(const FrameResource& resource, uint32_t& imageIndex) const;
-    VkResult present(VkQueue presentQueue, uint32_t imageIndex);
+    VkResult fetch(const FrameResource& resource, u32& imageIndex) const;
+    VkResult present(VkQueue presentQueue, u32 imageIndex);
 
     VkExtent2D extent() const;
-    int width() const;
-    int height() const;
+    i32 width() const;
+    i32 height() const;
     VkFormat format() const;
 
     QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device) const;
     RenderUtils::SwapChainSupportDetails getSupport(VkPhysicalDevice device) const;
-    VkFramebuffer getFrameBuffer(uint32_t index) const;
-    VkSemaphore getRenderFinishedSemaphore(uint32_t index) const;
+    VkFramebuffer getFrameBuffer(u32 index) const;
+    VkSemaphore getRenderFinishedSemaphore(u32 index) const;
 
 private:
     void createImageViews();

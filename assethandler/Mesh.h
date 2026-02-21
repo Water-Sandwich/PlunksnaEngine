@@ -18,10 +18,10 @@ struct Mesh
 {
     //host
     std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
+    std::vector<i32> indices;
 
-    uint32_t verticesSize;
-    uint32_t indicesSize;
+    i32 verticesSize;
+    i32 indicesSize;
 
     //device
     Buffer vertexBuffer;

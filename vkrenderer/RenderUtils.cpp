@@ -25,7 +25,7 @@ constexpr Severity vkToPkSev(VkDebugUtilsMessageSeverityFlagBitsEXT vkSev)
     }
 }
 
-VkImageView createImageView(const Context& context, VkImage image, VkFormat format, uint32_t mipLevels,
+VkImageView createImageView(const Context& context, VkImage image, VkFormat format, u32 mipLevels,
                             VkImageAspectFlags aspectFlags)
 {
     VkImageViewCreateInfo createInfo{};
@@ -77,7 +77,7 @@ VkFormat findDepthFormat(const Context& context)
     );
 }
 
-void createImage(const Context& context, Image& image, uint32_t width, uint32_t height, uint32_t mipLevels,
+void createImage(const Context& context, Image& image, u32 width, u32 height, u32 mipLevels,
     VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
     VmaMemoryUsage memoryUsage, VkSampleCountFlagBits numSamples)
 {
@@ -112,17 +112,17 @@ void createImage(const Context& context, Image& image, uint32_t width, uint32_t 
     );
 }
 
-uint32_t getMipLevels(uint32_t width, uint32_t height)
+u32 getMipLevels(u32 width, u32 height)
 {
-    return static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
+    return static_cast<u32>(std::floor(std::log2(std::max(width, height)))) + 1;
 }
 
-uint32_t findMemoryType(const Context& context, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+u32 findMemoryType(const Context& context, u32 typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(context.physicalDevice, &memProperties);
 
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    for (u32 i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
             return i;
         }
@@ -133,7 +133,7 @@ uint32_t findMemoryType(const Context& context, uint32_t typeFilter, VkMemoryPro
 
 std::vector<VkLayerProperties> getLayers()
 {
-    uint32_t layerCount = 0;
+    u32 layerCount = 0;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
     std::vector<VkLayerProperties> layers(layerCount);
@@ -144,7 +144,7 @@ std::vector<VkLayerProperties> getLayers()
 
 std::vector<VkExtensionProperties> getExtensions()
 {
-    uint32_t extensionCount = 0;
+    u32 extensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
     std::vector<VkExtensionProperties> extensions(extensionCount);
@@ -160,7 +160,7 @@ std::vector<VkExtensionProperties> getExtensions()
 
 std::vector<const char*> getRequiredExtensions(bool isDebug)
 {
-    uint32_t sdlExtensionCount = 0;
+    u32 sdlExtensionCount = 0;
     auto sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
 
     std::vector<const char*> extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
@@ -198,7 +198,7 @@ bool hasStencil(VkFormat format)
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-float getMaxAnisotropy(const Context& context)
+f32 getMaxAnisotropy(const Context& context)
 {
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(context.physicalDevice, &properties);
@@ -207,7 +207,7 @@ float getMaxAnisotropy(const Context& context)
 
 std::vector<VkPhysicalDevice> getPhysicalDevices(const Context& context)
 {
-    uint32_t deviceCount = 0;
+    u32 deviceCount = 0;
     vkEnumeratePhysicalDevices(context.instance, &deviceCount, nullptr);
 
     ASSERT(deviceCount != 0, "No devices with Vulkan support found")
@@ -243,13 +243,13 @@ QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
 {
     QueueFamilyIndices indices;
 
-    uint32_t queueFamilyCount = 0;
+    u32 queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-    int i = 0;
+    i32 i = 0;
     for (const auto& queueFamily : queueFamilies) {
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
             indices.graphicsFamily = i;
@@ -270,7 +270,7 @@ QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
 
 bool checkDeviceExtensionSupport(VkPhysicalDevice device, const std::vector<const char*>& extensions)
 {
-    uint32_t extensionCount;
+    u32 extensionCount;
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
     std::vector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -319,7 +319,7 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurface
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
-    uint32_t formatCount;
+    u32 formatCount;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
 
     if (formatCount != 0) {
@@ -327,7 +327,7 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurface
         vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
     }
 
-    uint32_t presentModeCount;
+    u32 presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 
     if (presentModeCount != 0) {
@@ -343,7 +343,7 @@ VkShaderModule createShaderModule(const Context& context, const std::vector<char
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+    createInfo.pCode = reinterpret_cast<const u32*>(code.data());
 
     VkShaderModule shaderModule;
 
@@ -369,16 +369,16 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& avai
 
 VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window& window)
 {
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+    if (capabilities.currentExtent.width != std::numeric_limits<u32>::max()) {
         return capabilities.currentExtent;
     }
 
-    int width, height;
+    i32 width, height;
     SDL_GetWindowSizeInPixels(window.getWindow(), &width, &height);
 
     VkExtent2D actualExtent = {
-        static_cast<uint32_t>(width),
-        static_cast<uint32_t>(height)
+        static_cast<u32>(width),
+        static_cast<u32>(height)
     };
 
     actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,

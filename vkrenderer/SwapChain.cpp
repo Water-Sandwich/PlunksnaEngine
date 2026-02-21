@@ -26,7 +26,7 @@ void SwapChain::init(const Window& window, bool vSync)
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, vSync);
     VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
-    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+    u32 imageCount = swapChainSupport.capabilities.minImageCount + 1;
 
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
         imageCount = swapChainSupport.capabilities.maxImageCount;
@@ -49,7 +49,7 @@ void SwapChain::init(const Window& window, bool vSync)
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    uint32_t queueFamilyIndices[] = {m_context.familyIndices.graphicsFamily.value(), m_context.familyIndices.presentFamily.value()};
+    u32 queueFamilyIndices[] = {m_context.familyIndices.graphicsFamily.value(), m_context.familyIndices.presentFamily.value()};
 
     if (m_context.familyIndices.graphicsFamily != m_context.familyIndices.presentFamily) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -91,12 +91,12 @@ SwapChainSupportDetails SwapChain::getSupport(VkPhysicalDevice device) const
     return querySwapChainSupport(device, m_surface);
 }
 
-VkFramebuffer SwapChain::getFrameBuffer(uint32_t index) const
+VkFramebuffer SwapChain::getFrameBuffer(u32 index) const
 {
     return m_framebuffers[index];
 }
 
-VkSemaphore SwapChain::getRenderFinishedSemaphore(uint32_t index) const
+VkSemaphore SwapChain::getRenderFinishedSemaphore(u32 index) const
 {
     return m_renderFinished[index];
 }
@@ -128,7 +128,7 @@ void SwapChain::cleanSurface()
     VK_DESTROY(m_surface, m_context.instance, vkDestroySurfaceKHR)
 }
 
-VkResult SwapChain::fetch(const FrameResource& resource, uint32_t& imageIndex) const
+VkResult SwapChain::fetch(const FrameResource& resource, u32& imageIndex) const
 {
     return vkAcquireNextImageKHR(
         m_context.device, m_swapChain, UINT64_MAX,
@@ -136,7 +136,7 @@ VkResult SwapChain::fetch(const FrameResource& resource, uint32_t& imageIndex) c
         VK_NULL_HANDLE, &imageIndex);
 }
 
-VkResult SwapChain::present(VkQueue presentQueue, uint32_t imageIndex)
+VkResult SwapChain::present(VkQueue presentQueue, u32 imageIndex)
 {
     VkSemaphore signalSemaphores[] = {m_renderFinished[imageIndex]};
 
@@ -160,12 +160,12 @@ VkExtent2D SwapChain::extent() const
     return m_extent;
 }
 
-int SwapChain::width() const
+i32 SwapChain::width() const
 {
     return m_extent.width;
 }
 
-int SwapChain::height() const
+i32 SwapChain::height() const
 {
     return m_extent.height;
 }
@@ -208,7 +208,7 @@ void SwapChain::createFrameBuffers()
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = m_context.renderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.attachmentCount = static_cast<u32>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = m_extent.width;
         framebufferInfo.height = m_extent.height;
@@ -235,7 +235,7 @@ void SwapChain::createSemaphores()
 
     m_renderFinished.resize(m_images.size());
 
-    for (int i = 0; i < m_renderFinished.size(); i++) {
+    for (i32 i = 0; i < m_renderFinished.size(); i++) {
         ASSERT_V(vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_renderFinished[i]),
             "Could not create semaphore")
     }

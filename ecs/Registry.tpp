@@ -55,7 +55,7 @@ Result Registry::remove(Entity entity)
         return Result::ECS_EMPTY_SWAP_REMOVED;
 
     //remove entity from filters
-    for (int i = 0; i < m_filters.size(); i++) {
+    for (i32 i = 0; i < m_filters.size(); i++) {
         auto& filter = *m_filters[i].get();
 
         if ((filter.m_bitmask & bitmask) == filter.m_bitmask)
@@ -68,7 +68,7 @@ Result Registry::remove(Entity entity)
     }
 
     //update moved components from removal
-    for (int i = 0; i < m_filters.size(); i++) {
+    for (i32 i = 0; i < m_filters.size(); i++) {
         auto& filter = *m_filters[i].get();
 
         if ((filter.m_bitmask & bitmask) != filter.m_bitmask)
@@ -93,7 +93,7 @@ Component* Registry::get(Entity entity) const
 }
 
 template <typename ... Components>
-Filter<Components...>* Registry::makeFilter(typename Filter<Components...>::FilterFunction func, int priority, std::size_t reserveSize)
+Filter<Components...>* Registry::makeFilter(typename Filter<Components...>::FilterFunction func, i32 priority, std::size_t reserveSize)
 {
     //TODO: why does this need to be a uniqptr ?!?
     auto filter = std::make_unique<Filter<Components...>>(func, priority, reserveSize);
@@ -190,7 +190,7 @@ inline Result Registry::removeEntity(Entity entity)
         return Result::ECS_NULL_INDEX;
 
     //TODO: Remove components of entity
-    for (int i = 0; i < m_componentTypes.size(); i++) {
+    for (i32 i = 0; i < m_componentTypes.size(); i++) {
         if (m_entities.componentMasks[index][i] == 0)
             continue;
 

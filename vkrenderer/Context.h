@@ -8,13 +8,14 @@
 #include <optional>
 #include <vulkan/vulkan_core.h>
 #include <vk_mem_alloc.h>
+#include "utils/Types.h"
 
 namespace Plunksna {
 
 struct QueueFamilyIndices
 {
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
+    std::optional<u32> graphicsFamily;
+    std::optional<u32> presentFamily;
 
     bool isComplete() const
     {

@@ -12,6 +12,7 @@
 #include "engine/Log.h"
 #include "engine/Window.h"
 #include "Image.h"
+#include "utils/Types.h"
 
 namespace Plunksna::RenderUtils {
 
@@ -36,7 +37,7 @@ struct SwapChainSupportDetails
 constexpr Severity vkToPkSev(VkDebugUtilsMessageSeverityFlagBitsEXT vkSev);
 
 //images
-VkImageView createImageView(const Context& context, VkImage image, VkFormat format, uint32_t mipLevels = 1,
+VkImageView createImageView(const Context& context, VkImage image, VkFormat format, u32 mipLevels = 1,
                             VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT);
 
 VkFormat findDepthFormat(const Context& context);
@@ -44,11 +45,11 @@ VkFormat findDepthFormat(const Context& context);
 VkFormat findSupportedFormat(const Context& context, const std::vector<VkFormat>& candidates, VkImageTiling tiling,
                             VkFormatFeatureFlags features);
 
-void createImage(const Context& context, Image& image, uint32_t width, uint32_t height, uint32_t mipLevels,
+void createImage(const Context& context, Image& image, u32 width, u32 height, u32 mipLevels,
                 VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
                 VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
 
-uint32_t getMipLevels(uint32_t width, uint32_t height);
+u32 getMipLevels(u32 width, u32 height);
 
 //extensions and layers
 std::vector<VkLayerProperties> getLayers();
@@ -65,9 +66,9 @@ bool checkDeviceExtensionSupport(VkPhysicalDevice device, const std::vector<cons
 //capabilities
 bool hasStencil(VkFormat format);
 
-float getMaxAnisotropy(const Context& context);
+f32 getMaxAnisotropy(const Context& context);
 
-uint32_t findMemoryType(const Context& context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+u32 findMemoryType(const Context& context, u32 typeFilter, VkMemoryPropertyFlags properties);
 
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 

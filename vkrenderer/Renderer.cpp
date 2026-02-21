@@ -64,7 +64,7 @@ void Renderer::createInstance()
 
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
     if (s_enableValidationLayers) {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(s_validationLayers.size());
+        createInfo.enabledLayerCount = static_cast<u32>(s_validationLayers.size());
         createInfo.ppEnabledLayerNames = s_validationLayers.data();
 
         populateDebugMessengerCreateInfo(debugCreateInfo);
@@ -75,7 +75,7 @@ void Renderer::createInstance()
         createInfo.pNext = nullptr;
     }
 
-    createInfo.enabledExtensionCount = static_cast<Uint32>(extensions.size());
+    createInfo.enabledExtensionCount = static_cast<u32>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
 
     auto result = vkCreateInstance(&createInfo, nullptr, &m_context.instance);
@@ -109,7 +109,7 @@ VkInstance Renderer::init(const Window& window)
     createLogicalDevice(window);
     createAllocator();
     m_swapChain.init(window, m_verticalSync);
-    m_camera.resize((float)m_swapChain.width() / (float)m_swapChain.height());
+    m_camera.resize((f32)m_swapChain.width() / (f32)m_swapChain.height());
 
     createRenderPass();
     //createDescriptorSetLayout();
@@ -139,7 +139,7 @@ void Renderer::draw(const Window& window)
     FrameResource& currentFrame = m_frameResources[m_currentFrame];
     vkWaitForFences(m_context.device, 1, &currentFrame.frameInFlightFence, VK_TRUE, UINT64_MAX);
 
-    uint32_t imageIndex;
+    u32 imageIndex;
     VkResult result = m_swapChain.fetch(currentFrame, imageIndex);
 
     ASSERT_V(result, "Could not recreate swapchain")
@@ -264,7 +264,7 @@ void Renderer::initDescriptors()
 
 void Renderer::initDescriptorSets()
 {
-    for (int i = 0; i < m_maxInFlightFrames; i++) {
+    for (i32 i = 0; i < m_maxInFlightFrames; i++) {
         VkDescriptorBufferInfo cameraUBOInfo{};
         cameraUBOInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
         cameraUBOInfo.offset = 0;
@@ -326,7 +326,7 @@ void Renderer::createGraphicsPipeline()
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &bindingsDesc; // Optional
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribDesc.size());
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<u32>(attribDesc.size());
     vertexInputInfo.pVertexAttributeDescriptions = attribDesc.data(); // Optional
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -337,8 +337,8 @@ void Renderer::createGraphicsPipeline()
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapChain.width());
-    viewport.height = static_cast<float>(m_swapChain.height());
+    viewport.width = static_cast<f32>(m_swapChain.width());
+    viewport.height = static_cast<f32>(m_swapChain.height());
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
@@ -353,7 +353,7 @@ void Renderer::createGraphicsPipeline()
 
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.dynamicStateCount = static_cast<u32>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
     VkPipelineViewportStateCreateInfo viewportState{};
@@ -525,7 +525,7 @@ void Renderer::createRenderPass()
     std::array<VkAttachmentDescription, 3> attachments = {colorAttachment, depthAttachment, colorAttachmentResolve};
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.attachmentCount = static_cast<u32>(attachments.size());
     renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
@@ -563,12 +563,12 @@ void Renderer::createCommandBuffers()
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = m_commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = static_cast<uint32_t>(tempBuffer.size());
+    allocInfo.commandBufferCount = static_cast<u32>(tempBuffer.size());
 
     ASSERT_V(vkAllocateCommandBuffers(m_context.device, &allocInfo, tempBuffer.data()),
         "failed to allocate command buffers!")
 
-    for (int i = 0; i < m_maxInFlightFrames; i++)
+    for (i32 i = 0; i < m_maxInFlightFrames; i++)
         m_frameResources[i].commandBuffer = tempBuffer[i];
 }
 
@@ -581,7 +581,7 @@ void Renderer::createSyncObjects()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (int i = 0; i < m_maxInFlightFrames; i++) {
+    for (i32 i = 0; i < m_maxInFlightFrames; i++) {
         ASSERT_V(vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &m_frameResources[i].imageAvailableSem),
             "Could not create semaphore")
 
@@ -595,8 +595,8 @@ void Renderer::createTextureImage()
     m_textureAsset = m_assetHandler.loadTexture("obama_prism.jpg");
     Texture* texture = m_assetHandler.getTexture(m_textureAsset);
 
-    uint32_t texWidth = texture->width();
-    uint32_t texHeight = texture->height();
+    u32 texWidth = texture->width();
+    u32 texHeight = texture->height();
     VkDeviceSize imageSize = texture->getSize() * 4;
 
     texture->mipLevels = getMipLevels(texWidth, texHeight);
@@ -713,9 +713,9 @@ void Renderer::createUniformBuffers()
 
 void Renderer::createModelUBOs()
 {
-    for (int i = 0; i < MAX_OBJECTS_UBO; i++) {
+    for (i32 i = 0; i < MAX_OBJECTS_UBO; i++) {
 
-        glm::vec3 pos = g_random.randomVector<3, float>() * g_random.randomReal(-100.f, 100.f);
+        glm::vec3 pos = g_random.randomVector<3, f32>() * g_random.randomReal(-100.f, 100.f);
 
         glm::mat4 model = glm::mat4(1.0f);
 
@@ -724,7 +724,7 @@ void Renderer::createModelUBOs()
         model = glm::rotate(
             model,
             g_random.randomReal(-180.f, 180.f),
-            g_random.randomVector<3, float>()
+            g_random.randomVector<3, f32>()
         );
 
         m_modelUBOs.push_back(model);
@@ -743,9 +743,9 @@ void Renderer::createFrameResources()
     createModelUBOs();
 }
 
-void Renderer::updateUniformBuffer(uint32_t currentImage)
+void Renderer::updateUniformBuffer(u32 currentImage)
 {
-    m_camera.resize((float)m_swapChain.width() / (float)m_swapChain.height());
+    m_camera.resize((f32)m_swapChain.width() / (f32)m_swapChain.height());
 
     CameraUBO camUBO{
         .view = m_camera.getView(),
@@ -761,7 +761,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
 }
 
 
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) const
+void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex) const
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -782,7 +782,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     clearValues[1].depthStencil = {1.0f, 0};
 
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.clearValueCount = static_cast<u32>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -799,8 +799,8 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapChain.width());
-    viewport.height = static_cast<float>(m_swapChain.height());
+    viewport.width = static_cast<f32>(m_swapChain.width());
+    viewport.height = static_cast<f32>(m_swapChain.height());
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -810,8 +810,8 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     scissor.extent = m_swapChain.extent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    for (int i = 0; i < m_modelUBOs.size(); i++) {
-        uint32_t offset = SIZE(ModelUBO) * i;
+    for (i32 i = 0; i < m_modelUBOs.size(); i++) {
+        u32 offset = SIZE(ModelUBO) * i;
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 1, &offset);
 
@@ -897,7 +897,7 @@ void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
     endSingleTimeCommands(commandBuffer);
 }
 
-void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const
+void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, u32 width, u32 height) const
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -931,7 +931,7 @@ void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
 }
 
 void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-                                     uint32_t mipLevels) const
+                                     u32 mipLevels) const
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -987,8 +987,8 @@ void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayo
     endSingleTimeCommands(commandBuffer);
 }
 
-void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight,
-                               uint32_t mipLevels) const
+void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight,
+                               u32 mipLevels) const
 {
     // Check if image format supports linear blitting
     VkFormatProperties formatProperties;
@@ -1010,10 +1010,10 @@ void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, int32_t texW
     barrier.subresourceRange.layerCount = 1;
     barrier.subresourceRange.levelCount = 1;
 
-    int32_t mipWidth = texWidth;
-    int32_t mipHeight = texHeight;
+    i32 mipWidth = texWidth;
+    i32 mipHeight = texHeight;
 
-    for (uint32_t i = 1; i < mipLevels; i++) {
+    for (u32 i = 1; i < mipLevels; i++) {
         barrier.subresourceRange.baseMipLevel = i - 1;
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -1117,11 +1117,11 @@ void Renderer::createLogicalDevice(const Window& window)
     m_context.familyIndices = m_swapChain.getQueueFamilies(m_context.physicalDevice);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {
+    std::set<u32> uniqueQueueFamilies = {
         m_context.familyIndices.graphicsFamily.value(), m_context.familyIndices.presentFamily.value()
     };
 
-    for (uint32_t queueFamily : uniqueQueueFamilies) {
+    for (u32 queueFamily : uniqueQueueFamilies) {
         VkDeviceQueueCreateInfo queueCreateInfo{};
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueCreateInfo.queueFamilyIndex = queueFamily;
@@ -1137,14 +1137,14 @@ void Renderer::createLogicalDevice(const Window& window)
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
-    createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+    createInfo.queueCreateInfoCount = static_cast<u32>(queueCreateInfos.size());
     createInfo.pEnabledFeatures = &deviceFeatures;
 
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(s_deviceExtensions.size());
+    createInfo.enabledExtensionCount = static_cast<u32>(s_deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = s_deviceExtensions.data();
 
     if (s_enableValidationLayers) {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(s_validationLayers.size());
+        createInfo.enabledLayerCount = static_cast<u32>(s_validationLayers.size());
         createInfo.ppEnabledLayerNames = s_validationLayers.data();
     }
     else {

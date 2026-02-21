@@ -9,14 +9,13 @@
 #include <string>
 #include <glm/vec2.hpp>
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
-#include <vulkan/vulkan_core.h>
 
 #include "Components.h"
 #include "vkrenderer/Renderer.h"
 #include "Window.h"
 #include "assethandler/AssetHandler.h"
 #include "ecs/Registry.h"
+#include <utils/Types.h>
 
 namespace Plunksna {
 
@@ -35,11 +34,11 @@ public:
     void run();
 
 private:
-    void tick(float delta_ms);
+    void tick(f32 delta_ms);
     void render();
     void handleEvents();
 
-    void moveCamera(float delta_ms);
+    void moveCamera(f32 delta_ms);
     void rotateCamera();
 
 private:
@@ -52,9 +51,9 @@ private:
     TimePoint m_startTime;
     TimePoint m_lastTime;
 
-    float m_maxFPS;
-    float m_maxFrameTime_ms;
-    float m_deltaTime_ms;
+    f32 m_maxFPS;
+    f32 m_maxFrameTime_ms;
+    f32 m_deltaTime_ms;
 
 public:
     bool m_isRunning = true;

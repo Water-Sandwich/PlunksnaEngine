@@ -77,7 +77,7 @@ TEST_CASE("Component Store test", "[ECS]")
     {
         ComponentStore<glm::vec2> cs(0);
 
-        REQUIRE(!cs.add(NULL_ENTITY, 5, 5));
+        REQUIRE(cs.add(NULL_ENTITY, 5, 5) == Result::SUCCESS);
         REQUIRE(cs.count() == 0);
     }
 }

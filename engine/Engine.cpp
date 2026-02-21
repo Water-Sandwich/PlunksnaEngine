@@ -17,7 +17,7 @@
 
 namespace Plunksna {
 
-void Engine::tick(float delta_ms)
+void Engine::tick(f32 delta_ms)
 {
     rotateCamera();
     moveCamera(delta_ms);
@@ -68,11 +68,11 @@ void Engine::handleEvents()
     }
 }
 
-void Engine::moveCamera(float delta_ms)
+void Engine::moveCamera(f32 delta_ms)
 {
     Camera* camera = m_renderer.getCamera();
 
-    float speed = 0.005;
+    f32 speed = 0.005;
     if (g_keyboard.get(SDL_SCANCODE_LALT))
         speed = 0.1;
 
@@ -115,7 +115,7 @@ void Engine::rotateCamera()
     SDL_SetWindowRelativeMouseMode(m_window.getWindow(), true);
 
     Camera* camera = m_renderer.getCamera();
-    float sensitivity = 0.005;
+    f32 sensitivity = 0.005;
 
     glm::vec2 delta = g_mouse.getMouseDelta();
 
@@ -159,10 +159,10 @@ void Engine::run()
         render();
 
         m_lastTime = std::chrono::system_clock::now();
-        m_deltaTime_ms = std::chrono::duration<float, std::milli>(m_lastTime - m_startTime).count();
+        m_deltaTime_ms = std::chrono::duration<f32, std::milli>(m_lastTime - m_startTime).count();
 
         if (m_deltaTime_ms < m_maxFrameTime_ms) {
-            // std::chrono::duration<float, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
+            // std::chrono::duration<f32, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
             // std::this_thread::sleep_for(waitTime_ms);
             // //LOG("Frame time: " << m_deltaTime_ms);
             // m_deltaTime_ms += waitTime_ms.count();

@@ -20,19 +20,19 @@ void Mouse::swap() noexcept {
     m_scrollFrame = 0;
 }
 
-bool Mouse::get(Uint8 button) const {
+bool Mouse::get(u8 button) const {
     return m_states[m_stateIndex] & SDL_BUTTON_MASK(button);
 }
 
-bool Mouse::getPrevious(Uint8 button) const {
+bool Mouse::getPrevious(u8 button) const {
     return m_states[getOtherIndex()] & SDL_BUTTON_MASK(button);
 }
 
-bool Mouse::getPressed(Uint8 button) const {
+bool Mouse::getPressed(u8 button) const {
     return !getPrevious(button) && get(button);
 }
 
-bool Mouse::getReleased(Uint8 button) const {
+bool Mouse::getReleased(u8 button) const {
     return getPrevious(button) && !get(button);
 }
 
@@ -48,21 +48,21 @@ glm::vec2 Mouse::getMouseGlobal() const {
     return m_globalMouse;
 }
 
-void Mouse::setScroll(float scroll) {
+void Mouse::setScroll(f32 scroll) {
     m_scroll = scroll;
     m_scrollTotal += m_scroll;
     m_scrollFrame += m_scroll;
 }
 
-float Mouse::getScroll() const {
+f32 Mouse::getScroll() const {
     return m_scroll;
 }
 
-float Mouse::getScrollFrame() const {
+f32 Mouse::getScrollFrame() const {
     return m_scrollFrame;
 }
 
-float Mouse::getScrollTotal() const {
+f32 Mouse::getScrollTotal() const {
     return m_scrollTotal;
 }
 
