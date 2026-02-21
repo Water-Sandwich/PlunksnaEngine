@@ -45,7 +45,7 @@ Asset AssetHandler::loadTexture(std::string name)
 
     tex.pixels = stbi_load(path.c_str(), &tex.extents.x, &tex.extents.y, &tex.extents.z, STBI_rgb_alpha);
 
-    ASSERT_SS(tex.pixels, "failed to load texture image! : " << path.string())
+    ASSERT(tex.pixels, "failed to load texture image! : " << path.string())
 
     return asset;
 }

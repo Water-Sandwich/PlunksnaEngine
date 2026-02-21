@@ -245,7 +245,8 @@ void Renderer::selectDevice(const Window& window)
         }
     }
 
-    ASSERT(m_context.physicalDevice != VK_NULL_HANDLE, "Failed to find suitable GPU")
+    ASSERT(m_context.physicalDevice != VK_NULL_HANDLE,
+        "Failed to find suitable GPU")
 }
 
 void Renderer::createDescriptorSetLayout()
@@ -259,7 +260,7 @@ void Renderer::createDescriptorSetLayout()
 
     VkDescriptorSetLayoutBinding modelUBOLayout{};
     modelUBOLayout.binding = 1;
-    modelUBOLayout.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    modelUBOLayout.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     modelUBOLayout.descriptorCount = 1;
     modelUBOLayout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     modelUBOLayout.pImmutableSamplers = nullptr; // Optional
@@ -687,7 +688,7 @@ void Renderer::createIndexBuffer()
 void Renderer::createUniformBuffers()
 {
     //TODO, suballocate UBOs
-    VkDeviceSize bufferSize = SIZE(CameraUBO) + sizeof(ModelUBO);
+    VkDeviceSize bufferSize = SIZE(CameraUBO) + (SIZE(ModelUBO) * m_modelUBOs.capacity());
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
         //TODO: Could be sequential if using memcpy for UBOs
@@ -703,7 +704,7 @@ void Renderer::createDescriptorPools()
     std::array<VkDescriptorPoolSize, 3> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(m_maxInFlightFrames);
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(m_maxInFlightFrames);
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[2].descriptorCount = static_cast<uint32_t>(m_maxInFlightFrames);
@@ -742,8 +743,8 @@ void Renderer::createDescriptorSets()
 
         VkDescriptorBufferInfo modelUBOInfo{};
         modelUBOInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
-        modelUBOInfo.offset = sizeof(CameraUBO);
-        modelUBOInfo.range = sizeof(ModelUBO) * MAX_OBJECTS;
+        modelUBOInfo.offset = SIZE(CameraUBO);
+        modelUBOInfo.range = SIZE(ModelUBO);
 
         Texture* texture = m_assetHandler.getTexture(m_textureAsset);
 
@@ -766,7 +767,7 @@ void Renderer::createDescriptorSets()
         descriptorWrites[1].dstSet = m_frameResources[i].descriptorSet;
         descriptorWrites[1].dstBinding = 1;
         descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         descriptorWrites[1].descriptorCount = 1;
         descriptorWrites[1].pBufferInfo = &modelUBOInfo;
 
@@ -782,14 +783,35 @@ void Renderer::createDescriptorSets()
     }
 }
 
+void Renderer::createModelUBOs()
+{
+    for (int i = 0; i < 5; i++) {
+        glm::vec3 pos = {0.0f, float(i * 3), 0.0f};
+
+        glm::mat4 model = glm::mat4(1.0f);
+
+        model = glm::translate(model, pos);
+
+        model = glm::rotate(
+            model,
+            glm::radians(90.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f)
+        );
+
+        m_modelUBOs.push_back(model);
+    }
+}
+
 void Renderer::createFrameResources()
 {
     m_frameResources.resize(m_maxInFlightFrames);
+    m_modelUBOs.reserve(MAX_OBJECTS_UBO);
 
     createUniformBuffers();
     createCommandBuffers();
     createDescriptorSets();
     createSyncObjects();
+    createModelUBOs();
 }
 
 void Renderer::updateUniformBuffer(uint32_t currentImage)
@@ -801,18 +823,12 @@ void Renderer::updateUniformBuffer(uint32_t currentImage)
         .proj = m_camera.getPerspective()
     };
 
-    ModelUBO modelUBO{};
-    modelUBO.model = glm::rotate(
-        glm::mat4(1.0f),
-        glm::radians(90.0f),
-        glm::vec3(1.0f, 0.0f, 0.0f));
-
     auto* buffer = static_cast<std::byte*>(
         m_frameResources[currentImage].uniformBufferMapped
     );
 
     memcpy(buffer, &camUBO, sizeof(CameraUBO));
-    memcpy(buffer + SIZE(CameraUBO), &modelUBO, sizeof(ModelUBO));
+    memcpy(buffer + SIZE(CameraUBO), m_modelUBOs.data(), sizeof(ModelUBO) * m_modelUBOs.size());
 }
 
 
@@ -865,10 +881,13 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     scissor.extent = m_swapChain.extent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
+    for (int i = 0; i < m_modelUBOs.size(); i++) {
+        uint32_t offset = SIZE(ModelUBO) * i;
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 1, &offset);
 
-    vkCmdDrawIndexed(commandBuffer, (mesh->indicesSize), 1, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, (mesh->indicesSize), 1, 0, 0, 0);
+    }
 
     vkCmdEndRenderPass(commandBuffer);
 

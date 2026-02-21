@@ -17,8 +17,24 @@ layout(binding = 1) uniform ModelUBO {
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 
+vec4 roundNearest(in vec4 num, in float rnd){
+    vec4 modNum = mod(num, rnd);
+    return num - modNum;
+}
+
+float roundNearest(in float num, in float rnd){
+    float modNum = mod(num, rnd);
+    return num - modNum;
+}
+
 void main() {
-    gl_Position = cameraUBO.proj * cameraUBO.view * modelUBO.model * vec4(inPosition, 1.0);
+    float roundSize = 0.4;
+    vec4 finalPos = cameraUBO.proj * cameraUBO.view * modelUBO.model * vec4(inPosition, 1);
+//    finalPos.x = roundNearest(finalPos.x, roundSize);
+//    finalPos.y = roundNearest(finalPos.y, roundSize);
+
+    gl_Position = finalPos;
+
     fragColor = inColor;
     fragTexCoord = vec2(inTexCoord.x, 1.0 - inTexCoord.y);
 }

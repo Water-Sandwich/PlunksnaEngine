@@ -43,9 +43,11 @@ struct ModelUBO
 {
     glm::mat4 model;
 
-    //camera
-    // glm::mat4 view;
-    // glm::mat4 proj;
+    ModelUBO() = default;
+    ModelUBO(const glm::mat4& mod)
+    {
+        model = mod;
+    }
 };
 
 //===========================================
@@ -98,6 +100,7 @@ private:
     void createUniformBuffers();
     void createDescriptorSets();
 
+    void createModelUBOs();
     void updateUniformBuffer(uint32_t currentImage);
 
     //asset
@@ -160,14 +163,16 @@ private:
 
     Camera m_camera;
 
-    //assets
-
     //model
     Asset m_mesh;
 
     //texture
     Asset m_textureAsset = NULL_ASSET;
     VkSampler m_textureSampler;
+
+    //instances
+    const int MAX_OBJECTS_UBO = 2048;
+    std::vector<ModelUBO> m_modelUBOs;
 
 
     float m_queuePriority = 1.f;
@@ -177,7 +182,6 @@ private:
     int m_currentFrame = 0;
 
     bool m_hasResized = false;
-    const int MAX_OBJECTS = 1;
 private:
     //=======DEBUG=========
 

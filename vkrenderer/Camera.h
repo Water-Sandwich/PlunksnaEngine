@@ -27,7 +27,7 @@ public:
     //vertical FoV
     float m_fovY = 70;
     float m_nearClip = 0.1f;
-    float m_farClip = 10.0f;
+    float m_farClip = 100.0f;
 
 private:
     float m_aspect = 4.0/3.0f;
