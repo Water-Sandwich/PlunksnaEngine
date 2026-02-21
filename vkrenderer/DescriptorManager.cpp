@@ -137,8 +137,10 @@ VkDescriptorSet DescriptorManager::pushSetWrite(Descriptor desc, int setNum)
 
         if (isBufferDescriptor(layoutBuild.type))
             write.pBufferInfo = &setBuild.bufferInfo;
-        else
+        else if (isImageDescriptor(layoutBuild.type))
             write.pImageInfo = &setBuild.imageInfo;
+        else
+            THROW("Unsupported descriptor data type!")
 
 
         pack.setWrites.push_back(write);

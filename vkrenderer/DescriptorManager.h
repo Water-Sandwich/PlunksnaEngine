@@ -37,6 +37,7 @@ private:
         VkDescriptorPool pool = VK_NULL_HANDLE;
         VkDescriptorSetLayout layout = VK_NULL_HANDLE;
         std::vector<VkDescriptorSet> sets;
+
         uint32_t maxSets;
         uint32_t maxTotalBuildStages;
 

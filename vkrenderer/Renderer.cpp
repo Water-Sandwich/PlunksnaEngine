@@ -30,6 +30,7 @@
 #include <tiny_obj_loader.h>
 
 #include "RendererUtils.h"
+#include "engine/Random.h"
 
 #define SIZE(type) alignedSize(sizeof(type), m_context.physicalDeviceProperties.limits.minUniformBufferOffsetAlignment)
 
@@ -44,15 +45,16 @@ m_swapChain(m_context), m_assetHandler(assetHandler), m_camera({-2,0,0}, glm::no
 
 void Renderer::createInstance()
 {
-    ASSERT(checkValidationLayers(s_validationLayers), "Could not find validation layers")
+    ASSERT(checkValidationLayers(s_validationLayers),
+        "Could not find validation layers")
 
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Hello Triangle";
+    appInfo.pApplicationName = "Watchamacallit";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "Plunksna";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_4;
+    appInfo.apiVersion = VK_API_VERSION_1_2;
 
     auto extensions = getRequiredExtensions(s_enableValidationLayers);
 
@@ -711,8 +713,9 @@ void Renderer::createUniformBuffers()
 
 void Renderer::createModelUBOs()
 {
-    for (int i = 0; i < 5; i++) {
-        glm::vec3 pos = {0.0f, float(i * 3), 0.0f};
+    for (int i = 0; i < MAX_OBJECTS_UBO; i++) {
+
+        glm::vec3 pos = g_random.randomVector<3, float>() * g_random.randomReal(-100.f, 100.f);
 
         glm::mat4 model = glm::mat4(1.0f);
 
@@ -720,8 +723,8 @@ void Renderer::createModelUBOs()
 
         model = glm::rotate(
             model,
-            glm::radians(90.0f),
-            glm::vec3(1.0f, 0.0f, 0.0f)
+            g_random.randomReal(-180.f, 180.f),
+            g_random.randomVector<3, float>()
         );
 
         m_modelUBOs.push_back(model);

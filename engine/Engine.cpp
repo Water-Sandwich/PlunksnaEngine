@@ -71,7 +71,10 @@ void Engine::handleEvents()
 void Engine::moveCamera(float delta_ms)
 {
     Camera* camera = m_renderer.getCamera();
+
     float speed = 0.005;
+    if (g_keyboard.get(SDL_SCANCODE_LALT))
+        speed = 0.1;
 
     glm::vec3 inputDir(0);
 
@@ -159,13 +162,13 @@ void Engine::run()
         m_deltaTime_ms = std::chrono::duration<float, std::milli>(m_lastTime - m_startTime).count();
 
         if (m_deltaTime_ms < m_maxFrameTime_ms) {
-            std::chrono::duration<float, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
-            std::this_thread::sleep_for(waitTime_ms);
-            //LOG("Frame time: " << m_deltaTime_ms);
-            m_deltaTime_ms += waitTime_ms.count();
+            // std::chrono::duration<float, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
+            // std::this_thread::sleep_for(waitTime_ms);
+            // //LOG("Frame time: " << m_deltaTime_ms);
+            // m_deltaTime_ms += waitTime_ms.count();
         }
         else {
-            LOG_S(eWARNING, "High frame time: " << m_deltaTime_ms << "ms");
+            // LOG_S(eWARNING, "High frame time: " << m_deltaTime_ms << "ms");
         }
     }
 }

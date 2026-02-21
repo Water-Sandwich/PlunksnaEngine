@@ -172,12 +172,12 @@ private:
     VkSampler m_textureSampler;
 
     //instances
-    const int MAX_OBJECTS_UBO = 2048;
+    const int MAX_OBJECTS_UBO = 16384;
     std::vector<ModelUBO> m_modelUBOs;
 
 
     float m_queuePriority = 1.f;
-    bool m_verticalSync = true;
+    bool m_verticalSync = false;
 
     int m_maxInFlightFrames = 2;
     int m_currentFrame = 0;
