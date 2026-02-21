@@ -23,6 +23,21 @@ VkDescriptorSet DescriptorManager::getSet(Descriptor desc, int index) const
     return m_descriptors[desc].sets[index];
 }
 
+VkDescriptorPool* DescriptorManager::getPoolPtr(Descriptor desc)
+{
+    return &m_descriptors[desc].pool;
+}
+
+VkDescriptorSetLayout* DescriptorManager::getLayoutPtr(Descriptor desc)
+{
+    return &m_descriptors[desc].layout;
+}
+
+VkDescriptorSet* DescriptorManager::getSetPtr(Descriptor desc, int index)
+{
+    return &m_descriptors[desc].sets[index];
+}
+
 Descriptor DescriptorManager::beginBuild()
 {
     m_descriptors.emplace_back();
@@ -53,10 +68,10 @@ VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Des
 uint32_t DescriptorManager::pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info)
 {
     auto& pack = m_descriptors[desc];
-    auto index = pack.setBuildStages.size();
+    auto index = pack.setBuildStages.size() % pack.layoutBuildStages.size();
 
-    ASSERT(index < pack.layoutBuildStages.size(),
-        "Attempting to build a set larger than its layout! size:" << index)
+    ASSERT(pack.setBuildStages.size() <= pack.maxTotalBuildStages,
+        "Attempting to build a set with too many buffers! size:" << index)
 
     ASSERT(isBufferDescriptor(pack.layoutBuildStages[index].type),
         "Trying to bind an invalid type to a buffer layout binding! expectedType: "
@@ -73,10 +88,10 @@ uint32_t DescriptorManager::pushBufferInfo(Descriptor desc, VkDescriptorBufferIn
 uint32_t DescriptorManager::pushImageInfo(Descriptor desc, VkDescriptorImageInfo info)
 {
     auto& pack = m_descriptors[desc];
-    auto index = pack.setBuildStages.size();
+    auto index = pack.setBuildStages.size() % pack.layoutBuildStages.size();;
 
-    ASSERT(index < pack.layoutBuildStages.size(),
-        "Attempting to build a set larger than its layout! size:" << index)
+    ASSERT(pack.setBuildStages.size() <= pack.maxTotalBuildStages,
+        "Attempting to build a set with too many images! size:" << index)
 
     ASSERT(isImageDescriptor(pack.layoutBuildStages[index].type),
         "Trying to bind an invalid type to a image layout binding! expectedType: "
@@ -90,11 +105,15 @@ uint32_t DescriptorManager::pushImageInfo(Descriptor desc, VkDescriptorImageInfo
     return index;
 }
 
-VkDescriptorSet DescriptorManager::pushSetWrite(const Context& context, Descriptor desc, int setNum)
+VkDescriptorSet DescriptorManager::pushSetWrite(Descriptor desc, int setNum)
 {
     auto& pack = m_descriptors[desc];
 
-    ASSERT(pack.layoutBuildStages.size() == pack.setBuildStages.size(),
+    ASSERT(pack.setBuildStages.size() <= pack.maxTotalBuildStages,
+        "Trying to build a set higher than the max stage count! max: " << pack.maxTotalBuildStages <<
+        " current: " << pack.setBuildStages.size());
+
+    ASSERT((pack.setBuildStages.size() % pack.layoutBuildStages.size()) == 0,
         "Trying to build an incomplete set!\n"
         << " setSize:" << pack.setBuildStages.size()
         << " layoutSize: " << pack.layoutBuildStages.size());
@@ -102,21 +121,19 @@ VkDescriptorSet DescriptorManager::pushSetWrite(const Context& context, Descript
     ASSERT(setNum < pack.sets.size(),
         "Trying to access a set out of bounds! setNum: " << setNum << "setsSize: " << pack.sets.size());
 
-    pack.setWrites.reserve(pack.setBuildStages.size());
+    //pack.setWrites.reserve(pack.setBuildStages.size());
 
-    for (uint32_t i = 0; i < pack.setBuildStages.size(); i++) {
+    for (uint32_t i = 0; i < pack.layoutBuildStages.size(); i++) {
         auto& layoutBuild = pack.layoutBuildStages[i];
         auto& setBuild = pack.setBuildStages[i];
 
-        VkWriteDescriptorSet write = {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = getSet(desc, setNum),
-            .dstBinding = i,
-            .dstArrayElement = 0,
-            .descriptorType = layoutBuild.type,
-            .descriptorCount = 1,
-            .pBufferInfo = &setBuild.bufferInfo
-        };
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = getSet(desc, setNum);
+        write.dstBinding = i;
+        write.dstArrayElement = 0;
+        write.descriptorType = layoutBuild.type;
+        write.descriptorCount = 1;
 
         if (isBufferDescriptor(layoutBuild.type))
             write.pBufferInfo = &setBuild.bufferInfo;
@@ -135,6 +152,8 @@ void DescriptorManager::createDescriptorSets(const Context& context, Descriptor 
     auto& pack = m_descriptors[desc];
 
     vkUpdateDescriptorSets(context.device, pack.setWrites.size(), pack.setWrites.data(), 0, nullptr);
+
+    pack.setWrites.clear();
 }
 
 void DescriptorManager::clean(const Context& context)
@@ -150,6 +169,7 @@ void DescriptorManager::clean(const Context& context)
 void DescriptorManager::createPool(const Context& context, Descriptor desc, uint32_t maxSets)
 {
     auto& buildQueue = m_descriptors[desc].layoutBuildStages;
+    m_descriptors[desc].maxSets = maxSets;
 
     std::vector<VkDescriptorPoolSize> poolSizes;
     poolSizes.reserve(buildQueue.size());
@@ -176,6 +196,7 @@ void DescriptorManager::createPool(const Context& context, Descriptor desc, uint
 void DescriptorManager::createLayout(const Context& context, Descriptor desc)
 {
     auto& buildQueue = m_descriptors[desc].layoutBuildStages;
+    m_descriptors[desc].maxTotalBuildStages = buildQueue.size() * m_descriptors[desc].maxSets;
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     bindings.reserve(buildQueue.size());
@@ -204,8 +225,11 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
 void DescriptorManager::allocateSets(const Context& context, Descriptor desc, uint32_t maxSets)
 {
     auto& pack = m_descriptors[desc];
-    pack.sets.resize(maxSets);
     std::vector layouts(maxSets, pack.layout);
+
+    pack.sets.resize(maxSets);
+    pack.setWrites.reserve(pack.maxTotalBuildStages);
+    pack.setBuildStages.reserve(pack.maxTotalBuildStages);
 
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -215,6 +239,36 @@ void DescriptorManager::allocateSets(const Context& context, Descriptor desc, ui
 
     ASSERT_V(vkAllocateDescriptorSets(context.device, &allocInfo, pack.sets.data()),
         "failed to allocate descriptor sets!")
+}
+
+constexpr bool DescriptorManager::isBufferDescriptor(VkDescriptorType type)
+{
+    switch (type)
+    {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+            return true;
+        default:
+            return false;
+    }
+}
+
+constexpr bool DescriptorManager::isImageDescriptor(VkDescriptorType type)
+{
+    switch (type)
+    {
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+            return true;
+        default:
+            return false;
+    }
 }
 
 } // Plunksna

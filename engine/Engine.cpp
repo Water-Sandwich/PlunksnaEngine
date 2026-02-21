@@ -104,8 +104,12 @@ void Engine::moveCamera(float delta_ms)
 
 void Engine::rotateCamera()
 {
-    if (!g_mouse.get(SDL_BUTTON_RIGHT))
+    if (!g_mouse.get(SDL_BUTTON_RIGHT)) {
+        SDL_SetWindowRelativeMouseMode(m_window.getWindow(), false);
         return;
+    }
+
+    SDL_SetWindowRelativeMouseMode(m_window.getWindow(), true);
 
     Camera* camera = m_renderer.getCamera();
     float sensitivity = 0.005;
@@ -130,7 +134,7 @@ Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
 {
     m_renderer.init(m_window);
 
-    m_maxFPS = 60.f;
+    m_maxFPS = 144.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
 
@@ -157,6 +161,7 @@ void Engine::run()
         if (m_deltaTime_ms < m_maxFrameTime_ms) {
             std::chrono::duration<float, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
             std::this_thread::sleep_for(waitTime_ms);
+            //LOG("Frame time: " << m_deltaTime_ms);
             m_deltaTime_ms += waitTime_ms.count();
         }
         else {

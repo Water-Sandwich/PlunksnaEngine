@@ -24,6 +24,7 @@
 #include "Vertex.h"
 #include "Buffer.h"
 #include "Camera.h"
+#include "DescriptorManager.h"
 #include "assethandler/AssetHandler.h"
 
 namespace Plunksna {
@@ -86,19 +87,19 @@ private:
     void createLogicalDevice(const Window& window);
     void createAllocator();
 
-    void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createRenderPass();
 
     void createCommandPool();
-    void createDescriptorPools();
+
+    void initDescriptors();
+    void initDescriptorSets();
 
     //frame resources
     void createFrameResources();
     void createCommandBuffers();
     void createSyncObjects();
     void createUniformBuffers();
-    void createDescriptorSets();
 
     void createModelUBOs();
     void updateUniformBuffer(uint32_t currentImage);
@@ -147,6 +148,7 @@ private:
     Context m_context;
     SwapChain m_swapChain;
     AssetHandler& m_assetHandler;
+    DescriptorManager m_descriptors;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
     VkQueue m_presentQueue = VK_NULL_HANDLE;
@@ -154,12 +156,11 @@ private:
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
     VkCommandPool m_transientCommandPool = VK_NULL_HANDLE;
 
-    VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
 
-    VkDescriptorPool m_descriptorPool;
     std::vector<FrameResource> m_frameResources;
+    Descriptor m_descriptor;
 
     Camera m_camera;
 

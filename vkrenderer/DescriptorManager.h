@@ -37,6 +37,8 @@ private:
         VkDescriptorPool pool = VK_NULL_HANDLE;
         VkDescriptorSetLayout layout = VK_NULL_HANDLE;
         std::vector<VkDescriptorSet> sets;
+        uint32_t maxSets;
+        uint32_t maxTotalBuildStages;
 
         std::vector<DescriptorBindingBuild> layoutBuildStages;
         std::vector<DescriptorSetBuild> setBuildStages;
@@ -50,6 +52,10 @@ public:
     VkDescriptorSetLayout getLayout(Descriptor desc) const;
     VkDescriptorSet getSet(Descriptor desc, int index) const;
 
+    VkDescriptorPool* getPoolPtr(Descriptor desc);
+    VkDescriptorSetLayout* getLayoutPtr(Descriptor desc);
+    VkDescriptorSet* getSetPtr(Descriptor desc, int index);
+
     //start to build a descriptor pack, returns a handle to the current build queue
     Descriptor beginBuild();
     //add a binding, returns bind point
@@ -62,7 +68,7 @@ public:
     //push an image to the descriptor set queue build, returns the binding point
     uint32_t pushImageInfo(Descriptor desc, VkDescriptorImageInfo info);
     //prepare descriptor set writes
-    VkDescriptorSet pushSetWrite(const Context& context, Descriptor desc, int setNum);
+    VkDescriptorSet pushSetWrite(Descriptor desc, int setNum);
     //initialize all descriptor sets
     void createDescriptorSets(const Context& context, Descriptor desc);
 
@@ -80,35 +86,6 @@ private:
     std::vector<DescriptorPack> m_descriptors;
 };
 
-constexpr bool DescriptorManager::isBufferDescriptor(VkDescriptorType type)
-{
-    switch (type)
-    {
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-            return true;
-        default:
-            return false;
-    }
-}
-
-constexpr bool DescriptorManager::isImageDescriptor(VkDescriptorType type)
-{
-    switch (type)
-    {
-        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-            return true;
-        default:
-            return false;
-    }
-}
 } // Plunksna
 
 #endif //DESCRIPTORMANAGER_H
