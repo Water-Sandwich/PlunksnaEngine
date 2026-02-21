@@ -69,6 +69,7 @@ add_folders(
         ecs/
         vkrenderer/
         assethandler/
+        utils/
 )
 
 set(SOURCE_FILES
