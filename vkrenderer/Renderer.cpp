@@ -123,8 +123,9 @@ VkInstance Renderer::init(const Window& window)
     createTextureSampler();
 
     loadModel();
-    createVertexBuffer();
-    createIndexBuffer();
+    // createVertexBuffer();
+    // createIndexBuffer();
+    createVertexAndIndexBuffers();
     m_assetHandler.freeMeshHost(m_mesh); //?????
 
     //frame resources
@@ -665,36 +666,22 @@ void Renderer::loadModel()
     m_mesh = m_assetHandler.loadMesh("obama_prism.obj");
 }
 
-void Renderer::createVertexBuffer()
+void Renderer::createVertexAndIndexBuffers()
 {
     Mesh* mesh = m_assetHandler.getMesh(m_mesh);
-    VkDeviceSize bufferSize = sizeof(mesh->vertices[0]) * mesh->vertices.size();
+    VkDeviceSize bufferSize = mesh->verticesSize + mesh->indicesSize;
 
     void* data;
     Buffer stagingBuffer = beginStagingBuffer(bufferSize, &data);
 
-    memcpy(data, mesh->vertices.data(), bufferSize);
+    memcpy(data, mesh->vertices.data(), mesh->verticesSize);
+    memcpy(static_cast<u8*>(data) + mesh->verticesSize, mesh->indices.data(), mesh->indicesSize);
 
-    createBuffer(mesh->vertexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    createBuffer(mesh->combinedBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT
+        | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
-    endAndCopyStagingBuffer(stagingBuffer, mesh->vertexBuffer, bufferSize);
-}
-
-void Renderer::createIndexBuffer()
-{
-    Mesh* mesh = m_assetHandler.getMesh(m_mesh);
-    VkDeviceSize bufferSize = sizeof(mesh->indices[0]) * mesh->indices.size();
-
-    void* data;
-    Buffer stagingBuffer = beginStagingBuffer(bufferSize, &data);
-
-    memcpy(data, mesh->indices.data(), (size_t)bufferSize);
-
-    createBuffer(mesh->indexBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-         VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
-
-    endAndCopyStagingBuffer(stagingBuffer, mesh->indexBuffer, bufferSize);
+    endAndCopyStagingBuffer(stagingBuffer, mesh->combinedBuffer, bufferSize);
 }
 
 void Renderer::createUniformBuffers()
@@ -715,7 +702,9 @@ void Renderer::createModelUBOs()
 {
     for (i32 i = 0; i < MAX_OBJECTS_UBO; i++) {
 
-        glm::vec3 pos = g_random.randomVector<3, f32>() * g_random.randomReal(-100.f, 100.f);
+        f32 radius = 16.f;
+
+        glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
 
         glm::mat4 model = glm::mat4(1.0f);
 
@@ -790,11 +779,14 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 
     Mesh* mesh = m_assetHandler.getMesh(m_mesh);
 
-    VkBuffer vertexBuffers[] = {mesh->vertexBuffer.buffer};
+    VkBuffer vertexBuffers[] = {mesh->combinedBuffer.buffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    //indices need to be aligned to 4B if UINT32
+    VkDeviceSize indexOffset = (mesh->verticesSize + 3) & ~3;
+
+    vkCmdBindIndexBuffer(commandBuffer, mesh->combinedBuffer.buffer, indexOffset, VK_INDEX_TYPE_UINT32);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -810,12 +802,12 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     scissor.extent = m_swapChain.extent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    for (i32 i = 0; i < m_modelUBOs.size(); i++) {
+    for (u32 i = 0; i < m_modelUBOs.size(); i++) {
         u32 offset = SIZE(ModelUBO) * i;
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 1, &offset);
 
-        vkCmdDrawIndexed(commandBuffer, (mesh->indicesSize), 1, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), 1, 0, 0, 0);
     }
 
     vkCmdEndRenderPass(commandBuffer);

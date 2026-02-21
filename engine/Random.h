@@ -9,12 +9,16 @@
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
+#include "utils/Types.h"
+
 namespace Plunksna {
 
 class Random {
 public:
-    Random() noexcept
-        : m_gen(m_device())
+    Random() noexcept : m_gen(m_device())
+    {}
+
+    explicit Random(u32 seed) noexcept : m_gen(seed)
     {}
 
     //get random integer type, inclusive min and max
@@ -58,7 +62,11 @@ private:
     std::mt19937 m_gen;
 };
 
+#ifdef NDEBUG
 inline static Random g_random{};
+#else
+inline static Random g_random{0};
+#endif
 
 } // Plunksna
 

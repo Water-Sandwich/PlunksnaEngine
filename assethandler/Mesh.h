@@ -18,14 +18,19 @@ struct Mesh
 {
     //host
     std::vector<Vertex> vertices;
-    std::vector<i32> indices;
+    std::vector<u32> indices;
 
-    i32 verticesSize;
-    i32 indicesSize;
+    VkDeviceSize verticesSize;
+    VkDeviceSize indicesSize;
+
+    u32 verticesCount;
+    u32 indicesCount;
 
     //device
-    Buffer vertexBuffer;
-    Buffer indexBuffer;
+    // Buffer vertexBuffer;
+    // Buffer indexBuffer;
+
+    Buffer combinedBuffer;
 
     bool isHostLoaded() const
     {
@@ -34,7 +39,7 @@ struct Mesh
 
     bool isDeviceLoaded() const
     {
-        return vertexBuffer.buffer != VK_NULL_HANDLE && indexBuffer.buffer != VK_NULL_HANDLE;
+        return combinedBuffer.buffer != VK_NULL_HANDLE;
     }
 };
 

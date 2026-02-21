@@ -114,8 +114,7 @@ private:
     //asset
     //3d
     void loadModel();
-    void createVertexBuffer();
-    void createIndexBuffer();
+    void createVertexAndIndexBuffers();
 
     //init device
     void selectDevice(const Window& window);
@@ -173,12 +172,11 @@ private:
     VkSampler m_textureSampler;
 
     //instances
-    const i32 MAX_OBJECTS_UBO = 16384;
+    const u32 MAX_OBJECTS_UBO = 64;
     std::vector<ModelUBO> m_modelUBOs;
 
-
     f32 m_queuePriority = 1.f;
-    bool m_verticalSync = false;
+    bool m_verticalSync = true;
 
     i32 m_maxInFlightFrames = 2;
     i32 m_currentFrame = 0;

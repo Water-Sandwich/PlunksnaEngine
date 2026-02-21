@@ -151,8 +151,10 @@ Asset AssetHandler::loadMesh(std::string name)
         }
     }
 
-    mesh.verticesSize = mesh.vertices.size();
-    mesh.indicesSize = mesh.indices.size();
+    mesh.verticesCount = mesh.vertices.size();
+    mesh.verticesSize = mesh.vertices.size() * sizeof(mesh.vertices[0]);
+    mesh.indicesCount = mesh.indices.size();
+    mesh.indicesSize = mesh.indices.size() * sizeof(mesh.indices[0]);
 
     return asset;
 }
@@ -204,13 +206,12 @@ void AssetHandler::destroyMeshHost(Mesh* mesh)
 {
     //clear doesnt free memory
     std::vector<Vertex>().swap(mesh->vertices);
-    std::vector<i32>().swap(mesh->indices);
+    std::vector<u32>().swap(mesh->indices);
 }
 
 void AssetHandler::destroyMeshDevice(const Context& context, Mesh* mesh)
 {
-    mesh->indexBuffer.destroy(context);
-    mesh->vertexBuffer.destroy(context);
+    mesh->combinedBuffer.destroy(context);
 }
 
 //SHADERS
