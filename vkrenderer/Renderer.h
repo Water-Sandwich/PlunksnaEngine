@@ -35,18 +35,18 @@ static const bool s_enableValidationLayers = false;
 static const bool s_enableValidationLayers = true;
 #endif
 
-struct CameraUBO
+struct CameraSO
 {
     glm::mat4 view;
     glm::mat4 proj;
 };
 
-struct ModelUBO
+struct PerObjectSO
 {
     glm::mat4 model;
 
-    ModelUBO() = default;
-    ModelUBO(const glm::mat4& mod)
+    PerObjectSO() = default;
+    PerObjectSO(const glm::mat4& mod)
     {
         model = mod;
     }
@@ -101,9 +101,11 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void createUniformBuffers();
+    void createSSBOs();
 
     void createModelUBOs();
-    void updateUniformBuffer(u32 currentImage);
+    void updateCameraBuffer(u32 currentImage);
+    void updateObjectsBuffer(u32 currentImage);
 
     //asset
     //textures
@@ -172,8 +174,9 @@ private:
     VkSampler m_textureSampler;
 
     //instances
-    const u32 MAX_OBJECTS_UBO = 64;
-    std::vector<ModelUBO> m_modelUBOs;
+    const u32 MAX_OBJECTS_SSBO = 64;
+    u32 m_objectSpawnCount = MAX_OBJECTS_SSBO;
+    std::vector<PerObjectSO> m_objects;
 
     f32 m_queuePriority = 1.f;
     bool m_verticalSync = true;

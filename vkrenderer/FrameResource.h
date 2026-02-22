@@ -21,6 +21,9 @@ struct FrameResource {
     void* uniformBufferMapped = nullptr;
     Buffer uniformBuffer;
 
+    void* storageBufferMapped = nullptr;
+    Buffer storageBuffer;
+
     VkSemaphore imageAvailableSem = VK_NULL_HANDLE;
     VkFence frameInFlightFence = VK_NULL_HANDLE;
 
@@ -28,6 +31,8 @@ struct FrameResource {
     {
         vmaUnmapMemory(context.allocator, uniformBuffer.allocation);
         uniformBuffer.destroy(context);
+        vmaUnmapMemory(context.allocator, storageBuffer.allocation);
+        storageBuffer.destroy(context);
     }
 
     void destroySync(const Context& context)

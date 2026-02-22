@@ -29,6 +29,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#include "PushConstant.h"
 #include "RendererUtils.h"
 #include "engine/Random.h"
 
@@ -53,7 +54,7 @@ void Renderer::createInstance()
     appInfo.pApplicationName = "Watchamacallit";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "Plunksna";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 1);
     appInfo.apiVersion = VK_API_VERSION_1_2;
 
     auto extensions = getRequiredExtensions(s_enableValidationLayers);
@@ -112,7 +113,6 @@ VkInstance Renderer::init(const Window& window)
     m_camera.resize((f32)m_swapChain.width() / (f32)m_swapChain.height());
 
     createRenderPass();
-    //createDescriptorSetLayout();
     initDescriptors();
     createGraphicsPipeline();
     createCommandPool();
@@ -123,13 +123,10 @@ VkInstance Renderer::init(const Window& window)
     createTextureSampler();
 
     loadModel();
-    // createVertexBuffer();
-    // createIndexBuffer();
     createVertexAndIndexBuffers();
-    m_assetHandler.freeMeshHost(m_mesh); //?????
+    m_assetHandler.freeMeshHost(m_mesh);
 
     //frame resources
-    //createDescriptorPools();
     createFrameResources();
 
     return m_context.instance;
@@ -141,11 +138,11 @@ void Renderer::draw(const Window& window)
     vkWaitForFences(m_context.device, 1, &currentFrame.frameInFlightFence, VK_TRUE, UINT64_MAX);
 
     u32 imageIndex;
-    VkResult result = m_swapChain.fetch(currentFrame, imageIndex);
+    ASSERT_V(m_swapChain.fetch(currentFrame, imageIndex),
+        "Could not recreate swapchain");
 
-    ASSERT_V(result, "Could not recreate swapchain")
-
-    updateUniformBuffer(m_currentFrame);
+    updateCameraBuffer(m_currentFrame);
+    updateObjectsBuffer(m_currentFrame);
 
     vkResetFences(m_context.device, 1, &currentFrame.frameInFlightFence);
     vkResetCommandBuffer(currentFrame.commandBuffer, 0);
@@ -170,7 +167,7 @@ void Renderer::draw(const Window& window)
     ASSERT_V(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, currentFrame.frameInFlightFence),
         "failed to submit draw command buffer!")
 
-    result = m_swapChain.present(m_presentQueue, imageIndex);
+    VkResult result = m_swapChain.present(m_presentQueue, imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_hasResized) {
         m_hasResized = false;
@@ -256,8 +253,11 @@ void Renderer::initDescriptors()
 {
     m_descriptor = m_descriptors.beginBuild();
 
+    //camera
     m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT);
+    //per object data
+    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+    //texture
     m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
     m_descriptors.submitBuild(m_context, m_descriptor, m_maxInFlightFrames);
@@ -269,16 +269,16 @@ void Renderer::initDescriptorSets()
         VkDescriptorBufferInfo cameraUBOInfo{};
         cameraUBOInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
         cameraUBOInfo.offset = 0;
-        cameraUBOInfo.range = sizeof(CameraUBO);
+        cameraUBOInfo.range = sizeof(CameraSO);
 
         m_descriptors.pushBufferInfo(m_descriptor, cameraUBOInfo);
 
-        VkDescriptorBufferInfo modelUBOInfo{};
-        modelUBOInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
-        modelUBOInfo.offset = SIZE(CameraUBO);
-        modelUBOInfo.range = SIZE(ModelUBO);
+        VkDescriptorBufferInfo SSBOInfo{};
+        SSBOInfo.buffer = m_frameResources[i].storageBuffer.buffer;
+        SSBOInfo.offset = 0;
+        SSBOInfo.range = sizeof(PerObjectSO) * MAX_OBJECTS_SSBO;
 
-        m_descriptors.pushBufferInfo(m_descriptor, modelUBOInfo);
+        m_descriptors.pushBufferInfo(m_descriptor, SSBOInfo);
 
         Texture* texture = m_assetHandler.getTexture(m_textureAsset);
 
@@ -408,12 +408,17 @@ void Renderer::createGraphicsPipeline()
     colorBlending.blendConstants[2] = 0.0f; // Optional
     colorBlending.blendConstants[3] = 0.0f; // Optional
 
+    VkPushConstantRange pushConstant{};
+    pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstant.offset = 0;
+    pushConstant.size = sizeof(PushConstant);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 0; // Optional
     pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = m_descriptors.getLayoutPtr(m_descriptor);
 
@@ -687,22 +692,35 @@ void Renderer::createVertexAndIndexBuffers()
 void Renderer::createUniformBuffers()
 {
     //TODO, suballocate UBOs
-    VkDeviceSize bufferSize = SIZE(CameraUBO) + (SIZE(ModelUBO) * m_modelUBOs.capacity());
+    VkDeviceSize bufferSize = SIZE(CameraSO);
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
-        //TODO: Could be sequential if using memcpy for UBOs
         createBuffer(m_frameResources[i].uniformBuffer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+            VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
         vmaMapMemory(m_context.allocator, m_frameResources[i].uniformBuffer.allocation, &m_frameResources[i].uniformBufferMapped);
     }
 }
 
+void Renderer::createSSBOs()
+{
+    //TODO, suballocate UBOs
+    VkDeviceSize bufferSize = SIZE(PerObjectSO) * MAX_OBJECTS_SSBO;
+
+    for (size_t i = 0; i < m_maxInFlightFrames; i++) {
+        //TODO: Could be sequential if using memcpy
+        createBuffer(m_frameResources[i].storageBuffer, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+
+        vmaMapMemory(m_context.allocator, m_frameResources[i].storageBuffer.allocation, &m_frameResources[i].storageBufferMapped);
+    }
+}
+
 void Renderer::createModelUBOs()
 {
-    for (i32 i = 0; i < MAX_OBJECTS_UBO; i++) {
+    for (i32 i = 0; i < m_objectSpawnCount; i++) {
 
-        f32 radius = 16.f;
+        f32 radius = 10.f;
 
         glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
 
@@ -716,27 +734,28 @@ void Renderer::createModelUBOs()
             g_random.randomVector<3, f32>()
         );
 
-        m_modelUBOs.push_back(model);
+        m_objects.push_back(model);
     }
 }
 
 void Renderer::createFrameResources()
 {
     m_frameResources.resize(m_maxInFlightFrames);
-    m_modelUBOs.reserve(MAX_OBJECTS_UBO);
+    m_objects.reserve(MAX_OBJECTS_SSBO);
 
     createUniformBuffers();
+    createSSBOs();
     createCommandBuffers();
     initDescriptorSets();
     createSyncObjects();
     createModelUBOs();
 }
 
-void Renderer::updateUniformBuffer(u32 currentImage)
+void Renderer::updateCameraBuffer(u32 currentImage)
 {
     m_camera.resize((f32)m_swapChain.width() / (f32)m_swapChain.height());
 
-    CameraUBO camUBO{
+    CameraSO camUBO{
         .view = m_camera.getView(),
         .proj = m_camera.getPerspective()
     };
@@ -745,10 +764,19 @@ void Renderer::updateUniformBuffer(u32 currentImage)
         m_frameResources[currentImage].uniformBufferMapped
     );
 
-    memcpy(buffer, &camUBO, sizeof(CameraUBO));
-    memcpy(buffer + SIZE(CameraUBO), m_modelUBOs.data(), sizeof(ModelUBO) * m_modelUBOs.size());
+    memcpy(buffer, &camUBO, sizeof(CameraSO));
+    //memcpy(buffer + SIZE(CameraSO), m_modelUBOs.data(), sizeof(PerObjectSO) * m_modelUBOs.size());
 }
 
+//TODO: eeventually only update those that change
+void Renderer::updateObjectsBuffer(u32 currentImage)
+{
+    auto* buffer = static_cast<std::byte*>(
+        m_frameResources[currentImage].storageBufferMapped
+    );
+
+    memcpy(buffer, m_objects.data(), sizeof(PerObjectSO) * m_objects.size());
+}
 
 void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex) const
 {
@@ -802,13 +830,21 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     scissor.extent = m_swapChain.extent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    for (u32 i = 0; i < m_modelUBOs.size(); i++) {
-        u32 offset = SIZE(ModelUBO) * i;
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 1, &offset);
+    // for (u32 i = 0; i < m_objects.size(); i++) {
+    //     PushConstant push{i};
+    //     vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
+    //     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //                             m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
+    //
+    //     vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), 1, 0, 0, 0);
+    // }
 
-        vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), 1, 0, 0, 0);
-    }
+    PushConstant push{0};
+    vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
+
+    vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), m_objects.size(), 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -1126,11 +1162,19 @@ void Renderer::createLogicalDevice(const Window& window)
     deviceFeatures.samplerAnisotropy = VK_TRUE;
     deviceFeatures.sampleRateShading = m_context.sampleShading;
 
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{};
+    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    indexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+    indexingFeatures.runtimeDescriptorArray = VK_TRUE;
+    indexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
+    indexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.queueCreateInfoCount = static_cast<u32>(queueCreateInfos.size());
     createInfo.pEnabledFeatures = &deviceFeatures;
+    createInfo.pNext = &indexingFeatures;
 
     createInfo.enabledExtensionCount = static_cast<u32>(s_deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = s_deviceExtensions.data();

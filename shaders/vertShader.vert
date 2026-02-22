@@ -9,32 +9,36 @@ layout(binding = 0) uniform CameraUBO {
     mat4 proj;
 } cameraUBO;
 
-layout(binding = 1) uniform ModelUBO {
+struct Object {
     mat4 model;
-} modelUBO;
+};
 
+layout(std430, binding = 1) readonly buffer SSBO {
+    Object objects[];
+} modelSSBO;
+
+layout(push_constant) uniform PushConstant{
+    uint instanceIndex;
+} constants;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 
-vec4 roundNearest(in vec4 num, in float rnd){
-    vec4 modNum = mod(num, rnd);
-    return num - modNum;
-}
-
-float roundNearest(in float num, in float rnd){
-    float modNum = mod(num, rnd);
-    return num - modNum;
-}
-
 void main() {
-    float roundSize = 0.4;
-    vec4 finalPos = cameraUBO.proj * cameraUBO.view * modelUBO.model * vec4(inPosition, 1);
-//    finalPos.x = roundNearest(finalPos.x, roundSize);
-//    finalPos.y = roundNearest(finalPos.y, roundSize);
-
-    gl_Position = finalPos;
+    uint index = constants.instanceIndex + gl_InstanceIndex;
+    gl_Position = cameraUBO.proj * cameraUBO.view * modelSSBO.objects[index].model * vec4(inPosition, 1);
 
     fragColor = inColor;
     fragTexCoord = vec2(inTexCoord.x, 1.0 - inTexCoord.y);
 }
+
+
+//vec4 roundNearest(in vec4 num, in float rnd){
+//    vec4 modNum = mod(num, rnd);
+//    return num - modNum;
+//}
+//
+//float roundNearest(in float num, in float rnd){
+//    float modNum = mod(num, rnd);
+//    return num - modNum;
+//}

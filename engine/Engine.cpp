@@ -72,9 +72,9 @@ void Engine::moveCamera(f32 delta_ms)
 {
     Camera* camera = m_renderer.getCamera();
 
-    f32 speed = 0.005;
+    f32 speed = 0.02;
     if (g_keyboard.get(SDL_SCANCODE_LALT))
-        speed = 0.1;
+        speed = 1;
 
     glm::vec3 inputDir(0);
 

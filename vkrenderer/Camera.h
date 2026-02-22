@@ -23,12 +23,13 @@ public:
     //position of camera
     glm::vec3 m_position;
     //normalized vector for pointing direction
+    //TODO: switch to quats
     glm::vec3 m_direction;
 
     //vertical FoV
     f32 m_fovY = 70;
     f32 m_nearClip = 0.1f;
-    f32 m_farClip = 1000.0f;
+    f32 m_farClip = 16384.0f;
 
 private:
     f32 m_aspect = 4.0/3.0f;
