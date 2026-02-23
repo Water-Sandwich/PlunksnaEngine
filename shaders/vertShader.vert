@@ -4,14 +4,15 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 
+struct Object {
+    mat4 model;
+    uint textureIndex;
+};
+
 layout(binding = 0) uniform CameraUBO {
     mat4 view;
     mat4 proj;
 } cameraUBO;
-
-struct Object {
-    mat4 model;
-};
 
 layout(std430, binding = 1) readonly buffer SSBO {
     Object objects[];
@@ -23,6 +24,7 @@ layout(push_constant) uniform PushConstant{
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
+layout(location = 2) flat out uint objectIndex;
 
 void main() {
     uint index = constants.instanceIndex + gl_InstanceIndex;
@@ -30,6 +32,7 @@ void main() {
 
     fragColor = inColor;
     fragTexCoord = vec2(inTexCoord.x, 1.0 - inTexCoord.y);
+    objectIndex = index;
 }
 
 

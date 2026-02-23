@@ -6,7 +6,6 @@
 #define VKRENDERER_H
 
 #include <vk_mem_alloc.h>
-#include <optional>
 #include <vector>
 #include <SDL3/SDL_stdinc.h>
 #include <vulkan/vulkan_core.h>
@@ -14,9 +13,6 @@
 
 #include "engine/Window.h"
 
-#include <bits/chrono.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 #include "Context.h"
 #include "FrameResource.h"
@@ -27,6 +23,7 @@
 #include "DescriptorManager.h"
 #include "assethandler/AssetHandler.h"
 #include "utils/Types.h"
+#include "ShaderObjects.h"
 
 namespace Plunksna {
 #ifdef NDEBUG
@@ -34,23 +31,6 @@ static const bool s_enableValidationLayers = false;
 #else
 static const bool s_enableValidationLayers = true;
 #endif
-
-struct CameraSO
-{
-    glm::mat4 view;
-    glm::mat4 proj;
-};
-
-struct PerObjectSO
-{
-    glm::mat4 model;
-
-    PerObjectSO() = default;
-    PerObjectSO(const glm::mat4& mod)
-    {
-        model = mod;
-    }
-};
 
 //===========================================
 //====================RENDERER===============
@@ -109,8 +89,9 @@ private:
 
     //asset
     //textures
-    void createTextureImage();
-    void createTextureImageView() const;
+    void createTextures(std::vector<std::string> textures);
+    Asset createTextureImage(const std::string& file);
+    void createTextureImageView(Asset textureAsse) const;
     void createTextureSampler();
 
     //asset
@@ -170,12 +151,14 @@ private:
     Asset m_mesh;
 
     //texture
-    Asset m_textureAsset = NULL_ASSET;
+    // Asset m_textureAsset = NULL_ASSET;
+    std::vector<Asset> m_textures;
     VkSampler m_textureSampler;
 
     //instances
-    const u32 MAX_OBJECTS_SSBO = 64;
-    u32 m_objectSpawnCount = MAX_OBJECTS_SSBO;
+    const u32 MAX_OBJECTS_SSBO = 65536;
+    const u32 MAX_TEXTURES = 64;
+    u32 m_objectSpawnCount = 512;
     std::vector<PerObjectSO> m_objects;
 
     f32 m_queuePriority = 1.f;

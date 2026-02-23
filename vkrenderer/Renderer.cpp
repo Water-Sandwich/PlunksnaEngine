@@ -118,8 +118,10 @@ VkInstance Renderer::init(const Window& window)
     createCommandPool();
     m_swapChain.initResources();
 
-    createTextureImage();
-    createTextureImageView();
+    std::vector<std::string> names{"sus1.png", "sus.png", "sus2.png"};
+    createTextures(names);
+    // createTextureImage();
+    // createTextureImageView();
     createTextureSampler();
 
     loadModel();
@@ -188,7 +190,9 @@ void Renderer::clean()
         rec.destroyBuffers(m_context);
 
     VK_DESTROY(m_textureSampler, m_context.device, vkDestroySampler)
-    m_assetHandler.destroyTexture(m_context, m_textureAsset);
+    //m_assetHandler.destroyTexture(m_context, m_textureAsset);
+    for (auto tex : m_textures)
+        m_assetHandler.destroyTexture(m_context, tex);
 
     VK_DESTROY(m_context.renderPass, m_context.device, vkDestroyRenderPass)
 
@@ -256,11 +260,12 @@ void Renderer::initDescriptors()
     //camera
     m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
     //per object data
-    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     //texture
-    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT,
+        MAX_TEXTURES, VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT);
 
-    m_descriptors.submitBuild(m_context, m_descriptor, m_maxInFlightFrames);
+    m_descriptors.submitBuild(m_context, m_descriptor, m_maxInFlightFrames, MAX_TEXTURES);
 }
 
 void Renderer::initDescriptorSets()
@@ -280,14 +285,18 @@ void Renderer::initDescriptorSets()
 
         m_descriptors.pushBufferInfo(m_descriptor, SSBOInfo);
 
-        Texture* texture = m_assetHandler.getTexture(m_textureAsset);
+        std::vector<VkDescriptorImageInfo> images(m_textures.size());
 
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = texture->fullView;
-        imageInfo.sampler = m_textureSampler;
+        for (int j = 0; j < images.size(); j++) {
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = m_assetHandler.getTexture(m_textures[j])->fullView;
+            imageInfo.sampler = m_textureSampler;
 
-        m_descriptors.pushImageInfo(m_descriptor, imageInfo);
+            images[j] = imageInfo;
+        }
+
+        m_descriptors.pushImageInfos(m_descriptor, images);
 
         m_frameResources[i].descriptorSet = m_descriptors.pushSetWrite(m_descriptor, i);
     }
@@ -596,10 +605,21 @@ void Renderer::createSyncObjects()
     }
 }
 
-void Renderer::createTextureImage()
+void Renderer::createTextures(std::vector<std::string> textures)
 {
-    m_textureAsset = m_assetHandler.loadTexture("obama_prism.jpg");
-    Texture* texture = m_assetHandler.getTexture(m_textureAsset);
+    m_textures.reserve(textures.size());
+
+    for (const auto& name : textures) {
+        Asset tex = createTextureImage(name);
+        createTextureImageView(tex);
+        m_textures.push_back(tex);
+    }
+}
+
+Asset Renderer::createTextureImage(const std::string& file)
+{
+    Asset textureAsset = m_assetHandler.loadTexture(file);
+    Texture* texture = m_assetHandler.getTexture(textureAsset);
 
     u32 texWidth = texture->width();
     u32 texHeight = texture->height();
@@ -610,11 +630,11 @@ void Renderer::createTextureImage()
     void* data;
     Buffer stagingBuffer = beginStagingBuffer(imageSize, &data);
 
-    std::memcpy(data, texture->pixels, static_cast<size_t>(imageSize));
+    std::memcpy(data, texture->pixels, imageSize);
 
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-    m_assetHandler.freeTextureHost(m_textureAsset);
+    m_assetHandler.freeTextureHost(textureAsset);
 
     //image layout is undefined
     createImage(m_context, texture->image, texWidth, texHeight, texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
@@ -630,11 +650,13 @@ void Renderer::createTextureImage()
 
     //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
     generateMipMaps(texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, texture->mipLevels);
+
+    return textureAsset;
 }
 
-void Renderer::createTextureImageView() const
+void Renderer::createTextureImageView(Asset textureAsset) const
 {
-    Texture* texture = m_assetHandler.getTexture(m_textureAsset);
+    Texture* texture = m_assetHandler.getTexture(textureAsset);
     texture->fullView = createImageView(m_context, texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texture->mipLevels);
 }
 
@@ -668,7 +690,7 @@ void Renderer::createTextureSampler()
 
 void Renderer::loadModel()
 {
-    m_mesh = m_assetHandler.loadMesh("obama_prism.obj");
+    m_mesh = m_assetHandler.loadMesh("sus.obj");
 }
 
 void Renderer::createVertexAndIndexBuffers()
@@ -724,6 +746,7 @@ void Renderer::createModelUBOs()
 
         glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
 
+
         glm::mat4 model = glm::mat4(1.0f);
 
         model = glm::translate(model, pos);
@@ -734,7 +757,10 @@ void Renderer::createModelUBOs()
             g_random.randomVector<3, f32>()
         );
 
-        m_objects.push_back(model);
+        PerObjectSO obj(model);
+        obj.textureIndex = g_random.randomInt(0, m_textures.size() - 1);
+
+        m_objects.push_back(obj);
     }
 }
 
@@ -777,6 +803,7 @@ void Renderer::updateObjectsBuffer(u32 currentImage)
 
     memcpy(buffer, m_objects.data(), sizeof(PerObjectSO) * m_objects.size());
 }
+
 
 void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex) const
 {
@@ -830,19 +857,19 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     scissor.extent = m_swapChain.extent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    // for (u32 i = 0; i < m_objects.size(); i++) {
-    //     PushConstant push{i};
-    //     vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
-    //     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //                             m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
-    //
-    //     vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), 1, 0, 0, 0);
-    // }
+    for (u32 i = 0; i < m_objects.size(); i++) {
+        PushConstant push{i};
+        vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
 
-    PushConstant push{0};
-    vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
+        vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), 1, 0, 0, 0);
+    }
+
+    // PushConstant push{0};
+    // vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
+    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //                     m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), m_objects.size(), 0, 0, 0);
 

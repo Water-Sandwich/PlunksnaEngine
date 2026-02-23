@@ -22,15 +22,26 @@ private:
     {
         VkDescriptorType type;
         VkShaderStageFlags stages;
+        u32 descriptorCount;
+        VkDescriptorBindingFlags bindingFlags;
+    };
+
+    enum BindType
+    {
+        eNONE = -1,
+        eBUFFER = 0,
+        eIMAGE,
+        eVARIMAGE,
+        eVARBUFFER
     };
 
     struct DescriptorSetBuild
     {
-        union
-        {
-            VkDescriptorBufferInfo bufferInfo;
-            VkDescriptorImageInfo imageInfo;
-        };
+        u32 descriptorCount = 1;
+        BindType type;
+        VkDescriptorBufferInfo bufferInfo;
+        VkDescriptorImageInfo imageInfo;
+        std::vector<VkDescriptorImageInfo> imageInfos;
     };
 
     struct DescriptorPack
@@ -41,10 +52,14 @@ private:
 
         u32 maxSets;
         u32 maxTotalBuildStages;
+        u32 maxVariableDescriptors;
+        u32 variableDescriptors = 0;
 
         std::vector<DescriptorBindingBuild> layoutBuildStages;
         std::vector<DescriptorSetBuild> setBuildStages;
         std::vector<VkWriteDescriptorSet> setWrites;
+
+        bool isVariable = false;
     };
 
 public:
@@ -61,16 +76,20 @@ public:
     //start to build a descriptor pack, returns a handle to the current build queue
     Descriptor beginBuild();
     //add a binding, returns bind point
-    u32 pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages);
+    u32 pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages,
+        u32 descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = 0);
     //submit the queue and build the pool and layout and allocates descriptor sets, returns finished layout
-    VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc, u32 maxSets);
+    VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc, u32 maxSets, u32 maxVariableDescriptors = 0);
 
     //push a buffer to the descriptor set queue build, returns the binding point
     u32 pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info);
     //push an image to the descriptor set queue build, returns the binding point
     u32 pushImageInfo(Descriptor desc, VkDescriptorImageInfo info);
+    //push a vector of images to the descriptor set queue build, returns the binding point, must be the last bind point
+    u32 pushImageInfos(Descriptor desc, const std::vector<VkDescriptorImageInfo>& info);
     //prepare descriptor set writes
     VkDescriptorSet pushSetWrite(Descriptor desc, i32 setNum);
+
     //initialize all descriptor sets
     void createDescriptorSets(const Context& context, Descriptor desc);
 
@@ -78,7 +97,7 @@ public:
 private:
     void createPool(const Context& context, Descriptor desc, u32 maxSets);
     void createLayout(const Context& context, Descriptor desc);
-    void allocateSets(const Context& context, Descriptor desc, u32 maxSets);
+    void allocateSets(const Context& context, Descriptor desc, u32 maxSets, u32 maxVariableDescriptors);
 
     static constexpr bool isBufferDescriptor(VkDescriptorType type);
     static constexpr bool isImageDescriptor(VkDescriptorType type);
