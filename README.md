@@ -46,7 +46,7 @@ Make sure the dependencies are built and properly placed in your PATH such that 
 In your terminal run the following:
 
 ```
-git clone git clone https://github.com/Water-Sandwich/PlunksnaEngine.git
+git clone https://github.com/Water-Sandwich/PlunksnaEngine.git
 cd PlunksnaEngine/
 Cmake CmakeLists.txt
 make
