@@ -1,4 +1,4 @@
-#include <engine/Random.h>
+#include <Engine/Random.h>
 #include "TestIncludes.h"
 
 TEST_CASE( "random is within inclusive bounds", "[random]" ) {

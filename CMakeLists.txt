@@ -4,85 +4,20 @@ set(CMAKE_CXX_STANDARD 26)
 
 add_compile_options(-Werror -Wreturn-type)
 
-function(find_or_fetch package_name repo_url tag target_name)
-    find_package(${package_name} QUIET)
+include(cmake/Dependencies.cmake)
 
-    if (NOT ${package_name}_FOUND)
-        message(STATUS "${package_name} not found, fetching from ${repo_url}...")
+add_subdirectory(ECS)
+add_subdirectory(Engine)
+add_subdirectory(VKRenderer)
+add_subdirectory(AssetHandler)
 
-        include(FetchContent)
-        FetchContent_Declare(
-                ${package_name}
-                GIT_REPOSITORY ${repo_url}
-                GIT_TAG ${tag}
-        )
-        FetchContent_MakeAvailable(${package_name})
+add_executable(Plunksna main.cpp)
 
-        # Optionally set ${package_name}_FOUND to TRUE
-        set(${package_name}_FOUND TRUE PARENT_SCOPE)
-    endif()
-endfunction()
-
-function(add_folders)
-    set(SRC_FILES "")
-
-    foreach(folder IN LISTS ARGN)
-        file(GLOB_RECURSE TMP CONFIGURE_DEPENDS
-                ${CMAKE_SOURCE_DIR}/${folder}/*.cpp
-                ${CMAKE_SOURCE_DIR}/${folder}/*.h
-                ${CMAKE_SOURCE_DIR}/${folder}/*.hpp
-                ${CMAKE_SOURCE_DIR}/${folder}/*.tpp
-        )
-        list(APPEND SRC_FILES ${TMP})
-    endforeach()
-
-    set(SRC_FOLDERS ${SRC_FILES} PARENT_SCOPE)
-endfunction()
-
-
-find_or_fetch(
-        SDL3
-        https://github.com/libsdl-org/SDL.git
-        release-3.2.14
-        SDL3::SDL3
-)
-
-find_or_fetch(
-        glm
-        https://github.com/g-truc/glm.git
-        1.0.1
-        glm
-)
-
-find_or_fetch(
-        VulkanMemoryAllocator
-        https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-        3.3.0
-        GPUOpen::VulkanMemoryAllocator
-)
-
-find_package(Vulkan REQUIRED)
-
-set(SRC_FOLDERS)
-add_folders(
-        engine/
-        ecs/
-        vkrenderer/
-        assethandler/
-        utils/
-)
-
-set(SOURCE_FILES
-        main.cpp
-        ${SRC_FOLDERS}
-)
-
-add_executable(Plunksna ${SOURCE_FILES})
-
-target_link_libraries(Plunksna PRIVATE SDL3 glm Vulkan::Vulkan)
-
-target_include_directories(Plunksna PRIVATE
-        ${CMAKE_SOURCE_DIR}
+target_link_libraries(Plunksna
+        PRIVATE
+        engine
+        vkrenderer
+        assethandler
 )
 
 add_subdirectory(tests)
