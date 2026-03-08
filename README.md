@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Plunksna is a work in progress game engine with a custom Entity Component System (ECS) heavily leveraging template metaprogramming.
+Plunksna is a work in progress 3D Vulkan game engine with a custom Entity Component System (ECS) using template metaprogramming.
 
 ## Planned features
 
@@ -17,18 +17,25 @@ Currently, if you would like to make a game with this, you will have to write co
 
 ## Dependencies
 
-- SDL3 is used for input, window management and 2D rendering
-- GLM is used for mathematics
-- Catch2 is used for unit testing
-- CMake and make for building
+- SDL3: Input and window management
+- Vulkan: 3D renderering
+- Vulkan Memory Allocator: Vulkan helper
+- glm: Mathematics
+- tinyobjloader: Loading 3D assets
+- stb_image: Loading textures
+- Tracy: CPU and GPU profiling 
+- Catch2: Testing
+- CMake and make: Building the project
 
 ### Linux
 
-Install sld3, glm and catch2 using your distro's package manager such as:
+Install the dependencies above using your distro's package manager such as:
 
 ```
-# pacman -Sy sdl3 glm catch2
+# paru -Sy sdl3 vulkan-devel vulkan-memory-allocator glm tinyobjloader stb catch2
 ```
+
+SDL3, glm, VMA, tinyobjloader and Tracy can be omitted and you can let CMake fetch it for you.
 
 ### Windows
 
