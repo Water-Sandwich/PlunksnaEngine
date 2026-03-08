@@ -17,27 +17,29 @@ enum Severity : unsigned char
     eLETHAL
 };
 
+//colors
 #define RED "\033[49;31m"
 #define YELLOW "\033[49;33m"
 #define WHITE "\033[49;39m"
 #define RESET "\033[0m"
 
-#define INFO "[INFO]: "
-#define WARNING "[WARNING]: "
-#define LETHAL "[LETHAL]: "
-#define VERBOSE "[VERBOSE]: "
+//prefixes
+#define PINFO "[INFO]: "
+#define PWARNING "[WARNING]: "
+#define PLETHAL "[LETHAL]: "
+#define PVERBOSE "[VERBOSE]: "
 
 constexpr const char* getStr(Severity severity)
 {
     switch (severity) {
     case Severity::eINFO:
-        return WHITE INFO;
+        return WHITE PINFO;
     case Severity::eWARNING:
-        return YELLOW WARNING;
+        return YELLOW PWARNING;
     case Severity::eLETHAL:
-        return RED LETHAL;
+        return RED PLETHAL;
     default:
-        return RESET INFO;
+        return RESET PINFO;
     }
 }
 

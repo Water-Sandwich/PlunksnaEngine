@@ -22,4 +22,5 @@ target_link_libraries(Plunksna
 
 target_compile_definitions(Plunksna PRIVATE TRACY_ENABLE)
 
+enable_testing()
 add_subdirectory(tests)
