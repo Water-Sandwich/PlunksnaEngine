@@ -1,15 +1,15 @@
 # Plunksna Engine
 
-## Purpose
+## Description
 
 Plunksna is a work in progress 3D Vulkan game engine with a custom Entity Component System (ECS) using template metaprogramming.
 
 ## Planned features
 
 - Seperation of engine code into seperate static library
-- Asset management
-- Entity handles
-- Unified rendering and audio
+- Draw sorting and culling
+- Physics
+- Audio
 
 ## Usage
 
@@ -32,10 +32,10 @@ Currently, if you would like to make a game with this, you will have to write co
 Install the dependencies above using your distro's package manager such as:
 
 ```
-# paru -Sy sdl3 vulkan-devel vulkan-memory-allocator glm tinyobjloader stb catch2
+# pacman -Sy vulkan-devel stb {optionally: glm, catch2, ...}
 ```
 
-SDL3, glm, VMA, tinyobjloader and Tracy can be omitted and you can let CMake fetch it for you.
+The other dependecies can be fetched by CMake using FetchContent, however the build system will prefer to use system installed packages over fetched ones.
 
 ### Windows
 
