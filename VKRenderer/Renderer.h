@@ -104,6 +104,7 @@ private:
 
     //buffers and commands
     void recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex) const;
+    void bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const;
 
     void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
         VmaAllocationCreateFlags flags = {}) const;

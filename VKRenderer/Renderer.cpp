@@ -832,17 +832,6 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 
-    Mesh* mesh = m_assetHandler.getMesh(m_mesh);
-
-    VkBuffer vertexBuffers[] = {mesh->combinedBuffer.buffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-    //indices need to be aligned to 4B if UINT32
-    VkDeviceSize indexOffset = (mesh->verticesSize + 3) & ~3;
-
-    vkCmdBindIndexBuffer(commandBuffer, mesh->combinedBuffer.buffer, indexOffset, VK_INDEX_TYPE_UINT32);
-
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -857,19 +846,26 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     scissor.extent = m_swapChain.extent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    for (u32 i = 0; i < m_objects.size(); i++) {
-        PushConstant push{i};
-        vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
+    //sorted array somewhere here
 
-        vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), 1, 0, 0, 0);
-    }
+    //for every mesh...
+    Mesh* mesh = m_assetHandler.getMesh(m_mesh);
 
-    // PushConstant push{0};
-    // vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
-    // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //                     m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
+    bindMesh(mesh, commandBuffer);
+
+    // for (u32 i = 0; i < m_objects.size(); i++) {
+    //     PushConstant push{i};
+    //     vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
+    //     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //                             m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
+    //
+    //     vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), 1, 0, 0, 0);
+    // }
+
+    PushConstant push{0};
+    vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), m_objects.size(), 0, 0, 0);
 
@@ -879,8 +875,20 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
         "failed to record command buffer! (end)")
 }
 
+void Renderer::bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const
+{
+    VkBuffer vertexBuffers[] = {mesh->combinedBuffer.buffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+    //indices need to be aligned to 4B if UINT32
+    VkDeviceSize indexOffset = (mesh->verticesSize + 3) & ~3;
+
+    vkCmdBindIndexBuffer(commandBuffer, mesh->combinedBuffer.buffer, indexOffset, VK_INDEX_TYPE_UINT32);
+}
+
 void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
-    VmaAllocationCreateFlags flags) const
+                            VmaAllocationCreateFlags flags) const
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
