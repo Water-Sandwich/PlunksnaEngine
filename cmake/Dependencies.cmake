@@ -21,6 +21,8 @@ function(findOrFetch package_name repo_url tag)
     endif()
 endfunction()
 
+
+
 findOrFetch(
         SDL3
         https://github.com/libsdl-org/SDL.git
@@ -45,18 +47,10 @@ findOrFetch(
         v0.13.1
 )
 
+findOrFetch(
+        tinyobjloader
+        https://github.com/tinyobjloader/tinyobjloader.git
+        v1.0.6
+)
 
 find_package(Vulkan REQUIRED)
-
-#find_package(Tracy CONFIG QUIET)
-#
-#if(NOT Tracy_FOUND)
-#    FetchContent_Declare(
-#            Tracy
-#            GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-#            GIT_TAG v0.13.1
-#    )
-#
-#    FetchContent_MakeAvailable(Tracy)
-#endif()
-
