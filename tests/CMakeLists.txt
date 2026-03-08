@@ -1,6 +1,5 @@
 find_package(Catch2 3 REQUIRED)
 
-
 add_executable(test_run test_Random.cpp
         test_Random.cpp
         TestIncludes.h

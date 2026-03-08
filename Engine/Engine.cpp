@@ -14,6 +14,7 @@
 #include <iostream>
 #include <thread>
 #include <vulkan/vulkan.h>
+#include <tracy/Tracy.hpp>
 
 namespace Plunksna {
 
@@ -30,6 +31,7 @@ void Engine::render()
 
 void Engine::handleEvents()
 {
+    ZoneScopedN("Event handling");
     SDL_Event event;
     g_keyboard.swap();
     g_mouse.swap();
@@ -152,6 +154,7 @@ void Engine::init()
 void Engine::run()
 {
     while (m_isRunning) {
+        ZoneScopedN("Main loop");
         m_startTime = std::chrono::system_clock::now();
 
         handleEvents();

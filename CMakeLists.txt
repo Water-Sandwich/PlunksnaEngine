@@ -20,4 +20,6 @@ target_link_libraries(Plunksna
         assethandler
 )
 
+target_compile_definitions(Plunksna PRIVATE TRACY_ENABLE)
+
 add_subdirectory(tests)

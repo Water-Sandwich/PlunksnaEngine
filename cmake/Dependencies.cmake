@@ -53,4 +53,10 @@ findOrFetch(
         v1.0.6
 )
 
+findOrFetch(
+        Catch2
+        https://github.com/catchorg/Catch2.git
+        v3.13.0
+)
+
 find_package(Vulkan REQUIRED)
