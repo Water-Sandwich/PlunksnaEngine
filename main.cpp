@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "Engine/Engine.h"
-#include "Engine/Exception.h"
+#include "engine/Engine.h"
+#include "engine/Exception.h"
 
 int main()
 {

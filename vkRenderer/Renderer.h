@@ -11,7 +11,7 @@
 #include <vulkan/vulkan_core.h>
 #include <filesystem>
 
-#include "Engine/Window.h"
+#include "engine/Window.h"
 
 #include "Context.h"
 #include "FrameResource.h"
@@ -20,7 +20,8 @@
 #include "Buffer.h"
 #include "Camera.h"
 #include "DescriptorManager.h"
-#include "AssetHandler/AssetHandler.h"
+#include "DrawSorter.h"
+#include "assetHandler/AssetHandler.h"
 #include "Utils/Types.h"
 #include "ShaderObjects.h"
 
@@ -88,22 +89,22 @@ private:
 
     //asset
     //textures
-    void createTextures(std::vector<std::string> textures);
+    void createTextures(const std::vector<std::string>& textures);
     Asset createTextureImage(const std::string& file);
-    void createTextureImageView(Asset textureAsse) const;
+    void createTextureImageView(Asset textureAsset) const;
     void createTextureSampler();
 
     //asset
     //3d
-    void loadModel();
-    void createVertexAndIndexBuffers();
+    void loadMeshes();
+    void createVertexAndIndexBuffers(Asset meshHnd);
 
     //init device
     void selectDevice(const Window& window);
     bool isDeviceSuitable(VkPhysicalDevice device) const;
 
     //buffers and commands
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex) const;
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex);
     void bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const;
 
     void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
@@ -131,6 +132,7 @@ private:
     Context m_context;
     SwapChain m_swapChain;
     AssetHandler& m_assetHandler;
+    DrawSorter m_drawSorter;
     DescriptorManager m_descriptors;
 
     VkQueue m_graphicsQueue = VK_NULL_HANDLE;
@@ -148,7 +150,8 @@ private:
     Camera m_camera;
 
     //model
-    Asset m_mesh;
+    Asset m_susMesh;
+    Asset m_pyramid;
 
     //texture
     // Asset m_textureAsset = NULL_ASSET;
@@ -158,7 +161,7 @@ private:
     //instances
     const u32 MAX_OBJECTS_SSBO = 65536;
     const u32 MAX_TEXTURES = 64;
-    u32 m_objectSpawnCount = 512;
+    u32 m_objectSpawnCount = 16;
     std::vector<PerObjectSO> m_objects;
 
     f32 m_queuePriority = 1.f;

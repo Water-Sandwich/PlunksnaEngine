@@ -5,7 +5,7 @@
 #define REGISTRY_TPP
 
 #include "Registry.h"
-#include "../Engine/Exception.h"
+#include "../engine/Exception.h"
 
 namespace Plunksna {
 

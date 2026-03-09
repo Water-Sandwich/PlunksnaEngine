@@ -24,6 +24,11 @@ struct PerObjectSO
     {
         model = mod;
     }
+    PerObjectSO(const glm::mat4& mod, u32 tex)
+    {
+        model = mod;
+        textureIndex = tex;
+    }
 };
 
 }

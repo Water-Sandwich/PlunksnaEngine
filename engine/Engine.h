@@ -11,10 +11,10 @@
 #include <SDL3/SDL.h>
 
 #include "Components.h"
-#include "VKRenderer/Renderer.h"
+#include "vkRenderer/Renderer.h"
 #include "Window.h"
-#include "AssetHandler/AssetHandler.h"
-#include "ECS/Registry.h"
+#include "assetHandler/AssetHandler.h"
+#include "ecs/Registry.h"
 #include <Utils/Types.h>
 
 namespace Plunksna {

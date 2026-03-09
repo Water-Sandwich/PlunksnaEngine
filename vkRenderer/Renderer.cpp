@@ -11,9 +11,9 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <set>
 
-#include "Engine/Exception.h"
-#include "Engine/Log.h"
-#include "Engine/Window.h"
+#include "engine/Exception.h"
+#include "engine/Log.h"
+#include "engine/Window.h"
 
 #include <fstream>
 #include <chrono>
@@ -31,7 +31,7 @@
 
 #include "PushConstant.h"
 #include "RendererUtils.h"
-#include "Engine/Random.h"
+#include "engine/Random.h"
 
 #define SIZE(type) alignedSize(sizeof(type), m_context.physicalDeviceProperties.limits.minUniformBufferOffsetAlignment)
 
@@ -118,15 +118,15 @@ VkInstance Renderer::init(const Window& window)
     createCommandPool();
     m_swapChain.initResources();
 
-    std::vector<std::string> names{"sus1.png", "sus.png", "sus2.png"};
+    std::vector<std::string> names{"obama_prism.jpg", "sus1.png", "sus.png", "sus2.png"};
     createTextures(names);
     // createTextureImage();
     // createTextureImageView();
     createTextureSampler();
 
-    loadModel();
-    createVertexAndIndexBuffers();
-    m_assetHandler.freeMeshHost(m_mesh);
+    loadMeshes();
+    createVertexAndIndexBuffers(m_susMesh);
+    createVertexAndIndexBuffers(m_pyramid);
 
     //frame resources
     createFrameResources();
@@ -145,6 +145,7 @@ void Renderer::draw(const Window& window)
 
     updateCameraBuffer(m_currentFrame);
     updateObjectsBuffer(m_currentFrame);
+    m_drawSorter.clearFinalObjects();
 
     vkResetFences(m_context.device, 1, &currentFrame.frameInFlightFence);
     vkResetCommandBuffer(currentFrame.commandBuffer, 0);
@@ -190,9 +191,8 @@ void Renderer::clean()
         rec.destroyBuffers(m_context);
 
     VK_DESTROY(m_textureSampler, m_context.device, vkDestroySampler)
-    //m_assetHandler.destroyTexture(m_context, m_textureAsset);
-    for (auto tex : m_textures)
-        m_assetHandler.destroyTexture(m_context, tex);
+
+    m_assetHandler.clean(m_context);
 
     VK_DESTROY(m_context.renderPass, m_context.device, vkDestroyRenderPass)
 
@@ -206,8 +206,6 @@ void Renderer::clean()
 
     for (auto& rec : m_frameResources)
         rec.destroySync(m_context);
-
-    m_assetHandler.destroyMesh(m_context, m_mesh);
 
     vmaDestroyAllocator(m_context.allocator);
 
@@ -605,14 +603,15 @@ void Renderer::createSyncObjects()
     }
 }
 
-void Renderer::createTextures(std::vector<std::string> textures)
+void Renderer::createTextures(const std::vector<std::string>& textures)
 {
     m_textures.reserve(textures.size());
 
-    for (const auto& name : textures) {
-        Asset tex = createTextureImage(name);
+    for (int i = 0; i < textures.size(); i++) {
+        Asset tex = createTextureImage(textures[i]);
         createTextureImageView(tex);
         m_textures.push_back(tex);
+        m_assetHandler.setTextureID(tex, i);
     }
 }
 
@@ -688,14 +687,18 @@ void Renderer::createTextureSampler()
         "failed to create texture sampler!");
 }
 
-void Renderer::loadModel()
+void Renderer::loadMeshes()
 {
-    m_mesh = m_assetHandler.loadMesh("sus.obj");
+    m_susMesh = m_assetHandler.loadMesh("sus.obj");
+    //m_assetHandler.freeMeshHost(m_susMesh);
+
+    m_pyramid = m_assetHandler.loadMesh("obama_prism.obj");
+    //m_assetHandler.freeMeshHost(m_pyramid);
 }
 
-void Renderer::createVertexAndIndexBuffers()
+void Renderer::createVertexAndIndexBuffers(Asset meshHnd)
 {
-    Mesh* mesh = m_assetHandler.getMesh(m_mesh);
+    Mesh* mesh = m_assetHandler.getMesh(meshHnd);
     VkDeviceSize bufferSize = mesh->verticesSize + mesh->indicesSize;
 
     void* data;
@@ -709,6 +712,8 @@ void Renderer::createVertexAndIndexBuffers()
          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
     endAndCopyStagingBuffer(stagingBuffer, mesh->combinedBuffer, bufferSize);
+
+    m_assetHandler.freeMeshHost(meshHnd);
 }
 
 void Renderer::createUniformBuffers()
@@ -741,12 +746,8 @@ void Renderer::createSSBOs()
 void Renderer::createModelUBOs()
 {
     for (i32 i = 0; i < m_objectSpawnCount; i++) {
-
         f32 radius = 10.f;
-
         glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
-
-
         glm::mat4 model = glm::mat4(1.0f);
 
         model = glm::translate(model, pos);
@@ -757,10 +758,22 @@ void Renderer::createModelUBOs()
             g_random.randomVector<3, f32>()
         );
 
-        PerObjectSO obj(model);
-        obj.textureIndex = g_random.randomInt(0, m_textures.size() - 1);
+        DrawMeshCommand draw{};
 
-        m_objects.push_back(obj);
+        if (g_random.randomInt(0,1) == 0) {
+            draw.mesh = m_susMesh;
+            draw.model = model;
+            draw.textureID = 1;
+        }
+        else {
+            draw.mesh = m_pyramid;
+            draw.model = model;
+            draw.textureID = 0;
+        }
+
+        m_drawSorter.drawMesh(draw);
+
+        //m_objects.push_back(obj);
     }
 }
 
@@ -791,21 +804,22 @@ void Renderer::updateCameraBuffer(u32 currentImage)
     );
 
     memcpy(buffer, &camUBO, sizeof(CameraSO));
-    //memcpy(buffer + SIZE(CameraSO), m_modelUBOs.data(), sizeof(PerObjectSO) * m_modelUBOs.size());
 }
 
-//TODO: eeventually only update those that change
+//TODO: eventually only update those that change
 void Renderer::updateObjectsBuffer(u32 currentImage)
 {
     auto* buffer = static_cast<std::byte*>(
         m_frameResources[currentImage].storageBufferMapped
     );
 
-    memcpy(buffer, m_objects.data(), sizeof(PerObjectSO) * m_objects.size());
+    const auto& objs = m_drawSorter.getFinalObjects();
+
+    memcpy(buffer, objs.data(), sizeof(PerObjectSO) * objs.size());
 }
 
 
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex) const
+void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex)
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -846,28 +860,22 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     scissor.extent = m_swapChain.extent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    //sorted array somewhere here
+    auto& drawCommands = m_drawSorter.getDrawCommands();
+    u32 offset = 0;
 
-    //for every mesh...
-    Mesh* mesh = m_assetHandler.getMesh(m_mesh);
+    for (const auto& [meshHnd, objects] : drawCommands) {
+        Mesh* mesh = m_assetHandler.getMesh(meshHnd);
 
-    bindMesh(mesh, commandBuffer);
+        bindMesh(mesh, commandBuffer);
 
-    // for (u32 i = 0; i < m_objects.size(); i++) {
-    //     PushConstant push{i};
-    //     vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
-    //     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //                             m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
-    //
-    //     vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), 1, 0, 0, 0);
-    // }
+        PushConstant push{offset};
+        vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
 
-    PushConstant push{0};
-    vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstant), &push);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        m_pipelineLayout, 0, 1, &m_frameResources[m_currentFrame].descriptorSet, 0, nullptr);
-
-    vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), m_objects.size(), 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), objects.size(), 0, 0, 0);
+        offset += objects.size();
+    }
 
     vkCmdEndRenderPass(commandBuffer);
 

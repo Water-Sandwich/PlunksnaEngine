@@ -6,10 +6,10 @@ add_compile_options(-Werror -Wreturn-type)
 
 include(cmake/Dependencies.cmake)
 
-add_subdirectory(ECS)
-add_subdirectory(Engine)
-add_subdirectory(VKRenderer)
-add_subdirectory(AssetHandler)
+add_subdirectory(ecs)
+add_subdirectory(engine)
+add_subdirectory(vkRenderer)
+add_subdirectory(assetHandler)
 
 add_executable(Plunksna main.cpp)
 

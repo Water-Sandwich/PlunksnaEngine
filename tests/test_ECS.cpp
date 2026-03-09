@@ -3,9 +3,9 @@
 //
 
 #include "TestIncludes.h"
-#include "ECS/ComponentStore.h"
-#include "ECS/Filter.h"
-#include "Engine/Components.h"
+#include "ecs/ComponentStore.h"
+#include "ecs/Filter.h"
+#include "engine/Components.h"
 
 
 TEST_CASE("Component Store test", "[ECS]")

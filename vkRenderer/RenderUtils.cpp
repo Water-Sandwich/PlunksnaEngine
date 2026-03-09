@@ -7,7 +7,7 @@
 #include <set>
 #include <SDL3/SDL_vulkan.h>
 
-#include "Engine/Exception.h"
+#include "engine/Exception.h"
 #include "RendererUtils.h"
 
 namespace Plunksna::RenderUtils {
@@ -149,11 +149,6 @@ std::vector<VkExtensionProperties> getExtensions()
 
     std::vector<VkExtensionProperties> extensions(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
-    // LOG("Available VK extensions:")
-    // for (auto ext : extensions) {
-    //     LOG_C(ext.extensionName);
-    // }
 
     return extensions;
 }

@@ -6,7 +6,7 @@
 #define TESTINCLUDES_H
 
 #include <catch2/catch_test_macros.hpp>
-#include <ECS/Entity.h>
+#include <ecs/Entity.h>
 
 using namespace Plunksna;
 

@@ -6,9 +6,9 @@
 
 #include <tiny_obj_loader.h>
 
-#include "Engine/Exception.h"
-#include "VKRenderer/RendererUtils.h"
-#include "VKRenderer/Vertex.h"
+#include "engine/Exception.h"
+#include "vkRenderer/RendererUtils.h"
+#include "vkRenderer/Vertex.h"
 
 using namespace Plunksna::RenderUtils;
 
@@ -35,9 +35,29 @@ AssetHandler::~AssetHandler()
     LOG("Asset handler destroyed")
 }
 
+void AssetHandler::clean(const Context& context)
+{
+    for (auto& [ass, obj] : m_textures) {
+        freeTexture(context, &obj);
+    }
+
+    for (auto& [ass, obj] : m_meshes) {
+        freeMesh(context, &obj);
+    }
+
+    for (auto& [ass, obj] : m_shaders) {
+        freeShader(context, &obj);
+    }
+
+    m_textures.clear();
+    m_meshes.clear();
+    m_shaders.clear();
+    m_textureIDs.clear();
+}
+
 //TEXTURES
 
-Asset AssetHandler::loadTexture(std::string name)
+Asset AssetHandler::loadTexture(const std::string& name)
 {
     Asset asset = makeAsset();
     Texture& tex = m_textures[asset];
@@ -75,6 +95,8 @@ void AssetHandler::freeTextureDevice(const Context& context, Asset texHnd)
     CHECK_R(texture->isDeviceLoaded(), "free called on device unloaded texture")
 
     destroyTextureDevice(context, texture);
+
+    m_textureIDs.erase(texHnd);
 }
 
 void AssetHandler::destroyTexture(const Context& context, Asset texHnd)
@@ -83,14 +105,23 @@ void AssetHandler::destroyTexture(const Context& context, Asset texHnd)
 
     CHECK_R(texture, "destroy called on unaccounted texture")
 
-    if (texture->isHostLoaded())
-        destroyTextureHost(texture);
-
-    if (texture->isDeviceLoaded())
-        destroyTextureDevice(context, texture);
+    freeTexture(context, texture);
 
     m_textures.erase(texHnd);
     m_fragments.push_back(texHnd);
+}
+
+void AssetHandler::setTextureID(Asset texHnd, u32 id)
+{
+    m_textureIDs[texHnd] = id;
+}
+
+u32 AssetHandler::getTextureId(Asset texHnd)
+{
+    if (m_textureIDs.contains(texHnd))
+        return m_textureIDs.at(texHnd);
+
+    return 0;
 }
 
 void AssetHandler::destroyTextureHost(Texture* texture)
@@ -105,6 +136,15 @@ void AssetHandler::destroyTextureDevice(const Context& context, Texture* texture
     texture->image.destroy(context);
     VK_DESTROY(texture->fullView, context.device, vkDestroyImageView)
     texture->mipLevels = 1;
+}
+
+void AssetHandler::freeTexture(const Context& context, Texture* texture)
+{
+    if (texture->isHostLoaded())
+        destroyTextureHost(texture);
+
+    if (texture->isDeviceLoaded())
+        destroyTextureDevice(context, texture);
 }
 
 //MESHES
@@ -192,11 +232,7 @@ void AssetHandler::destroyMesh(const Context& context, Asset meshHnd)
 
     CHECK_R(mesh, "destroy called on unaccounted texture")
 
-    if (mesh->isHostLoaded())
-        destroyMeshHost(mesh);
-
-    if (mesh->isDeviceLoaded())
-        destroyMeshDevice(context, mesh);
+    freeMesh(context, mesh);
 
     m_meshes.erase(meshHnd);
     m_fragments.push_back(meshHnd);
@@ -212,6 +248,15 @@ void AssetHandler::destroyMeshHost(Mesh* mesh)
 void AssetHandler::destroyMeshDevice(const Context& context, Mesh* mesh)
 {
     mesh->combinedBuffer.destroy(context);
+}
+
+void AssetHandler::freeMesh(const Context& context, Mesh* mesh)
+{
+    if (mesh->isHostLoaded())
+        destroyMeshHost(mesh);
+
+    if (mesh->isDeviceLoaded())
+        destroyMeshDevice(context, mesh);
 }
 
 //SHADERS
@@ -271,14 +316,23 @@ void AssetHandler::destroyShaderModule(const Context& context, Asset shader)
     m_fragments.push_back(shader);
 }
 
-void AssetHandler::destroyShaderHost(ShaderModule* mesh)
+void AssetHandler::destroyShaderHost(ShaderModule* shader)
 {
-    std::vector<char>().swap(mesh->byteCode);
+    std::vector<char>().swap(shader->byteCode);
 }
 
-void AssetHandler::destroyShaderDevice(const Context& context, ShaderModule* mesh)
+void AssetHandler::destroyShaderDevice(const Context& context, ShaderModule* shader)
 {
-    vkDestroyShaderModule(context.device, mesh->shaderModule, nullptr);
+    vkDestroyShaderModule(context.device, shader->shaderModule, nullptr);
+}
+
+void AssetHandler::freeShader(const Context& context, ShaderModule* shaderMod)
+{
+    if (shaderMod->isHostLoaded())
+        destroyShaderHost(shaderMod);
+
+    if (shaderMod->isDeviceLoaded())
+        destroyShaderDevice(context, shaderMod);
 }
 
 //OTHER

@@ -10,7 +10,7 @@
 
 namespace Plunksna {
 
-using Asset = i32;
+using Asset = u32;
 constexpr Asset NULL_ASSET = std::numeric_limits<Asset>::max();
 
 }

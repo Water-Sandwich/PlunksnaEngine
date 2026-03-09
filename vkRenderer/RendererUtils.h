@@ -9,8 +9,8 @@
 #include <vector>
 #include <string>
 #include "Context.h"
-#include "Engine/Log.h"
-#include "Engine/Window.h"
+#include "engine/Log.h"
+#include "engine/Window.h"
 #include "Image.h"
 #include "Utils/Types.h"
 

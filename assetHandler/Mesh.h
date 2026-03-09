@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "Asset.h"
-#include "VKRenderer/Buffer.h"
-#include "VKRenderer/Vertex.h"
+#include "vkRenderer/Buffer.h"
+#include "vkRenderer/Vertex.h"
 
 namespace Plunksna {
 

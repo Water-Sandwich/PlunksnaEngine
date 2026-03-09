@@ -7,7 +7,7 @@
 #include <glm/vec3.hpp>
 #include <stb/stb_image.h>
 
-#include "VKRenderer/Image.h"
+#include "vkRenderer/Image.h"
 
 namespace Plunksna {
 

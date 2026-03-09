@@ -5,7 +5,7 @@
 #include "DescriptorManager.h"
 
 #include "RendererUtils.h"
-#include "Engine/Exception.h"
+#include "engine/Exception.h"
 
 namespace Plunksna {
 VkDescriptorPool DescriptorManager::getPool(Descriptor desc) const

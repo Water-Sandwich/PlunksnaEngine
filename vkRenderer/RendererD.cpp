@@ -11,8 +11,8 @@
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-#include "Engine/Exception.h"
-#include "Engine/Log.h"
+#include "engine/Exception.h"
+#include "engine/Log.h"
 
 namespace Plunksna {
 

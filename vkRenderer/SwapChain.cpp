@@ -3,7 +3,7 @@
 //
 
 #include "SwapChain.h"
-#include "Engine/Exception.h"
+#include "engine/Exception.h"
 #include "RendererUtils.h"
 
 namespace Plunksna {

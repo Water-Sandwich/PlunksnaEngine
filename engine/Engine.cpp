@@ -9,7 +9,7 @@
 #include "Log.h"
 #include "Random.h"
 #include "Mouse.h"
-#include "VKRenderer/Renderer.h"
+#include "vkRenderer/Renderer.h"
 
 #include <iostream>
 #include <thread>

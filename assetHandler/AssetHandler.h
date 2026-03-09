@@ -38,10 +38,12 @@ public:
     AssetHandler();
     ~AssetHandler();
 
+    void clean(const Context& context);
+
     //====TEXTURES====
 
     //load texture from disk to ram
-    Asset loadTexture(std::string name);
+    Asset loadTexture(const std::string& name);
     //get texture from handle
     Texture* getTexture(Asset texHnd);
     //destroy cpu resources
@@ -50,6 +52,10 @@ public:
     void freeTextureDevice(const Context& context, Asset texHnd);
     //destroy the entire texture;
     void destroyTexture(const Context& context, Asset texHnd);
+    //set texture device id
+    void setTextureID(Asset texHnd, u32 id);
+    //get texture device id
+    u32 getTextureId(Asset texHnd);
 
     //====MESHES======
 
@@ -85,18 +91,22 @@ private:
     //destroy without checks
     static void destroyTextureHost(Texture* texture);
     static void destroyTextureDevice(const Context& context, Texture* texture);
+    static void freeTexture(const Context& context, Texture* texture);
 
     //meshes
     //destroy without checks
     static void destroyMeshHost(Mesh* mesh);
     static void destroyMeshDevice(const Context& context, Mesh* mesh);
+    static void freeMesh(const Context& context, Mesh* mesh);
 
     //shader
-    static void destroyShaderHost(ShaderModule* mesh);
-    static void destroyShaderDevice(const Context& context, ShaderModule* mesh);
+    static void destroyShaderHost(ShaderModule* shader);
+    static void destroyShaderDevice(const Context& context, ShaderModule* shader);
+    static void freeShader(const Context& context, ShaderModule* shader);
 
 private:
     std::unordered_map<Asset, Texture>      m_textures;
+    std::unordered_map<Asset, u32>          m_textureIDs;
     std::unordered_map<Asset, Mesh>         m_meshes;
     std::unordered_map<Asset, ShaderModule> m_shaders;
 
