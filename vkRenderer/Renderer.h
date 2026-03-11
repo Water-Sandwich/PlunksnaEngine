@@ -86,6 +86,11 @@ private:
     void initDescriptors();
     void initDescriptorSets();
 
+    //TODO: PISS
+    void createDescriptorPools();
+    void createDescriptorSetLayout();
+    void createDescriptorSets();
+
     //frame resources
     void createFrameResources();
     void createCommandBuffers();
@@ -132,6 +137,10 @@ private:
     void endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize) const;
 
 private:
+    //TODO: PISS
+    VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
+    VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
+
     Context m_context;
     SwapChain m_swapChain;
     AssetHandler& m_assetHandler;
