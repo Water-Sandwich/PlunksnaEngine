@@ -350,6 +350,8 @@ VkShaderModule createShaderModule(const Context& context, const std::vector<char
 
 VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, bool vSync)
 {
+    //return VK_PRESENT_MODE_IMMEDIATE_KHR;
+
     if (vSync)
         return VK_PRESENT_MODE_FIFO_KHR;
 

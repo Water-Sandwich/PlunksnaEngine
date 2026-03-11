@@ -211,7 +211,7 @@ Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
     m_renderer.uploadMeshes(m_assetHandler.getLoadedMeshes());
     m_renderer.initFrameResources();
 
-    m_maxFPS = 60.f;
+    m_maxFPS = 1.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
 
@@ -239,13 +239,10 @@ void Engine::run()
         m_deltaTime_ms = std::chrono::duration<f32, std::milli>(endTime - startTime).count();
 
         if (m_deltaTime_ms < m_maxFrameTime_ms) {
+            ZoneScopedN("Main wait")
             std::chrono::duration<f32, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);
             std::this_thread::sleep_for(waitTime_ms);
-            //LOG("Frame time: " << m_deltaTime_ms);
             m_deltaTime_ms += waitTime_ms.count();
-        }
-        else {
-            LOG_S(eWARNING, "High frame time: " << m_deltaTime_ms << "ms");
         }
     }
 }

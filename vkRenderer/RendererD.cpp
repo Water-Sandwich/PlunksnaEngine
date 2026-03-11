@@ -54,6 +54,11 @@ void Renderer::initDebugger()
         "Failed to set up debugger")
 }
 
+TracyVkCtx Renderer::initProfiler(const Context& contex, VkQueue queue, VkCommandBuffer cmdBuf)
+{
+    return TracyVkContext(contex.physicalDevice, contex.device, queue, cmdBuf);
+}
+
 void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {
     createInfo = {};

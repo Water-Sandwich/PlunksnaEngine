@@ -154,17 +154,19 @@ void Renderer::draw(const Window& window)
 {
     ZoneScopedN("Renderer::draw")
     FrameResource& currentFrame = m_frameResources[m_currentFrame];
+
     vkWaitForFences(m_context.device, 1, &currentFrame.frameInFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(m_context.device, 1, &currentFrame.frameInFlightFence);
 
     u32 imageIndex;
     ASSERT_V(m_swapChain.fetch(currentFrame, imageIndex),
         "Could not fetch from swapchain");
 
+    vkResetCommandBuffer(currentFrame.commandBuffer, 0);
+
     updateCameraBuffer(m_currentFrame);
     updateObjectsBuffer(m_currentFrame);
 
-    vkResetFences(m_context.device, 1, &currentFrame.frameInFlightFence);
-    vkResetCommandBuffer(currentFrame.commandBuffer, 0);
     recordCommandBuffer(currentFrame.commandBuffer, imageIndex);
 
     VkSemaphore waitSemaphores[] = {currentFrame.imageAvailableSem};
@@ -754,6 +756,13 @@ void Renderer::createSSBOs()
     }
 }
 
+void Renderer::createProfilers()
+{
+    for (auto& frame : m_frameResources) {
+        frame.profiler = initProfiler(m_context, m_graphicsQueue, frame.commandBuffer);
+    }
+}
+
 void Renderer::createFrameResources()
 {
     m_frameResources.resize(m_maxInFlightFrames);
@@ -763,6 +772,7 @@ void Renderer::createFrameResources()
     createCommandBuffers();
     initDescriptorSets();
     createSyncObjects();
+    createProfilers();
 }
 
 void Renderer::updateCameraBuffer(u32 currentImage)

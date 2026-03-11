@@ -10,6 +10,7 @@
 #include <SDL3/SDL_stdinc.h>
 #include <vulkan/vulkan_core.h>
 #include <filesystem>
+#include <tracy/TracyVulkan.hpp>
 
 #include "engine/Window.h"
 
@@ -69,7 +70,8 @@ private:
     };
 
     inline static const std::vector<const char*> s_deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME
     };
 
     void createInstance();
@@ -90,6 +92,7 @@ private:
     void createSyncObjects();
     void createUniformBuffers();
     void createSSBOs();
+    void createProfilers();
 
     void updateCameraBuffer(u32 currentImage);
     void updateObjectsBuffer(u32 currentImage);
@@ -167,6 +170,7 @@ private:
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
 
     void initDebugger();
+    TracyVkCtx initProfiler(const Context& contex, VkQueue queue, VkCommandBuffer cmdBuf);
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
     VkResult CreateDebugUtilsMessengerEXT(

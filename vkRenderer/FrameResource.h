@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
+#include <tracy/TracyVulkan.hpp>
 
 #include "Buffer.h"
 #include "Context.h"
@@ -27,12 +28,15 @@ struct FrameResource {
     VkSemaphore imageAvailableSem = VK_NULL_HANDLE;
     VkFence frameInFlightFence = VK_NULL_HANDLE;
 
+    TracyVkCtx profiler = VK_NULL_HANDLE;
+
     void destroyBuffers(const Context& context)
     {
         vmaUnmapMemory(context.allocator, uniformBuffer.allocation);
         uniformBuffer.destroy(context);
         vmaUnmapMemory(context.allocator, storageBuffer.allocation);
         storageBuffer.destroy(context);
+        TracyVkDestroy(profiler)
     }
 
     void destroySync(const Context& context)
