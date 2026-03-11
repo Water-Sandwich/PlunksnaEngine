@@ -48,12 +48,20 @@ public:
     ~Renderer() = default;
 
     VkInstance init(const Window& window);
+    void uploadTextures(const std::vector<Asset>& textures);
+    void uploadMeshes(const std::vector<Asset>& meshes);
+    void initFrameResources();
+
+    void pushDrawCommand(const DrawMeshCommand& command);
     void draw(const Window& window);
+
     void clean();
 
     Camera* getCamera();
 
     void resizeNotif();
+    void setVSync(const Window& window, bool vsync);
+    bool getVSync() const;
 
 private:
     inline static const std::vector<const char*> s_validationLayers = {
@@ -83,20 +91,15 @@ private:
     void createUniformBuffers();
     void createSSBOs();
 
-    void createModelUBOs();
     void updateCameraBuffer(u32 currentImage);
     void updateObjectsBuffer(u32 currentImage);
 
-    //asset
     //textures
-    void createTextures(const std::vector<std::string>& textures);
-    Asset createTextureImage(const std::string& file);
+    Asset createTextureImage(Asset tex);
     void createTextureImageView(Asset textureAsset) const;
     void createTextureSampler();
 
     //asset
-    //3d
-    void loadMeshes();
     void createVertexAndIndexBuffers(Asset meshHnd);
 
     //init device
@@ -125,9 +128,6 @@ private:
 
     void endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize) const;
 
-public:
-    VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
-
 private:
     Context m_context;
     SwapChain m_swapChain;
@@ -149,30 +149,22 @@ private:
 
     Camera m_camera;
 
-    //model
-    Asset m_susMesh;
-    Asset m_pyramid;
-
-    //texture
-    // Asset m_textureAsset = NULL_ASSET;
-    std::vector<Asset> m_textures;
     VkSampler m_textureSampler;
 
     //instances
-    const u32 MAX_OBJECTS_SSBO = 65536;
+    const u32 MAX_OBJECTS_SSBO = 1000000;
     const u32 MAX_TEXTURES = 64;
-    u32 m_objectSpawnCount = 16;
-    std::vector<PerObjectSO> m_objects;
 
     f32 m_queuePriority = 1.f;
-    bool m_verticalSync = true;
 
     i32 m_maxInFlightFrames = 2;
     i32 m_currentFrame = 0;
 
     bool m_hasResized = false;
+
 private:
     //=======DEBUG=========
+    VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
 
     void initDebugger();
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);

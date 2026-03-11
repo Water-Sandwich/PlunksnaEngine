@@ -25,6 +25,17 @@ T* getFromUMap(Asset asset, std::unordered_map<Asset, T>& umap)
     return nullptr;
 }
 
+template<typename T>
+std::vector<Asset> getLoadedAssets(std::unordered_map<Asset, T> map)
+{
+    std::vector<Asset> vec;
+    vec.reserve(map.size());
+    for (const auto& [asset, other] : map) {
+        vec.push_back(asset);
+    }
+    return vec;
+}
+
 AssetHandler::AssetHandler()
 {
     initWorkingPath();
@@ -116,12 +127,17 @@ void AssetHandler::setTextureID(Asset texHnd, u32 id)
     m_textureIDs[texHnd] = id;
 }
 
-u32 AssetHandler::getTextureId(Asset texHnd)
+u32 AssetHandler::getTextureId(Asset texHnd) const
 {
     if (m_textureIDs.contains(texHnd))
         return m_textureIDs.at(texHnd);
 
     return 0;
+}
+
+std::vector<Asset> AssetHandler::getLoadedTextures() const
+{
+    return getLoadedAssets(m_textures);
 }
 
 void AssetHandler::destroyTextureHost(Texture* texture)
@@ -236,6 +252,11 @@ void AssetHandler::destroyMesh(const Context& context, Asset meshHnd)
 
     m_meshes.erase(meshHnd);
     m_fragments.push_back(meshHnd);
+}
+
+std::vector<Asset> AssetHandler::getLoadedMeshes() const
+{
+    return getLoadedAssets(m_meshes);
 }
 
 void AssetHandler::destroyMeshHost(Mesh* mesh)

@@ -31,7 +31,9 @@
 
 #include "PushConstant.h"
 #include "RendererUtils.h"
+#include "assetHandler/Assets.h"
 #include "engine/Random.h"
+#include "tracy/Tracy.hpp"
 
 #define SIZE(type) alignedSize(sizeof(type), m_context.physicalDeviceProperties.limits.minUniformBufferOffsetAlignment)
 
@@ -109,7 +111,7 @@ VkInstance Renderer::init(const Window& window)
     selectDevice(window);
     createLogicalDevice(window);
     createAllocator();
-    m_swapChain.init(window, m_verticalSync);
+    m_swapChain.init(window);
     m_camera.resize((f32)m_swapChain.width() / (f32)m_swapChain.height());
 
     createRenderPass();
@@ -118,34 +120,48 @@ VkInstance Renderer::init(const Window& window)
     createCommandPool();
     m_swapChain.initResources();
 
-    std::vector<std::string> names{"obama_prism.jpg", "sus1.png", "sus.png", "sus2.png"};
-    createTextures(names);
-    // createTextureImage();
-    // createTextureImageView();
-    createTextureSampler();
-
-    loadMeshes();
-    createVertexAndIndexBuffers(m_susMesh);
-    createVertexAndIndexBuffers(m_pyramid);
-
-    //frame resources
-    createFrameResources();
-
     return m_context.instance;
+}
+
+void Renderer::uploadTextures(const std::vector<Asset>& textures)
+{
+    for (i32 i = 0; i < textures.size(); i++) {
+        createTextureImage(textures[i]);
+        m_assetHandler.setTextureID(textures[i], i);
+    }
+
+    createTextureSampler();
+}
+
+void Renderer::uploadMeshes(const std::vector<Asset>& meshes)
+{
+    for (auto mesh : meshes) {
+        createVertexAndIndexBuffers(mesh);
+    }
+}
+
+void Renderer::initFrameResources()
+{
+    createFrameResources();
+}
+
+void Renderer::pushDrawCommand(const DrawMeshCommand& command)
+{
+    m_drawSorter.drawMesh(command);
 }
 
 void Renderer::draw(const Window& window)
 {
+    ZoneScopedN("Renderer::draw")
     FrameResource& currentFrame = m_frameResources[m_currentFrame];
     vkWaitForFences(m_context.device, 1, &currentFrame.frameInFlightFence, VK_TRUE, UINT64_MAX);
 
     u32 imageIndex;
     ASSERT_V(m_swapChain.fetch(currentFrame, imageIndex),
-        "Could not recreate swapchain");
+        "Could not fetch from swapchain");
 
     updateCameraBuffer(m_currentFrame);
     updateObjectsBuffer(m_currentFrame);
-    m_drawSorter.clearFinalObjects();
 
     vkResetFences(m_context.device, 1, &currentFrame.frameInFlightFence);
     vkResetCommandBuffer(currentFrame.commandBuffer, 0);
@@ -174,12 +190,13 @@ void Renderer::draw(const Window& window)
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_hasResized) {
         m_hasResized = false;
-        m_swapChain.regenerate(window, m_verticalSync);
+        m_swapChain.regenerate(window, m_swapChain.getVSync());
     }
     else if (result != VK_SUCCESS)
         THROW("Could not present swap chain image")
 
     m_currentFrame = ++m_currentFrame % m_maxInFlightFrames;
+    m_drawSorter.clearAll();
 }
 
 void Renderer::clean()
@@ -233,6 +250,19 @@ void Renderer::resizeNotif()
     m_hasResized = true;
 }
 
+void Renderer::setVSync(const Window& window, bool vsync)
+{
+    if (vsync == getVSync())
+        return;
+
+    m_swapChain.regenerate(window, vsync);
+}
+
+bool Renderer::getVSync() const
+{
+    return m_swapChain.getVSync();
+}
+
 void Renderer::selectDevice(const Window& window)
 {
     auto devices = getPhysicalDevices(m_context);
@@ -283,12 +313,13 @@ void Renderer::initDescriptorSets()
 
         m_descriptors.pushBufferInfo(m_descriptor, SSBOInfo);
 
-        std::vector<VkDescriptorImageInfo> images(m_textures.size());
+        auto imageHnds = m_assetHandler.getLoadedTextures();
+        std::vector<VkDescriptorImageInfo> images(imageHnds.size());
 
         for (int j = 0; j < images.size(); j++) {
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = m_assetHandler.getTexture(m_textures[j])->fullView;
+            imageInfo.imageView = m_assetHandler.getTexture(imageHnds[j])->fullView;
             imageInfo.sampler = m_textureSampler;
 
             images[j] = imageInfo;
@@ -603,22 +634,9 @@ void Renderer::createSyncObjects()
     }
 }
 
-void Renderer::createTextures(const std::vector<std::string>& textures)
+Asset Renderer::createTextureImage(Asset tex)
 {
-    m_textures.reserve(textures.size());
-
-    for (int i = 0; i < textures.size(); i++) {
-        Asset tex = createTextureImage(textures[i]);
-        createTextureImageView(tex);
-        m_textures.push_back(tex);
-        m_assetHandler.setTextureID(tex, i);
-    }
-}
-
-Asset Renderer::createTextureImage(const std::string& file)
-{
-    Asset textureAsset = m_assetHandler.loadTexture(file);
-    Texture* texture = m_assetHandler.getTexture(textureAsset);
+    Texture* texture = m_assetHandler.getTexture(tex);
 
     u32 texWidth = texture->width();
     u32 texHeight = texture->height();
@@ -633,7 +651,7 @@ Asset Renderer::createTextureImage(const std::string& file)
 
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-    m_assetHandler.freeTextureHost(textureAsset);
+    m_assetHandler.freeTextureHost(tex);
 
     //image layout is undefined
     createImage(m_context, texture->image, texWidth, texHeight, texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
@@ -650,7 +668,9 @@ Asset Renderer::createTextureImage(const std::string& file)
     //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
     generateMipMaps(texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, texture->mipLevels);
 
-    return textureAsset;
+    createTextureImageView(tex);
+
+    return tex;
 }
 
 void Renderer::createTextureImageView(Asset textureAsset) const
@@ -685,15 +705,6 @@ void Renderer::createTextureSampler()
 
     ASSERT_V(vkCreateSampler(m_context.device, &samplerInfo, nullptr, &m_textureSampler),
         "failed to create texture sampler!");
-}
-
-void Renderer::loadMeshes()
-{
-    m_susMesh = m_assetHandler.loadMesh("sus.obj");
-    //m_assetHandler.freeMeshHost(m_susMesh);
-
-    m_pyramid = m_assetHandler.loadMesh("obama_prism.obj");
-    //m_assetHandler.freeMeshHost(m_pyramid);
 }
 
 void Renderer::createVertexAndIndexBuffers(Asset meshHnd)
@@ -743,51 +754,15 @@ void Renderer::createSSBOs()
     }
 }
 
-void Renderer::createModelUBOs()
-{
-    for (i32 i = 0; i < m_objectSpawnCount; i++) {
-        f32 radius = 10.f;
-        glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
-        glm::mat4 model = glm::mat4(1.0f);
-
-        model = glm::translate(model, pos);
-
-        model = glm::rotate(
-            model,
-            g_random.randomReal(-180.f, 180.f),
-            g_random.randomVector<3, f32>()
-        );
-
-        DrawMeshCommand draw{};
-
-        if (g_random.randomInt(0,1) == 0) {
-            draw.mesh = m_susMesh;
-            draw.model = model;
-            draw.textureID = 1;
-        }
-        else {
-            draw.mesh = m_pyramid;
-            draw.model = model;
-            draw.textureID = 0;
-        }
-
-        m_drawSorter.drawMesh(draw);
-
-        //m_objects.push_back(obj);
-    }
-}
-
 void Renderer::createFrameResources()
 {
     m_frameResources.resize(m_maxInFlightFrames);
-    m_objects.reserve(MAX_OBJECTS_SSBO);
 
     createUniformBuffers();
     createSSBOs();
     createCommandBuffers();
     initDescriptorSets();
     createSyncObjects();
-    createModelUBOs();
 }
 
 void Renderer::updateCameraBuffer(u32 currentImage)
@@ -809,11 +784,14 @@ void Renderer::updateCameraBuffer(u32 currentImage)
 //TODO: eventually only update those that change
 void Renderer::updateObjectsBuffer(u32 currentImage)
 {
-    auto* buffer = static_cast<std::byte*>(
+    auto* buffer = static_cast<u8*>(
         m_frameResources[currentImage].storageBufferMapped
     );
 
+    //m_drawSorter.cullFrustum(&m_camera);
     const auto& objs = m_drawSorter.getFinalObjects();
+
+    ASSERT(objs.size() < MAX_OBJECTS_SSBO, "Max rendered object count reached!")
 
     memcpy(buffer, objs.data(), sizeof(PerObjectSO) * objs.size());
 }
@@ -821,6 +799,7 @@ void Renderer::updateObjectsBuffer(u32 currentImage)
 
 void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex)
 {
+    ZoneScopedN("Record command buffer")
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
@@ -864,6 +843,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     u32 offset = 0;
 
     for (const auto& [meshHnd, objects] : drawCommands) {
+        ZoneScopedN("Bind and draw meshes")
         Mesh* mesh = m_assetHandler.getMesh(meshHnd);
 
         bindMesh(mesh, commandBuffer);

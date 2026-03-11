@@ -27,7 +27,7 @@ public:
     SwapChain(SwapChain&&) = delete;
 
     void createSurface(const Window& window);
-    void init(const Window& window, bool vSync);
+    void init(const Window& window, bool vSync = true);
     void initResources();
 
     void regenerate(const Window& window, bool vSync);
@@ -47,6 +47,8 @@ public:
     RenderUtils::SwapChainSupportDetails getSupport(VkPhysicalDevice device) const;
     VkFramebuffer getFrameBuffer(u32 index) const;
     VkSemaphore getRenderFinishedSemaphore(u32 index) const;
+
+    bool getVSync() const;
 
 private:
     void createImageViews();
@@ -74,6 +76,8 @@ private:
 
     Image m_colorImage;
     VkImageView m_colorImageView = VK_NULL_HANDLE;
+
+    bool m_verticalSync;
 };
 
 } // Plunksna

@@ -30,7 +30,6 @@ public:
     Engine(Engine&& game) = delete;
     ~Engine();
 
-    void init();
     void run();
 
 private:
@@ -41,6 +40,9 @@ private:
     void moveCamera(f32 delta_ms);
     void rotateCamera();
 
+    void loadAssets();
+    void addObjects();
+
 private:
     Registry m_registry;
 
@@ -48,13 +50,11 @@ private:
     Renderer m_renderer;
     AssetHandler m_assetHandler;
 
-    TimePoint m_startTime;
-    TimePoint m_lastTime;
-
     f32 m_maxFPS;
     f32 m_maxFrameTime_ms;
     f32 m_deltaTime_ms;
 
+    Filter<Model, Transform3D>* m_renderMeshes;
 public:
     bool m_isRunning = true;
 };

@@ -55,7 +55,9 @@ public:
     //set texture device id
     void setTextureID(Asset texHnd, u32 id);
     //get texture device id
-    u32 getTextureId(Asset texHnd);
+    u32 getTextureId(Asset texHnd) const;
+    //get loaded textures
+    std::vector<Asset> getLoadedTextures() const;
 
     //====MESHES======
 
@@ -69,6 +71,8 @@ public:
     void freeMeshDevice(const Context& context, Asset meshHnd);
     //destroy the entire Mesh;
     void destroyMesh(const Context& context, Asset meshHnd);
+    //get loaded meshes
+    std::vector<Asset> getLoadedMeshes() const;
 
     //====SHADERS====
 

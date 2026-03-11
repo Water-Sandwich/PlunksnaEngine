@@ -13,19 +13,41 @@
 
 #include <iostream>
 #include <thread>
-#include <vulkan/vulkan.h>
 #include <tracy/Tracy.hpp>
+
+#include "assetHandler/Assets.h"
 
 namespace Plunksna {
 
+static f32 timer = 0;
 void Engine::tick(f32 delta_ms)
 {
+    ZoneScopedN("Tick")
+    timer += delta_ms;
     rotateCamera();
     moveCamera(delta_ms);
+
+    m_renderMeshes->foreach([&](Model& model, Transform3D& transform)
+    {
+        ZoneScopedN("Update mesh rotations")
+        transform = glm::rotate(transform, delta_ms * 0.005f, glm::vec3(0,1,0));
+    });
+
+    if (g_keyboard.getPressed(SDL_SCANCODE_V)) {
+        m_renderer.setVSync(m_window, !m_renderer.getVSync());
+        LOG("Vsync: " << m_renderer.getVSync())
+    }
 }
 
 void Engine::render()
 {
+    ZoneScopedN("Render")
+    m_renderMeshes->foreach([&](Model& model, Transform3D& transform)
+    {
+        ZoneScopedN("Push draw commands")
+        m_renderer.pushDrawCommand(DrawMeshCommand(model.mesh, transform, m_assetHandler.getTextureId(model.texture)));
+    });
+
     m_renderer.draw(m_window);
 }
 
@@ -134,35 +156,87 @@ void Engine::rotateCamera()
     camera->m_direction = forward;
 }
 
+void Engine::loadAssets()
+{
+    using namespace Assets;
+    meshPyramid = m_assetHandler.loadMesh("obama_prism.obj");
+    meshSus = m_assetHandler.loadMesh("sus.obj");
+
+    texPyramid = m_assetHandler.loadTexture("obama_prism.jpg");
+    texSus1 = m_assetHandler.loadTexture("sus.png");
+    texSus2 = m_assetHandler.loadTexture("sus1.png");
+    texSus3 = m_assetHandler.loadTexture("sus2.png");
+}
+
+void Engine::addObjects()
+{
+    for (i32 i = 0; i < 50; i++) {
+        Entity e = m_registry.makeEntity();
+
+        f32 radius = 50.f;
+        glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
+        glm::mat4 tx = glm::mat4(1.0f);
+
+        tx = glm::translate(tx, pos);
+
+        tx = glm::rotate(
+            tx,
+            g_random.randomReal(-180.f, 180.f),
+            g_random.randomVector<3, f32>()
+        );
+
+        m_registry.add<Transform3D>(e, tx);
+
+        Model model;
+
+        if (g_random.randomInt(0,1) == 0) {
+            model.mesh = Assets::meshSus;
+            model.texture = Assets::texSus1;
+        }
+        else {
+            model.mesh = Assets::meshPyramid;
+            model.texture = Assets::texPyramid;
+        }
+
+        m_registry.add<Model>(e, model);
+    }
+}
+
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags)
     : m_window(title, size, flags), m_renderer(m_assetHandler)
 {
     m_renderer.init(m_window);
+    loadAssets();
+    m_renderer.uploadTextures(m_assetHandler.getLoadedTextures());
+    m_renderer.uploadMeshes(m_assetHandler.getLoadedMeshes());
+    m_renderer.initFrameResources();
 
-    m_maxFPS = 144.f;
+    m_maxFPS = 60.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
 
-    init();
-}
+    m_renderMeshes = m_registry.makeFilter<Model, Transform3D>();
 
-void Engine::init()
-{
-    LOG("Engine init");
+    addObjects();
+
+    LOG("Engine init")
 }
 
 void Engine::run()
 {
+    auto startTime = std::chrono::system_clock::now();
+    auto endTime = startTime;
+
     while (m_isRunning) {
         ZoneScopedN("Main loop");
-        m_startTime = std::chrono::system_clock::now();
+        startTime = std::chrono::system_clock::now();
 
         handleEvents();
         tick(m_deltaTime_ms);
         render();
 
-        m_lastTime = std::chrono::system_clock::now();
-        m_deltaTime_ms = std::chrono::duration<f32, std::milli>(m_lastTime - m_startTime).count();
+        endTime = std::chrono::system_clock::now();
+        m_deltaTime_ms = std::chrono::duration<f32, std::milli>(endTime - startTime).count();
 
         if (m_deltaTime_ms < m_maxFrameTime_ms) {
             std::chrono::duration<f32, std::milli> waitTime_ms(m_maxFrameTime_ms - m_deltaTime_ms);

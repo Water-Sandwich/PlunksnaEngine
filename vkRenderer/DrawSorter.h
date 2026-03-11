@@ -15,10 +15,11 @@ namespace Plunksna {
 struct DrawMeshCommand
 {
     Asset mesh;
-    u32 textureID;
     glm::mat4 model;
+    u32 textureID;
 };
 
+//immediate mode draw sorter, clear all commands after each frame
 class DrawSorter {
 public:
     //add a draw command
@@ -37,7 +38,7 @@ public:
     std::vector<PerObjectSO>& getFinalObjects();
 
     //clear draw command buffers
-    void clear();
+    void clearAll();
 
     //clear only the final draw object buffer
     void clearFinalObjects();

@@ -5,13 +5,18 @@
 #ifndef COMPONENTS_H
 #define COMPONENTS_H
 
-#include <glm/vec2.hpp>
-#include <SDL3/SDL_render.h>
-#include <SDL3/SDL_stdinc.h>
+#include "assetHandler/Asset.h"
+#include <glm/mat4x4.hpp>
 
 namespace Plunksna {
 
+struct Model
+{
+    Asset mesh;
+    Asset texture;
+};
 
+using Transform3D = glm::mat4;
 
 }
 

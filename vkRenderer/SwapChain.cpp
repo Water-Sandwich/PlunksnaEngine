@@ -3,6 +3,9 @@
 //
 
 #include "SwapChain.h"
+
+#include <chrono>
+
 #include "engine/Exception.h"
 #include "RendererUtils.h"
 
@@ -70,6 +73,7 @@ void SwapChain::init(const Window& window, bool vSync)
 
     m_extent = extent;
     m_imageFormat = surfaceFormat.format;
+    m_verticalSync = vSync;
 }
 
 void SwapChain::initResources()
@@ -99,6 +103,11 @@ VkFramebuffer SwapChain::getFrameBuffer(u32 index) const
 VkSemaphore SwapChain::getRenderFinishedSemaphore(u32 index) const
 {
     return m_renderFinished[index];
+}
+
+bool SwapChain::getVSync() const
+{
+    return m_verticalSync;
 }
 
 void SwapChain::clean()

@@ -12,7 +12,11 @@ void DrawSorter::drawMesh(DrawMeshCommand command)
 
 void DrawSorter::cullFrustum(Camera* camera)
 {
+    //TODO: implement, need to add sphere/cube to each mesh at load time
 
+    // for (auto& [mesh, list] : m_meshInstancedDraws) {
+    //
+    // }
 }
 
 void DrawSorter::reserve(u64 size)
@@ -42,7 +46,7 @@ std::vector<PerObjectSO>& DrawSorter::getFinalObjects()
     return m_finalObjects;
 }
 
-void DrawSorter::clear()
+void DrawSorter::clearAll()
 {
     for (auto& [mesh, list] : m_meshInstancedDraws) {
         list.clear();
