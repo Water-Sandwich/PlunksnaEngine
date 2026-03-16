@@ -174,7 +174,7 @@ VkDescriptorSet DescriptorManager::pushSetWrite(Descriptor desc, i32 setNum)
 
     for (u32 i = 0; i < pack.layoutBuildStages.size(); i++) {
         auto& layoutBuild = pack.layoutBuildStages[i];
-        auto& setBuild = pack.setBuildStages[i];
+        auto& setBuild = pack.setBuildStages[setNum * pack.layoutBuildStages.size() + i];
 
         if (i < pack.layoutBuildStages.size() - 1) {
             ASSERT(pack.isVariable && (setBuild.type != eVARIMAGE || setBuild.type == eVARBUFFER),

@@ -86,11 +86,6 @@ private:
     void initDescriptors();
     void initDescriptorSets();
 
-    //TODO: PISS
-    void createDescriptorPools();
-    void createDescriptorSetLayout();
-    void createDescriptorSets();
-
     //frame resources
     void createFrameResources();
     void createCommandBuffers();
