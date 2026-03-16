@@ -56,7 +56,10 @@ void Renderer::initDebugger()
 
 TracyVkCtx Renderer::initProfiler(const Context& contex, VkQueue queue, VkCommandBuffer cmdBuf)
 {
-    return TracyVkContext(contex.physicalDevice, contex.device, queue, cmdBuf);
+    auto funcDomain = (PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT) vkGetInstanceProcAddr(contex.instance, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT");
+    auto funcCalib = (PFN_vkGetCalibratedTimestampsEXT) vkGetInstanceProcAddr(contex.instance, "vkGetCalibratedTimestampsEXT");
+
+    return TracyVkContextCalibrated(contex.physicalDevice, contex.device, queue, cmdBuf, funcDomain, funcCalib);
 }
 
 void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)

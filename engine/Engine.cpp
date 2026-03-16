@@ -211,7 +211,7 @@ Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
     m_renderer.uploadMeshes(m_assetHandler.getLoadedMeshes());
     m_renderer.initFrameResources();
 
-    m_maxFPS = 1.f;
+    m_maxFPS = 60.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
 

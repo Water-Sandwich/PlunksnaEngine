@@ -71,7 +71,7 @@ private:
 
     inline static const std::vector<const char*> s_deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME
+        VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME //profiling
     };
 
     void createInstance();
@@ -109,8 +109,12 @@ private:
     void selectDevice(const Window& window);
     bool isDeviceSuitable(VkPhysicalDevice device) const;
 
-    //buffers and commands
+    //draw
     void recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex);
+    void beginRenderPass(VkCommandBuffer commandBuffer, u32 imageIndex);
+    void setViewPort(VkCommandBuffer commandBuffer);
+    void drawMeshes(VkCommandBuffer commandBuffer);
+    void endRenderPass(VkCommandBuffer commandBuffer);
     void bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const;
 
     void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
@@ -172,6 +176,7 @@ private:
 private:
     //=======DEBUG=========
     VkDebugUtilsMessengerEXT m_debugger = VK_NULL_HANDLE;
+    TracyVkCtx m_profiler = VK_NULL_HANDLE;
 
     void initDebugger();
     TracyVkCtx initProfiler(const Context& contex, VkQueue queue, VkCommandBuffer cmdBuf);

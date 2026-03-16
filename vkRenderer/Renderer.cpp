@@ -116,8 +116,6 @@ VkInstance Renderer::init(const Window& window)
 
     createRenderPass();
     initDescriptors();
-    //createDescriptorPools();
-    //createDescriptorSetLayout();
     createGraphicsPipeline();
     createCommandPool();
     m_swapChain.initResources();
@@ -229,6 +227,7 @@ void Renderer::clean()
         rec.destroySync(m_context);
 
     vmaDestroyAllocator(m_context.allocator);
+    TracyVkDestroy(m_profiler)
 
     if (m_context.device != VK_NULL_HANDLE) {
         vkDestroyDevice(m_context.device, nullptr);
@@ -596,7 +595,7 @@ void Renderer::createCommandPool()
 
     VkCommandPoolCreateInfo transientCommandInfo{};
     transientCommandInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = m_context.familyIndices.graphicsFamily.value();
 
     ASSERT_V(vkCreateCommandPool(m_context.device, &poolInfo, nullptr, &m_transientCommandPool),
@@ -760,9 +759,18 @@ void Renderer::createSSBOs()
 
 void Renderer::createProfilers()
 {
-    for (auto& frame : m_frameResources) {
-        frame.profiler = initProfiler(m_context, m_graphicsQueue, frame.commandBuffer);
-    }
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = m_transientCommandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer cmd;
+    vkAllocateCommandBuffers(m_context.device, &allocInfo, &cmd);
+
+    m_profiler = initProfiler(m_context, m_graphicsQueue, cmd);
+
+    vkFreeCommandBuffers(m_context.device, m_transientCommandPool, 1, &cmd);
 }
 
 void Renderer::createFrameResources()
@@ -773,7 +781,6 @@ void Renderer::createFrameResources()
     createSSBOs();
     createCommandBuffers();
     initDescriptorSets();
-    //createDescriptorSets();
     createSyncObjects();
     createProfilers();
 }
@@ -812,7 +819,8 @@ void Renderer::updateObjectsBuffer(u32 currentImage)
 
 void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex)
 {
-    ZoneScopedN("Record command buffer")
+    ZoneScopedN("Record command buffer");
+    FrameResource& frame = m_frameResources[m_currentFrame];
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
@@ -820,6 +828,28 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 
     ASSERT_V(vkBeginCommandBuffer(commandBuffer, &beginInfo),
         "failed to begin recording command buffer! (begin)")
+
+    {
+        TracyVkZone(m_profiler, commandBuffer, "Record command buffer")
+
+        beginRenderPass(commandBuffer, imageIndex);
+
+        setViewPort(commandBuffer);
+
+        drawMeshes(commandBuffer);
+
+        endRenderPass(commandBuffer);
+    }
+
+    TracyVkCollect(m_profiler, commandBuffer);
+
+    ASSERT_V(vkEndCommandBuffer(commandBuffer),
+        "failed to record command buffer! (end)")
+}
+
+void Renderer::beginRenderPass(VkCommandBuffer commandBuffer, u32 imageIndex)
+{
+    TracyVkZone(m_profiler, commandBuffer, "Begin render pass");
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -836,8 +866,12 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     renderPassInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+}
+
+void Renderer::setViewPort(VkCommandBuffer commandBuffer)
+{
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -851,12 +885,15 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
     scissor.offset = {0, 0};
     scissor.extent = m_swapChain.extent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+}
 
+void Renderer::drawMeshes(VkCommandBuffer commandBuffer)
+{
     auto& drawCommands = m_drawSorter.getDrawCommands();
     u32 offset = 0;
 
+    TracyVkZone(m_profiler, commandBuffer, "Render meshes");
     for (const auto& [meshHnd, objects] : drawCommands) {
-        ZoneScopedN("Bind and draw meshes")
         Mesh* mesh = m_assetHandler.getMesh(meshHnd);
 
         bindMesh(mesh, commandBuffer);
@@ -869,11 +906,12 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
         vkCmdDrawIndexed(commandBuffer, (mesh->indicesCount), objects.size(), 0, 0, 0);
         offset += objects.size();
     }
+}
 
+void Renderer::endRenderPass(VkCommandBuffer commandBuffer)
+{
+    TracyVkZone(m_profiler, commandBuffer, "End render pass");
     vkCmdEndRenderPass(commandBuffer);
-
-    ASSERT_V(vkEndCommandBuffer(commandBuffer),
-        "failed to record command buffer! (end)")
 }
 
 void Renderer::bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const

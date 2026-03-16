@@ -6,7 +6,6 @@ function(findOrFetch package_name repo_url tag)
     if (NOT ${package_name}_FOUND)
         message(STATUS "${package_name} not found, fetching from ${repo_url}...")
 
-        include(FetchContent)
         FetchContent_Declare(
                 ${package_name}
                 GIT_REPOSITORY ${repo_url}
