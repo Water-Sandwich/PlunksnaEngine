@@ -1,6 +1,8 @@
 //
 // Created by d on 2/4/26.
 //
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/norm.hpp>
 
 #include "AssetHandler.h"
 
@@ -177,6 +179,8 @@ Asset AssetHandler::loadMesh(std::string name)
     std::string err;
     std::string warn;
 
+    glm::vec3 furthest{0};
+
     ASSERT(tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str()), err);
 
     std::unordered_map<Vertex, i32> uniqueVertices{};
@@ -203,9 +207,15 @@ Asset AssetHandler::loadMesh(std::string name)
                 mesh.vertices.push_back(vertex);
             }
 
+            if (glm::length2(vertex.pos) > glm::length2(furthest))
+                furthest = vertex.pos;
+
             mesh.indices.push_back(uniqueVertices[vertex]);
         }
     }
+
+    mesh.cullSphere.offset = furthest / 2.f;
+    mesh.cullSphere.radius = glm::length(furthest) / 2.f;
 
     mesh.verticesCount = mesh.vertices.size();
     mesh.verticesSize = mesh.vertices.size() * sizeof(mesh.vertices[0]);

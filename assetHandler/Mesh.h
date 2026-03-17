@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Asset.h"
+#include "CullSphere.h"
 #include "vkRenderer/Buffer.h"
 #include "vkRenderer/Vertex.h"
 
@@ -20,17 +21,17 @@ struct Mesh
     std::vector<Vertex> vertices;
     std::vector<u32> indices;
 
+    //device
+    Buffer combinedBuffer;
+
     VkDeviceSize verticesSize;
     VkDeviceSize indicesSize;
 
     u32 verticesCount;
     u32 indicesCount;
 
-    //device
-    // Buffer vertexBuffer;
-    // Buffer indexBuffer;
-
-    Buffer combinedBuffer;
+    //culling
+    CullSphere cullSphere;
 
     bool isHostLoaded() const
     {

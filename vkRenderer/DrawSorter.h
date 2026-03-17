@@ -9,6 +9,8 @@
 
 #include "Camera.h"
 #include "ShaderObjects.h"
+#include "assetHandler/AssetHandler.h"
+#include "assetHandler/CullSphere.h"
 
 namespace Plunksna {
 
@@ -22,6 +24,8 @@ struct DrawMeshCommand
 //immediate mode draw sorter, clear all commands after each frame
 class DrawSorter {
 public:
+    void setAssets(AssetHandler* assets);
+
     //add a draw command
     void drawMesh(DrawMeshCommand command);
 
@@ -35,7 +39,7 @@ public:
     std::unordered_map<Asset, std::vector<PerObjectSO>>& getDrawCommands();
 
     //get object SOs from sorted draw calls
-    std::vector<PerObjectSO>& getFinalObjects();
+    std::vector<PerObjectSO>& getFinalObjects(Camera* camera);
 
     //clear draw command buffers
     void clearAll();
@@ -45,6 +49,11 @@ public:
 private:
     std::unordered_map<Asset, std::vector<PerObjectSO>> m_meshInstancedDraws;
     std::vector<PerObjectSO> m_finalObjects;
+    AssetHandler* m_assets = nullptr;
+
+private:
+    static f32 distanceToPlane(glm::vec4 plane, glm::vec3 point);
+    static f32 distanceToPlanes(const std::array<glm::vec4, 6>& planes, glm::vec3 point);
 };
 
 } // Plunksna

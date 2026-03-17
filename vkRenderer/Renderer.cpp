@@ -119,6 +119,7 @@ VkInstance Renderer::init(const Window& window)
     createGraphicsPipeline();
     createCommandPool();
     m_swapChain.initResources();
+    m_drawSorter.setAssets(&m_assetHandler);
 
     return m_context.instance;
 }
@@ -809,7 +810,7 @@ void Renderer::updateObjectsBuffer(u32 currentImage)
     );
 
     //m_drawSorter.cullFrustum(&m_camera);
-    const auto& objs = m_drawSorter.getFinalObjects();
+    const auto& objs = m_drawSorter.getFinalObjects(&m_camera);
 
     ASSERT(objs.size() < MAX_OBJECTS_SSBO, "Max rendered object count reached!")
 

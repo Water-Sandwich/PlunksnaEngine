@@ -98,7 +98,7 @@ void Engine::moveCamera(f32 delta_ms)
 
     f32 speed = 0.02;
     if (g_keyboard.get(SDL_SCANCODE_LALT))
-        speed = 1;
+        speed = .1;
 
     glm::vec3 inputDir(0);
 
@@ -173,7 +173,7 @@ void Engine::addObjects()
     for (i32 i = 0; i < 50; i++) {
         Entity e = m_registry.makeEntity();
 
-        f32 radius = 50.f;
+        f32 radius = 10.f;
         glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
         glm::mat4 tx = glm::mat4(1.0f);
 

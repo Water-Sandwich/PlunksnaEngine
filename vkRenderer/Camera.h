@@ -18,6 +18,7 @@ public:
     void resize(f32 aspect);
     glm::mat4 getView() const;
     glm::mat4 getPerspective() const;
+    std::array<glm::vec4, 6> getFrustumPlanes() const;
 
 public:
     //position of camera
