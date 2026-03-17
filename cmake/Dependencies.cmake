@@ -1,26 +1,4 @@
-include(FetchContent)
-
-function(findOrFetch package_name repo_url tag)
-    find_package(${package_name} QUIET)
-
-    if (NOT ${package_name}_FOUND)
-        message(STATUS "${package_name} not found, fetching from ${repo_url}...")
-
-        FetchContent_Declare(
-                ${package_name}
-                GIT_REPOSITORY ${repo_url}
-                GIT_TAG ${tag}
-        )
-        FetchContent_MakeAvailable(${package_name})
-
-        # Optionally set ${package_name}_FOUND to TRUE
-        set(${package_name}_FOUND TRUE PARENT_SCOPE)
-    else()
-        message(STATUS "Using system ${package_name}...")
-    endif()
-endfunction()
-
-
+include(${CMAKE_CURRENT_LIST_DIR}/find.cmake)
 
 findOrFetch(
         SDL3
@@ -59,3 +37,5 @@ findOrFetch(
 )
 
 find_package(Vulkan REQUIRED)
+
+include(${CMAKE_CURRENT_LIST_DIR}/imguiDep.cmake)
