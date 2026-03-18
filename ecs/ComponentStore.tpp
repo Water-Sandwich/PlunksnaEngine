@@ -57,8 +57,8 @@ std::pair<Entity, void*> ComponentStore<Component>::remove(Entity entity)
     const auto otherIndex = m_indexes.at(m_entities.back());
     const auto otherEntity = m_entities[otherIndex];
 
-    std::swap(m_components[index], m_components.back());
-    std::swap(m_entities[index], m_entities.back());
+    m_components[index] = m_components.back();
+    m_entities[index] = m_entities.back();
 
     m_components.pop_back();
     m_entities.pop_back();

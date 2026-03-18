@@ -21,7 +21,6 @@ void DrawSorter::drawMesh(DrawMeshCommand command)
 
 void DrawSorter::cullFrustum(Camera* camera)
 {
-    ZoneScopedN("Frustum culling")
     auto planes = camera->getFrustumPlanes();
 
     for (auto& [meshHnd, list] : m_meshInstancedDraws) {
@@ -35,7 +34,9 @@ void DrawSorter::cullFrustum(Camera* camera)
             if (distance > -mesh.cullSphere.radius * 2)
                 continue;
 
-            list.erase(list.begin() + i);
+            //list.erase(list.begin() + i);
+            list[i] = list.back();
+            list.pop_back();
         }
     }
 }

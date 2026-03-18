@@ -26,6 +26,9 @@
 #include <glm/gtx/hash.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_vulkan.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
@@ -98,6 +101,53 @@ void Renderer::createAllocator()
     vmaCreateAllocator(&allocatorCreateInfo, &m_context.allocator);
 }
 
+void Renderer::initIMGui(const Window& window)
+{
+    VkDescriptorPoolSize pool_sizes[] =
+    {
+            { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = std::size(pool_sizes);
+    pool_info.pPoolSizes = pool_sizes;
+
+    VkDescriptorPool imguiPool;
+    ASSERT_V(vkCreateDescriptorPool(m_context.device, &pool_info, nullptr, &imguiPool), "failed to init IMGui buffer");
+
+    ImGui::CreateContext();
+
+    ImGui_ImplSDL3_InitForVulkan(window.getWindow());
+
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.ApiVersion = VK_API_VERSION_1_2;
+    init_info.Instance = m_context.instance;
+    init_info.PhysicalDevice = m_context.physicalDevice;
+    init_info.Device = m_context.device;
+    init_info.Queue = m_graphicsQueue;
+    init_info.DescriptorPool = imguiPool;
+    init_info.MinImageCount = m_maxInFlightFrames;
+    init_info.ImageCount = m_maxInFlightFrames;
+    init_info.QueueFamily = m_context.familyIndices.graphicsFamily.value();
+
+    ImGui_ImplVulkan_Init(&init_info);
+
+
+}
+
 VkInstance Renderer::init(const Window& window)
 {
     if (m_context.instance == VK_NULL_HANDLE)
@@ -120,6 +170,8 @@ VkInstance Renderer::init(const Window& window)
     createCommandPool();
     m_swapChain.initResources();
     m_drawSorter.setAssets(&m_assetHandler);
+
+    initIMGui(window);
 
     return m_context.instance;
 }

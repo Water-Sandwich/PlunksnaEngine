@@ -29,7 +29,6 @@ void Engine::tick(f32 delta_ms)
 
     m_renderMeshes->foreach([&](Model& model, Transform3D& transform)
     {
-        ZoneScopedN("Update mesh rotations")
         transform = glm::rotate(transform, delta_ms * 0.005f, glm::vec3(0,1,0));
     });
 
@@ -44,7 +43,6 @@ void Engine::render()
     ZoneScopedN("Render")
     m_renderMeshes->foreach([&](Model& model, Transform3D& transform)
     {
-        ZoneScopedN("Push draw commands")
         m_renderer.pushDrawCommand(DrawMeshCommand(model.mesh, transform, m_assetHandler.getTextureId(model.texture)));
     });
 
@@ -170,7 +168,7 @@ void Engine::loadAssets()
 
 void Engine::addObjects()
 {
-    for (i32 i = 0; i < 50; i++) {
+    for (i32 i = 0; i < 100000; i++) {
         Entity e = m_registry.makeEntity();
 
         f32 radius = 10.f;

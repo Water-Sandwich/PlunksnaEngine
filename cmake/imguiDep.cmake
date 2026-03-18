@@ -13,8 +13,8 @@ if(NOT TARGET imgui)
 
     file(GLOB SRC CONFIGURE_DEPENDS
             ${CURRENT_DIR}/*.cpp
-            ${CURRENT_DIR}/backends/imgui_imp_sdl3.cpp
-            ${CURRENT_DIR}/backends/imgui_imp_vulkan.cpp
+            ${CURRENT_DIR}/backends/imgui_impl_sdl3.cpp
+            ${CURRENT_DIR}/backends/imgui_impl_vulkan.cpp
     )
 
     add_library(imgui STATIC)

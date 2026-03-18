@@ -77,6 +77,7 @@ private:
     void createInstance();
     void createLogicalDevice(const Window& window);
     void createAllocator();
+    void initIMGui(const Window& window);
 
     void createGraphicsPipeline();
     void createRenderPass();
