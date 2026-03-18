@@ -125,27 +125,36 @@ void Renderer::initIMGui(const Window& window)
     pool_info.poolSizeCount = std::size(pool_sizes);
     pool_info.pPoolSizes = pool_sizes;
 
-    VkDescriptorPool imguiPool;
-    ASSERT_V(vkCreateDescriptorPool(m_context.device, &pool_info, nullptr, &imguiPool), "failed to init IMGui buffer");
+    ASSERT_V(vkCreateDescriptorPool(m_context.device, &pool_info, nullptr, &m_context.imguiPool), "failed to init IMGui buffer");
 
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+
+    ImGui::StyleColorsDark();
+
+    //createImGUIRenderPass();
 
     ImGui_ImplSDL3_InitForVulkan(window.getWindow());
 
-    ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.ApiVersion = VK_API_VERSION_1_2;
-    init_info.Instance = m_context.instance;
-    init_info.PhysicalDevice = m_context.physicalDevice;
-    init_info.Device = m_context.device;
-    init_info.Queue = m_graphicsQueue;
-    init_info.DescriptorPool = imguiPool;
-    init_info.MinImageCount = m_maxInFlightFrames;
-    init_info.ImageCount = m_maxInFlightFrames;
-    init_info.QueueFamily = m_context.familyIndices.graphicsFamily.value();
+    ImGui_ImplVulkan_InitInfo initInfo = {};
+    initInfo.ApiVersion = VK_API_VERSION_1_2;
+    initInfo.Instance = m_context.instance;
+    initInfo.PhysicalDevice = m_context.physicalDevice;
+    initInfo.Device = m_context.device;
+    initInfo.Queue = m_graphicsQueue;
+    initInfo.DescriptorPool = m_context.imguiPool;
+    initInfo.MinImageCount = m_maxInFlightFrames;
+    initInfo.ImageCount = m_maxInFlightFrames;
+    initInfo.QueueFamily = m_context.familyIndices.graphicsFamily.value();
+    initInfo.PipelineInfoMain.RenderPass = m_context.renderPass;
+    initInfo.PipelineInfoMain.MSAASamples = m_context.msaaSamples;
 
-    ImGui_ImplVulkan_Init(&init_info);
-
-
+    ImGui_ImplVulkan_Init(&initInfo);
 }
 
 VkInstance Renderer::init(const Window& window)
@@ -206,6 +215,8 @@ void Renderer::pushDrawCommand(const DrawMeshCommand& command)
 void Renderer::draw(const Window& window)
 {
     ZoneScopedN("Renderer::draw")
+    drawImgui();
+
     FrameResource& currentFrame = m_frameResources[m_currentFrame];
 
     vkWaitForFences(m_context.device, 1, &currentFrame.frameInFlightFence, VK_TRUE, UINT64_MAX);
@@ -256,6 +267,12 @@ void Renderer::draw(const Window& window)
 
 void Renderer::clean()
 {
+    vkDeviceWaitIdle(m_context.device);
+
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    VK_DESTROY(m_context.imguiPool, m_context.device, vkDestroyDescriptorPool)
+
     m_swapChain.clean();
     m_swapChain.cleanSurface();
 
@@ -636,6 +653,48 @@ void Renderer::createRenderPass()
         "failed to create render pass!")
 }
 
+void Renderer::createImGUIRenderPass()
+{
+    VkAttachmentDescription attachment = {};
+    attachment.format = m_swapChain.format();
+    attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference color_attachment = {};
+    color_attachment.attachment = 0;
+    color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_attachment;
+
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;  // or VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    VkRenderPassCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    info.attachmentCount = 1;
+    info.pAttachments = &attachment;
+    info.subpassCount = 1;
+    info.pSubpasses = &subpass;
+    info.dependencyCount = 1;
+    info.pDependencies = &dependency;
+
+    ASSERT_V(vkCreateRenderPass(m_context.device, &info, nullptr, &m_context.imguiRenderPass),
+        "Could not create Dear ImGui's render pass");
+}
+
 void Renderer::createCommandPool()
 {
     VkCommandPoolCreateInfo poolInfo{};
@@ -891,6 +950,8 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 
         drawMeshes(commandBuffer);
 
+        ImGui_ImplVulkan_RenderDrawData((ImDrawData*)m_context.ImGUIData, commandBuffer);
+
         endRenderPass(commandBuffer);
     }
 
@@ -977,6 +1038,19 @@ void Renderer::bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const
     VkDeviceSize indexOffset = (mesh->verticesSize + 3) & ~3;
 
     vkCmdBindIndexBuffer(commandBuffer, mesh->combinedBuffer.buffer, indexOffset, VK_INDEX_TYPE_UINT32);
+}
+
+void Renderer::drawImgui()
+{
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    bool open = true;
+    ImGui::ShowDemoWindow(&open);
+
+    ImGui::Render();
+    m_context.ImGUIData = ImGui::GetDrawData();
 }
 
 void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,

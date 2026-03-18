@@ -16,6 +16,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "assetHandler/Assets.h"
+#include <imgui_impl_sdl3.h>
 
 namespace Plunksna {
 
@@ -57,6 +58,7 @@ void Engine::handleEvents()
     g_mouse.swap();
 
     while (SDL_PollEvent(&event)) {
+        ImGui_ImplSDL3_ProcessEvent(&event);
         switch (event.type) {
         case SDL_EVENT_QUIT: {
             m_isRunning = false;
@@ -168,10 +170,10 @@ void Engine::loadAssets()
 
 void Engine::addObjects()
 {
-    for (i32 i = 0; i < 100000; i++) {
+    for (i32 i = 0; i < 1000; i++) {
         Entity e = m_registry.makeEntity();
 
-        f32 radius = 10.f;
+        f32 radius = 25.f;
         glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
         glm::mat4 tx = glm::mat4(1.0f);
 
@@ -209,7 +211,7 @@ Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
     m_renderer.uploadMeshes(m_assetHandler.getLoadedMeshes());
     m_renderer.initFrameResources();
 
-    m_maxFPS = 60.f;
+    m_maxFPS = 144.f;
     m_maxFrameTime_ms = 1000.f / m_maxFPS;
     m_deltaTime_ms = m_maxFrameTime_ms;
 

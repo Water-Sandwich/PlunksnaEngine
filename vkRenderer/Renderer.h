@@ -81,6 +81,7 @@ private:
 
     void createGraphicsPipeline();
     void createRenderPass();
+    void createImGUIRenderPass();
 
     void createCommandPool();
 
@@ -117,6 +118,9 @@ private:
     void drawMeshes(VkCommandBuffer commandBuffer);
     void endRenderPass(VkCommandBuffer commandBuffer);
     void bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const;
+
+    //draw imgui
+    void drawImgui();
 
     void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
         VmaAllocationCreateFlags flags = {}) const;
