@@ -9,7 +9,7 @@
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
-#include "Utils/Types.h"
+#include "utils/Types.h"
 
 namespace Plunksna {
 

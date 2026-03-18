@@ -7,7 +7,7 @@
 
 #include <glm/vec2.hpp>
 #include <SDL3/SDL_mouse.h>
-#include <Utils/Types.h>
+#include <utils/Types.h>
 
 namespace Plunksna {
 

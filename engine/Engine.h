@@ -15,7 +15,7 @@
 #include "Window.h"
 #include "assetHandler/AssetHandler.h"
 #include "ecs/Registry.h"
-#include <Utils/Types.h>
+#include <utils/Types.h>
 
 namespace Plunksna {
 

@@ -12,7 +12,7 @@
 #include "engine/Log.h"
 #include "engine/Window.h"
 #include "Image.h"
-#include "Utils/Types.h"
+#include "utils/Types.h"
 
 namespace Plunksna::RenderUtils {
 

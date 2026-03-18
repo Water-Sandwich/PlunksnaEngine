@@ -10,6 +10,7 @@ add_subdirectory(ecs)
 add_subdirectory(engine)
 add_subdirectory(vkRenderer)
 add_subdirectory(assetHandler)
+add_subdirectory(gui)
 
 add_executable(Plunksna main.cpp)
 
@@ -18,6 +19,7 @@ target_link_libraries(Plunksna
         engine
         vkrenderer
         assethandler
+        GUI
 )
 
 target_compile_definitions(Plunksna PRIVATE TRACY_ENABLE)

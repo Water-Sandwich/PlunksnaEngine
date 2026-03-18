@@ -6,7 +6,7 @@
 #define ASSET_H
 
 #include <limits>
-#include "Utils/Types.h"
+#include "utils/Types.h"
 
 namespace Plunksna {
 

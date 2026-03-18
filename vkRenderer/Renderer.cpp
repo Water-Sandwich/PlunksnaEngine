@@ -26,8 +26,6 @@
 #include <glm/gtx/hash.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -101,62 +99,6 @@ void Renderer::createAllocator()
     vmaCreateAllocator(&allocatorCreateInfo, &m_context.allocator);
 }
 
-void Renderer::initIMGui(const Window& window)
-{
-    VkDescriptorPoolSize pool_sizes[] =
-    {
-            { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-            { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-    };
-
-    VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_info.maxSets = 1000;
-    pool_info.poolSizeCount = std::size(pool_sizes);
-    pool_info.pPoolSizes = pool_sizes;
-
-    ASSERT_V(vkCreateDescriptorPool(m_context.device, &pool_info, nullptr, &m_context.imguiPool), "failed to init IMGui buffer");
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-
-    ImGui::StyleColorsDark();
-
-    //createImGUIRenderPass();
-
-    ImGui_ImplSDL3_InitForVulkan(window.getWindow());
-
-    ImGui_ImplVulkan_InitInfo initInfo = {};
-    initInfo.ApiVersion = VK_API_VERSION_1_2;
-    initInfo.Instance = m_context.instance;
-    initInfo.PhysicalDevice = m_context.physicalDevice;
-    initInfo.Device = m_context.device;
-    initInfo.Queue = m_graphicsQueue;
-    initInfo.DescriptorPool = m_context.imguiPool;
-    initInfo.MinImageCount = m_maxInFlightFrames;
-    initInfo.ImageCount = m_maxInFlightFrames;
-    initInfo.QueueFamily = m_context.familyIndices.graphicsFamily.value();
-    initInfo.PipelineInfoMain.RenderPass = m_context.renderPass;
-    initInfo.PipelineInfoMain.MSAASamples = m_context.msaaSamples;
-
-    ImGui_ImplVulkan_Init(&initInfo);
-}
-
 VkInstance Renderer::init(const Window& window)
 {
     if (m_context.instance == VK_NULL_HANDLE)
@@ -180,7 +122,7 @@ VkInstance Renderer::init(const Window& window)
     m_swapChain.initResources();
     m_drawSorter.setAssets(&m_assetHandler);
 
-    initIMGui(window);
+    m_gui.init(m_context, window, m_maxInFlightFrames);
 
     return m_context.instance;
 }
@@ -215,7 +157,7 @@ void Renderer::pushDrawCommand(const DrawMeshCommand& command)
 void Renderer::draw(const Window& window)
 {
     ZoneScopedN("Renderer::draw")
-    drawImgui();
+    m_gui.render();
 
     FrameResource& currentFrame = m_frameResources[m_currentFrame];
 
@@ -249,10 +191,10 @@ void Renderer::draw(const Window& window)
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    ASSERT_V(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, currentFrame.frameInFlightFence),
+    ASSERT_V(vkQueueSubmit(m_context.graphicsQueue, 1, &submitInfo, currentFrame.frameInFlightFence),
         "failed to submit draw command buffer!")
 
-    VkResult result = m_swapChain.present(m_presentQueue, imageIndex);
+    VkResult result = m_swapChain.present(m_context.presentQueue, imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_hasResized) {
         m_hasResized = false;
@@ -269,9 +211,7 @@ void Renderer::clean()
 {
     vkDeviceWaitIdle(m_context.device);
 
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    VK_DESTROY(m_context.imguiPool, m_context.device, vkDestroyDescriptorPool)
+    m_gui.clean(m_context);
 
     m_swapChain.clean();
     m_swapChain.cleanSurface();
@@ -653,48 +593,6 @@ void Renderer::createRenderPass()
         "failed to create render pass!")
 }
 
-void Renderer::createImGUIRenderPass()
-{
-    VkAttachmentDescription attachment = {};
-    attachment.format = m_swapChain.format();
-    attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference color_attachment = {};
-    color_attachment.attachment = 0;
-    color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_attachment;
-
-    VkSubpassDependency dependency = {};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;  // or VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    VkRenderPassCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    info.attachmentCount = 1;
-    info.pAttachments = &attachment;
-    info.subpassCount = 1;
-    info.pSubpasses = &subpass;
-    info.dependencyCount = 1;
-    info.pDependencies = &dependency;
-
-    ASSERT_V(vkCreateRenderPass(m_context.device, &info, nullptr, &m_context.imguiRenderPass),
-        "Could not create Dear ImGui's render pass");
-}
-
 void Renderer::createCommandPool()
 {
     VkCommandPoolCreateInfo poolInfo{};
@@ -880,7 +778,7 @@ void Renderer::createProfilers()
     VkCommandBuffer cmd;
     vkAllocateCommandBuffers(m_context.device, &allocInfo, &cmd);
 
-    m_profiler = initProfiler(m_context, m_graphicsQueue, cmd);
+    m_profiler = initProfiler(m_context, m_context.graphicsQueue, cmd);
 
     vkFreeCommandBuffers(m_context.device, m_transientCommandPool, 1, &cmd);
 }
@@ -916,6 +814,8 @@ void Renderer::updateCameraBuffer(u32 currentImage)
 //TODO: eventually only update those that change
 void Renderer::updateObjectsBuffer(u32 currentImage)
 {
+    ZoneScopedN("Update SSBO")
+
     auto* buffer = static_cast<u8*>(
         m_frameResources[currentImage].storageBufferMapped
     );
@@ -950,7 +850,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 
         drawMeshes(commandBuffer);
 
-        ImGui_ImplVulkan_RenderDrawData((ImDrawData*)m_context.ImGUIData, commandBuffer);
+        ImGui_ImplVulkan_RenderDrawData(m_gui.getDrawData(), commandBuffer);
 
         endRenderPass(commandBuffer);
     }
@@ -1040,19 +940,6 @@ void Renderer::bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const
     vkCmdBindIndexBuffer(commandBuffer, mesh->combinedBuffer.buffer, indexOffset, VK_INDEX_TYPE_UINT32);
 }
 
-void Renderer::drawImgui()
-{
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-
-    bool open = true;
-    ImGui::ShowDemoWindow(&open);
-
-    ImGui::Render();
-    m_context.ImGUIData = ImGui::GetDrawData();
-}
-
 void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
                             VmaAllocationCreateFlags flags) const
 {
@@ -1108,8 +995,8 @@ void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) const
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(m_graphicsQueue);
+    vkQueueSubmit(m_context.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_context.graphicsQueue);
 
     vkFreeCommandBuffers(m_context.device, m_transientCommandPool, 1, &commandBuffer);
 }
@@ -1391,8 +1278,8 @@ void Renderer::createLogicalDevice(const Window& window)
     ASSERT_V(vkCreateDevice(m_context.physicalDevice, &createInfo, nullptr, &m_context.device),
         "Could not create logical device")
 
-    vkGetDeviceQueue(m_context.device, m_context.familyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
-    vkGetDeviceQueue(m_context.device, m_context.familyIndices.presentFamily.value(), 0, &m_presentQueue);
+    vkGetDeviceQueue(m_context.device, m_context.familyIndices.graphicsFamily.value(), 0, &m_context.graphicsQueue);
+    vkGetDeviceQueue(m_context.device, m_context.familyIndices.presentFamily.value(), 0, &m_context.presentQueue);
 }
 
 } // Plunksna

@@ -8,7 +8,7 @@
 #include <optional>
 #include <vulkan/vulkan_core.h>
 #include <vk_mem_alloc.h>
-#include "Utils/Types.h"
+#include "utils/Types.h"
 
 namespace Plunksna {
 
@@ -33,15 +33,15 @@ struct Context
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkRenderPass imguiRenderPass = VK_NULL_HANDLE;
 
+    VkQueue graphicsQueue = VK_NULL_HANDLE;
+    VkQueue presentQueue = VK_NULL_HANDLE;
+
     QueueFamilyIndices familyIndices;
 
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
     VkBool32 sampleShading = VK_FALSE;
+
     VkPhysicalDeviceProperties physicalDeviceProperties;
-
-    VkDescriptorPool imguiPool = VK_NULL_HANDLE;
-
-    void* ImGUIData;
 };
 
 }

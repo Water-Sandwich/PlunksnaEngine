@@ -23,8 +23,9 @@
 #include "DescriptorManager.h"
 #include "DrawSorter.h"
 #include "assetHandler/AssetHandler.h"
-#include "Utils/Types.h"
+#include "utils/Types.h"
 #include "ShaderObjects.h"
+#include "gui/Gui.h"
 
 namespace Plunksna {
 #ifdef NDEBUG
@@ -77,11 +78,9 @@ private:
     void createInstance();
     void createLogicalDevice(const Window& window);
     void createAllocator();
-    void initIMGui(const Window& window);
 
     void createGraphicsPipeline();
     void createRenderPass();
-    void createImGUIRenderPass();
 
     void createCommandPool();
 
@@ -119,8 +118,6 @@ private:
     void endRenderPass(VkCommandBuffer commandBuffer);
     void bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const;
 
-    //draw imgui
-    void drawImgui();
 
     void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
         VmaAllocationCreateFlags flags = {}) const;
@@ -141,18 +138,12 @@ private:
     void endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize) const;
 
 private:
-    //TODO: PISS
-    VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
-    VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
-
     Context m_context;
     SwapChain m_swapChain;
     AssetHandler& m_assetHandler;
     DrawSorter m_drawSorter;
     DescriptorManager m_descriptors;
-
-    VkQueue m_graphicsQueue = VK_NULL_HANDLE;
-    VkQueue m_presentQueue = VK_NULL_HANDLE;
+    GUI m_gui;
 
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
     VkCommandPool m_transientCommandPool = VK_NULL_HANDLE;

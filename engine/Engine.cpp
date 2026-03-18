@@ -42,10 +42,13 @@ void Engine::tick(f32 delta_ms)
 void Engine::render()
 {
     ZoneScopedN("Render")
-    m_renderMeshes->foreach([&](Model& model, Transform3D& transform)
     {
-        m_renderer.pushDrawCommand(DrawMeshCommand(model.mesh, transform, m_assetHandler.getTextureId(model.texture)));
-    });
+        ZoneScopedN("Render push commands")
+        m_renderMeshes->foreach([&](Model& model, Transform3D& transform)
+        {
+            m_renderer.pushDrawCommand(DrawMeshCommand(model.mesh, transform, m_assetHandler.getTextureId(model.texture)));
+        });
+    }
 
     m_renderer.draw(m_window);
 }
@@ -170,10 +173,10 @@ void Engine::loadAssets()
 
 void Engine::addObjects()
 {
-    for (i32 i = 0; i < 1000; i++) {
+    for (i32 i = 0; i < 200; i++) {
         Entity e = m_registry.makeEntity();
 
-        f32 radius = 25.f;
+        f32 radius = 10.f;
         glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
         glm::mat4 tx = glm::mat4(1.0f);
 
