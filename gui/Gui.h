@@ -22,6 +22,7 @@ public:
 
 private:
     void draw();
+    void applyCustomStyle();
 
 private:
     VkDescriptorPool m_imguiPool = VK_NULL_HANDLE;

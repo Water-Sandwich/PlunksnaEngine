@@ -299,7 +299,7 @@ void Renderer::initDescriptors()
     m_descriptor = m_descriptors.beginBuild();
 
     //camera
-    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     //per object data
     m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     //texture
@@ -801,7 +801,8 @@ void Renderer::updateCameraBuffer(u32 currentImage)
 
     CameraSO camUBO{
         .view = m_camera.getView(),
-        .proj = m_camera.getPerspective()
+        .proj = m_camera.getPerspective(),
+        .pos = m_camera.m_position
     };
 
     auto* buffer = static_cast<std::byte*>(

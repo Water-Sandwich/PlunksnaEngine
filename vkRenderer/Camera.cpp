@@ -20,6 +20,17 @@ void Camera::resize(f32 aspect)
     m_aspect = aspect;
 }
 
+glm::mat4 Camera::getModel() const
+{
+    glm::mat4 model = glm::mat4(1);
+    model = glm::translate(model, m_position);
+
+    float angle = atan2(m_direction.y, m_direction.x);
+    model = glm::rotate(model, angle, glm::vec3(0,0,1));
+
+    return model;
+}
+
 glm::mat4 Camera::getView() const
 {
     return glm::lookAt(m_position, m_position + m_direction, glm::vec3(0,0,1));
@@ -36,7 +47,7 @@ std::array<glm::vec4, 6> Camera::getFrustumPlanes() const
 {
     glm::mat4 VP = getPerspective() * getView();
 
-    std::array<glm::vec4, 6> planes;
+    std::array<glm::vec4, 6> planes{};
 
     glm::vec4 row0 = glm::row(VP, 0);
     glm::vec4 row1 = glm::row(VP, 1);

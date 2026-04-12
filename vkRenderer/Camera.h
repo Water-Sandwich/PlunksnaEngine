@@ -16,6 +16,7 @@ public:
     ~Camera() = default;
 
     void resize(f32 aspect);
+    glm::mat4 getModel() const;
     glm::mat4 getView() const;
     glm::mat4 getPerspective() const;
     std::array<glm::vec4, 6> getFrustumPlanes() const;

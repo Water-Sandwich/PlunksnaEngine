@@ -10,6 +10,7 @@
 
 #include "vkRenderer/RendererUtils.h"
 #include "engine/Exception.h"
+#include "engine/Keyboard.h"
 
 namespace Plunksna {
 void GUI::init(const Context& context, const Window& window, u32 framesInFlight)
@@ -45,7 +46,8 @@ void GUI::init(const Context& context, const Window& window, u32 framesInFlight)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsDark();
+    applyCustomStyle();
 
     //createImGUIRenderPass();
 
@@ -95,7 +97,29 @@ ImDrawData* GUI::getDrawData()
 
 void GUI::draw()
 {
-    bool open = true;
-    ImGui::ShowDemoWindow(&open);
+    static bool open = false;
+
+    if (g_keyboard.getPressed(SDL_SCANCODE_K)) {
+        open = !open;
+    }
+
+    if (open)
+    {
+        //ImGui::Begin("My Window", &open);
+
+        ImGui::ShowDemoWindow();
+
+        //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.0f, .01f));
+
+
+        //ImGui::PopStyleVar();
+
+        //ImGui::End();
+    }
 }
-} // Plunksna
+
+void GUI::applyCustomStyle()
+{
+    //ImGui::SliderScalar()
+}
+} // Plunksnas

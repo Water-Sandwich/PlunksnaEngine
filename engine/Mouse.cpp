@@ -70,4 +70,6 @@ unsigned char Mouse::getOtherIndex() const {
     return m_stateIndex ^ 1;
 }
 
+Mouse g_mouse{};
+
 } // Plunksna

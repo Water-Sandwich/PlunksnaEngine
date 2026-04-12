@@ -96,4 +96,6 @@ const std::bitset<512>& Keyboard::getKeys() const
 {
     return m_keyBuffer[m_stateIndex];
 }
+
+Keyboard g_keyboard{};
 }

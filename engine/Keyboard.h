@@ -51,7 +51,7 @@ private:
     unsigned char m_stateIndex = 0;
 };
 
-inline static Keyboard g_keyboard{};
+extern Keyboard g_keyboard;
 
 } // Plunksna
 

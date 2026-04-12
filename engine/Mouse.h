@@ -59,7 +59,7 @@ private:
     unsigned char m_stateIndex = 0;
 };
 
-inline static Mouse g_mouse{};
+extern Mouse g_mouse;
 
 } // Plunksna
 

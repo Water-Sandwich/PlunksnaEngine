@@ -28,15 +28,14 @@ void Engine::tick(f32 delta_ms)
     rotateCamera();
     moveCamera(delta_ms);
 
+    if (!g_keyboard.get(SDL_SCANCODE_V)) {
+        return;
+    }
+
     m_renderMeshes->foreach([&](Model& model, Transform3D& transform)
     {
-        transform = glm::rotate(transform, delta_ms * 0.005f, glm::vec3(0,1,0));
+        transform = glm::rotate(transform, delta_ms * 0.001f, glm::vec3(0,0,1));
     });
-
-    if (g_keyboard.getPressed(SDL_SCANCODE_V)) {
-        m_renderer.setVSync(m_window, !m_renderer.getVSync());
-        LOG("Vsync: " << m_renderer.getVSync())
-    }
 }
 
 void Engine::render()
@@ -99,9 +98,9 @@ void Engine::moveCamera(f32 delta_ms)
 {
     Camera* camera = m_renderer.getCamera();
 
-    f32 speed = 0.02;
+    f32 speed = 0.001;
     if (g_keyboard.get(SDL_SCANCODE_LALT))
-        speed = .1;
+        speed = .01;
 
     glm::vec3 inputDir(0);
 
@@ -164,20 +163,25 @@ void Engine::loadAssets()
     using namespace Assets;
     meshPyramid = m_assetHandler.loadMesh("obama_prism.obj");
     meshSus = m_assetHandler.loadMesh("sus.obj");
+    meshTeapot = m_assetHandler.loadMesh("utah_teapot.obj");
+    meshSphere = m_assetHandler.loadMesh("smoothsphere.obj");
 
     texPyramid = m_assetHandler.loadTexture("obama_prism.jpg");
     texSus1 = m_assetHandler.loadTexture("sus.png");
     texSus2 = m_assetHandler.loadTexture("sus1.png");
     texSus3 = m_assetHandler.loadTexture("sus2.png");
+    texChecker = m_assetHandler.loadTexture("checkerboard64.png");
+    texWhite = m_assetHandler.loadTexture("white.png");
 }
 
 void Engine::addObjects()
 {
-    for (i32 i = 0; i < 200; i++) {
+    for (i32 i = 0; i < 5; i++) {
         Entity e = m_registry.makeEntity();
 
         f32 radius = 10.f;
-        glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
+        //glm::vec3 pos = g_random.randomVector<3, f32>() * (radius * static_cast<f32>(std::cbrt(g_random.randomReal(0.0, 1.0))));
+        glm::vec3 pos = {5, i * 5, 0};
         glm::mat4 tx = glm::mat4(1.0f);
 
         tx = glm::translate(tx, pos);
@@ -185,21 +189,21 @@ void Engine::addObjects()
         tx = glm::rotate(
             tx,
             g_random.randomReal(-180.f, 180.f),
-            g_random.randomVector<3, f32>()
+            glm::vec3(0,0,1)
         );
 
         m_registry.add<Transform3D>(e, tx);
 
-        Model model;
+        Model model {Assets::meshSphere, Assets::texWhite};
 
-        if (g_random.randomInt(0,1) == 0) {
-            model.mesh = Assets::meshSus;
-            model.texture = Assets::texSus1;
-        }
-        else {
-            model.mesh = Assets::meshPyramid;
-            model.texture = Assets::texPyramid;
-        }
+        // if (g_random.randomInt(0,1) == 0) {
+        //     model.mesh = Assets::meshSus;
+        //     model.texture = Assets::texSus1;
+        // }
+        // else {
+        //     model.mesh = Assets::meshPyramid;
+        //     model.texture = Assets::texPyramid;
+        // }
 
         m_registry.add<Model>(e, model);
     }

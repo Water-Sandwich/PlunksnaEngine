@@ -12,11 +12,15 @@ namespace Plunksna::Assets {
 
 inline static Asset meshPyramid;
 inline static Asset meshSus;
+inline static Asset meshTeapot;
+inline static Asset meshSphere;
 
 inline static Asset texSus1;
 inline static Asset texSus2;
 inline static Asset texSus3;
 inline static Asset texPyramid;
+inline static Asset texChecker;
+inline static Asset texWhite;
 
 }
 
