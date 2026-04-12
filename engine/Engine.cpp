@@ -28,6 +28,18 @@ void Engine::tick(f32 delta_ms)
     rotateCamera();
     moveCamera(delta_ms);
 
+    m_sines->foreach([&](Transform3D& tx, Sine& sine)
+    {
+        glm::vec3 offset = {0, 0, std::sin(timer * sine.speed) * sine.amplitude};
+        tx = glm::translate(sine.tempTx, offset);
+    });
+
+    if (g_keyboard.getPressed(SDL_SCANCODE_I)) {
+        auto tx = m_registry.get<Transform3D>(1);
+        Sine sin = {*tx, 0.01, 2};
+        m_registry.add<Sine>(1, sin);
+    }
+
     if (!g_keyboard.get(SDL_SCANCODE_V)) {
         return;
     }
@@ -194,7 +206,7 @@ void Engine::addObjects()
 
         m_registry.add<Transform3D>(e, tx);
 
-        Model model {Assets::meshSphere, Assets::texWhite};
+        Model model {Assets::meshTeapot, Assets::texWhite};
 
         // if (g_random.randomInt(0,1) == 0) {
         //     model.mesh = Assets::meshSus;
@@ -207,6 +219,10 @@ void Engine::addObjects()
 
         m_registry.add<Model>(e, model);
     }
+
+    auto tx = m_registry.get<Transform3D>(0);
+    Sine sin = {*tx, 0.01, 2};
+    m_registry.add<Sine>(0, sin);
 }
 
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags)
@@ -223,6 +239,7 @@ Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags
     m_deltaTime_ms = m_maxFrameTime_ms;
 
     m_renderMeshes = m_registry.makeFilter<Model, Transform3D>();
+    m_sines = m_registry.makeFilter<Transform3D, Sine>();
 
     addObjects();
 

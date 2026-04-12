@@ -30,6 +30,7 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     vec3 lightDir = normalize(vec3(0,0,1));
+    vec3 lightCol = vec3(1,1,1);
 
     uint texIndex = modelSSBO.objects[inObjIndex].textureIndex;
     vec4 texColor = texture(textures[nonuniformEXT(texIndex)], inTexCoord);
@@ -41,15 +42,14 @@ void main() {
 
     vec3 viewDir = normalize(cameraUBO.pos - inWorldPos);
     vec3 halfDir = normalize(lightDir + viewDir);
-    float shinyness = 32;
+    float shinyness = 128;
     float specular = pow(max(dot(worldNormal, halfDir), 0.0), shinyness);
 
-//    vec3 reflectDir = reflect(-lightDir, normalize(worldNormal));
-//    float specular = pow(max(dot(viewDir, reflectDir), 0.0), 8.0);
+    vec3 ambientCol = texColor.rgb * ambient;
+    vec3 diffuseCol = texColor.rgb * diffuse * lightCol;
+    vec3 specularCol = texColor.rgb * specular;
 
-//    diffuse = 0;
-
-    vec3 result = texColor.rgb * (ambient + diffuse + specular);
+    vec3 result = ambientCol + diffuseCol + specularCol;
 
     outColor = vec4(result, texColor.a);
 }

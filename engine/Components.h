@@ -16,6 +16,13 @@ struct Model
     Asset texture;
 };
 
+struct Sine
+{
+    glm::mat4 tempTx;
+    float speed;
+    float amplitude;
+};
+
 using Transform3D = glm::mat4;
 
 }

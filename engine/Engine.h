@@ -55,6 +55,7 @@ private:
     f32 m_deltaTime_ms;
 
     Filter<Model, Transform3D>* m_renderMeshes;
+    Filter<Transform3D, Sine>* m_sines;
 public:
     bool m_isRunning = true;
 };
