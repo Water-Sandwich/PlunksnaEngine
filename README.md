@@ -7,7 +7,6 @@ Plunksna is a work in progress 3D Vulkan game engine with a custom Entity Compon
 ## Planned features
 
 - Seperation of engine code into seperate static library
-- Draw sorting and culling
 - Physics
 - Audio
 
