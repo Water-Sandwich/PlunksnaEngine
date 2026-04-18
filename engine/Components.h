@@ -19,8 +19,9 @@ struct Model
 struct Sine
 {
     glm::mat4 tempTx;
-    float speed;
-    float amplitude;
+    f32 speed;
+    f32 amplitude;
+    f32 timer = 0;
 };
 
 using Transform3D = glm::mat4;

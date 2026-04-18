@@ -45,14 +45,16 @@ Descriptor DescriptorManager::beginBuild()
 }
 
 u32 DescriptorManager::pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages,
-    u32 descriptorCount, VkDescriptorBindingFlags bindingFlags)
+    u32 bindPoint, u32 descriptorCount, VkDescriptorBindingFlags bindingFlags)
 {
-    m_descriptors[desc].layoutBuildStages.push_back(DescriptorBindingBuild(type, stages, descriptorCount, bindingFlags));
+    auto& build = m_descriptors[desc];
+
+    build.layoutBuildStages.push_back(DescriptorBindingBuild(type, stages, descriptorCount, bindingFlags, bindPoint));
 
     if (bindingFlags != 0)
-        m_descriptors[desc].isVariable = true;
+        build.isVariable = true;
 
-    return m_descriptors[desc].layoutBuildStages.size() - 1;
+    return build.layoutBuildStages.size() - 1;
 }
 
 VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Descriptor desc, u32 maxSets, u32 maxVariableDescriptors)
@@ -184,7 +186,7 @@ VkDescriptorSet DescriptorManager::pushSetWrite(Descriptor desc, i32 setNum)
         VkWriteDescriptorSet write{};
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write.dstSet = getSet(desc, setNum);
-        write.dstBinding = i;
+        write.dstBinding = layoutBuild.bindPoint;
         write.dstArrayElement = 0;
         write.descriptorType = layoutBuild.type;
         write.descriptorCount = setBuild.descriptorCount;
@@ -265,11 +267,24 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
 
     std::vector<VkDescriptorBindingFlags> flags(buildQueue.size(), 0);
 
+    u32 currentBinding = 0;
     for (u32 i = 0; i < buildQueue.size(); i++) {
+        auto& layoutBuild = m_descriptors[desc].layoutBuildStages[i];
         flags[i] = buildQueue[i].bindingFlags;
 
+        if (layoutBuild.bindPoint != UINT32_MAX) {
+            ASSERT(layoutBuild.bindPoint >= currentBinding,
+                "Improperly formed bind point, currentBinding: " << currentBinding <<
+                ", layoutBuildStage[" << i << "].bindPoint: " << layoutBuild.bindPoint)
+
+            currentBinding = layoutBuild.bindPoint;
+        }
+        else {
+            layoutBuild.bindPoint = currentBinding;
+        }
+
         VkDescriptorSetLayoutBinding bind {
-            .binding = i,
+            .binding = currentBinding,
             .descriptorType = buildQueue[i].type,
             .descriptorCount = buildQueue[i].descriptorCount,
             .stageFlags = buildQueue[i].stages,
@@ -277,6 +292,7 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
         };
 
         bindings.push_back(bind);
+        currentBinding++;
     }
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};

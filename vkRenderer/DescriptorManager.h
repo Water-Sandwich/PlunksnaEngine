@@ -24,6 +24,7 @@ private:
         VkShaderStageFlags stages;
         u32 descriptorCount;
         VkDescriptorBindingFlags bindingFlags;
+        u32 bindPoint;
     };
 
     enum BindType
@@ -77,7 +78,7 @@ public:
     Descriptor beginBuild();
     //add a binding, returns bind point
     u32 pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages,
-        u32 descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = 0);
+        u32 bindPoint = UINT32_MAX, u32 descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = 0);
     //submit the queue and build the pool and layout and allocates descriptor sets, returns finished layout
     VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc, u32 maxSets, u32 maxVariableDescriptors = 0);
 

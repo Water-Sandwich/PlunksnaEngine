@@ -9,7 +9,7 @@ struct Object {
     uint textureIndex;
 };
 
-layout(binding = 0) uniform CameraUBO {
+layout(binding = 0) readonly uniform CameraUBO {
     mat4 view;
     mat4 proj;
     vec3 pos;

@@ -30,15 +30,15 @@ void Engine::tick(f32 delta_ms)
 
     m_sines->foreach([&](Transform3D& tx, Sine& sine)
     {
-        glm::vec3 offset = {0, 0, std::sin(timer * sine.speed) * sine.amplitude};
+        sine.timer += delta_ms;
+        glm::vec3 offset = {
+            std::sin(timer * sine.speed) * sine.amplitude,
+            std::cos(timer * sine.speed) * sine.amplitude,
+            0
+        };
+
         tx = glm::translate(sine.tempTx, offset);
     });
-
-    if (g_keyboard.getPressed(SDL_SCANCODE_I)) {
-        auto tx = m_registry.get<Transform3D>(1);
-        Sine sin = {*tx, 0.01, 2};
-        m_registry.add<Sine>(1, sin);
-    }
 
     if (!g_keyboard.get(SDL_SCANCODE_V)) {
         return;
@@ -46,7 +46,7 @@ void Engine::tick(f32 delta_ms)
 
     m_renderMeshes->foreach([&](Model& model, Transform3D& transform)
     {
-        transform = glm::rotate(transform, delta_ms * 0.001f, glm::vec3(0,0,1));
+        transform = glm::rotate(transform, delta_ms * 0.1f, glm::vec3(0,0,1));
     });
 }
 
@@ -218,11 +218,10 @@ void Engine::addObjects()
         // }
 
         m_registry.add<Model>(e, model);
-    }
 
-    auto tx = m_registry.get<Transform3D>(0);
-    Sine sin = {*tx, 0.01, 2};
-    m_registry.add<Sine>(0, sin);
+        // Sine sin = {tx, 1, 1};
+        // m_registry.add<Sine>(e, sin);
+    }
 }
 
 Engine::Engine(const std::string& title, const glm::uvec2& size, SDL_WindowFlags flags)
