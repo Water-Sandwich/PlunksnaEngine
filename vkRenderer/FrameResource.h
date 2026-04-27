@@ -19,21 +19,22 @@ struct FrameResource {
     VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 
-    void* uniformBufferMapped = nullptr;
-    Buffer uniformBuffer;
+    //TODO: tie this to descriptor manager
+    void* cameraMap = nullptr;
+    Buffer cameraBuffer;
 
-    void* storageBufferMapped = nullptr;
-    Buffer storageBuffer;
+    void* objsMap = nullptr;
+    Buffer objsBuffer;
 
     VkSemaphore imageAvailableSem = VK_NULL_HANDLE;
     VkFence frameInFlightFence = VK_NULL_HANDLE;
 
     void destroyBuffers(const Context& context)
     {
-        vmaUnmapMemory(context.allocator, uniformBuffer.allocation);
-        uniformBuffer.destroy(context);
-        vmaUnmapMemory(context.allocator, storageBuffer.allocation);
-        storageBuffer.destroy(context);
+        vmaUnmapMemory(context.allocator, cameraBuffer.allocation);
+        cameraBuffer.destroy(context);
+        vmaUnmapMemory(context.allocator, objsBuffer.allocation);
+        objsBuffer.destroy(context);
     }
 
     void destroySync(const Context& context)

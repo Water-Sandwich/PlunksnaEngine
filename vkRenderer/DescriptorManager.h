@@ -8,23 +8,22 @@
 #include <vulkan/vulkan_core.h>
 #include <vector>
 
+#include "Buffer.h"
 #include "Context.h"
 #include "utils/Types.h"
 
 namespace Plunksna {
 
 using Descriptor = u32;
+using DescriptorBufferHnd = u32;
 constexpr Descriptor NULL_DESCRIPTOR = std::numeric_limits<Descriptor>::max();
 
 class DescriptorManager {
 private:
-    struct DescriptorBindingBuild
+    struct DescriptorBuffer
     {
-        VkDescriptorType type;
-        VkShaderStageFlags stages;
-        u32 descriptorCount;
-        VkDescriptorBindingFlags bindingFlags;
-        u32 bindPoint;
+        Buffer buffer;
+        void* map = nullptr;
     };
 
     enum BindType
@@ -34,6 +33,15 @@ private:
         eIMAGE,
         eVARIMAGE,
         eVARBUFFER
+    };
+
+    struct DescriptorBindingBuild
+    {
+        VkDescriptorType type;
+        VkShaderStageFlags stages;
+        u32 descriptorCount;
+        VkDescriptorBindingFlags bindingFlags;
+        u32 bindPoint;
     };
 
     struct DescriptorSetBuild
@@ -59,6 +67,7 @@ private:
         std::vector<DescriptorBindingBuild> layoutBuildStages;
         std::vector<DescriptorSetBuild> setBuildStages;
         std::vector<VkWriteDescriptorSet> setWrites;
+        std::vector<DescriptorBuffer> setBuffers; //maxSets * layoutBuildStages = setBuildStages
 
         bool isVariable = false;
     };

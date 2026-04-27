@@ -32,6 +32,12 @@ struct PerObjectSO
     }
 };
 
+struct DirectionalLight
+{
+    alignas(16) glm::vec3 direction;
+    alignas(16) glm::vec3 color;
+};
+
 }
 
 #endif //SHADEROBJECTS_H

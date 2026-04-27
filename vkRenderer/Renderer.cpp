@@ -54,7 +54,7 @@ void Renderer::createInstance()
 
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Watchamacallit";
+    appInfo.pApplicationName = "Test";
     appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
     appInfo.pEngineName = "Plunksna";
     appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 1);
@@ -302,6 +302,8 @@ void Renderer::initDescriptors()
     m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
     //per object data
     m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    //directional lights
+    //m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
     //texture
     m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 10,
         MAX_TEXTURES, VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT);
@@ -313,18 +315,18 @@ void Renderer::initDescriptorSets()
 {
     for (i32 i = 0; i < m_maxInFlightFrames; i++) {
         VkDescriptorBufferInfo cameraUBOInfo{};
-        cameraUBOInfo.buffer = m_frameResources[i].uniformBuffer.buffer;
+        cameraUBOInfo.buffer = m_frameResources[i].cameraBuffer.buffer;
         cameraUBOInfo.offset = 0;
         cameraUBOInfo.range = sizeof(CameraSO);
 
         m_descriptors.pushBufferInfo(m_descriptor, cameraUBOInfo);
 
-        VkDescriptorBufferInfo SSBOInfo{};
-        SSBOInfo.buffer = m_frameResources[i].storageBuffer.buffer;
-        SSBOInfo.offset = 0;
-        SSBOInfo.range = sizeof(PerObjectSO) * MAX_OBJECTS_SSBO;
+        VkDescriptorBufferInfo objsInfo{};
+        objsInfo.buffer = m_frameResources[i].objsBuffer.buffer;
+        objsInfo.offset = 0;
+        objsInfo.range = sizeof(PerObjectSO) * MAX_OBJECTS_SSBO;
 
-        m_descriptors.pushBufferInfo(m_descriptor, SSBOInfo);
+        m_descriptors.pushBufferInfo(m_descriptor, objsInfo);
 
         auto imageHnds = m_assetHandler.getLoadedTextures();
         std::vector<VkDescriptorImageInfo> images(imageHnds.size());
@@ -746,10 +748,10 @@ void Renderer::createUniformBuffers()
     VkDeviceSize bufferSize = SIZE(CameraSO);
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
-        createBuffer(m_frameResources[i].uniformBuffer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        createBuffer(m_frameResources[i].cameraBuffer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
-        vmaMapMemory(m_context.allocator, m_frameResources[i].uniformBuffer.allocation, &m_frameResources[i].uniformBufferMapped);
+        vmaMapMemory(m_context.allocator, m_frameResources[i].cameraBuffer.allocation, &m_frameResources[i].cameraMap);
     }
 }
 
@@ -760,10 +762,10 @@ void Renderer::createSSBOs()
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
         //TODO: Could be sequential if using memcpy
-        createBuffer(m_frameResources[i].storageBuffer, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        createBuffer(m_frameResources[i].objsBuffer, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
-        vmaMapMemory(m_context.allocator, m_frameResources[i].storageBuffer.allocation, &m_frameResources[i].storageBufferMapped);
+        vmaMapMemory(m_context.allocator, m_frameResources[i].objsBuffer.allocation, &m_frameResources[i].objsMap);
     }
 }
 
@@ -806,7 +808,7 @@ void Renderer::updateCameraBuffer(u32 currentImage)
     };
 
     auto* buffer = static_cast<std::byte*>(
-        m_frameResources[currentImage].uniformBufferMapped
+        m_frameResources[currentImage].cameraMap
     );
 
     memcpy(buffer, &camUBO, sizeof(CameraSO));
@@ -818,7 +820,7 @@ void Renderer::updateObjectsBuffer(u32 currentImage)
     ZoneScopedN("Update SSBO")
 
     auto* buffer = static_cast<u8*>(
-        m_frameResources[currentImage].storageBufferMapped
+        m_frameResources[currentImage].objsMap
     );
 
     //m_drawSorter.cullFrustum(&m_camera);
