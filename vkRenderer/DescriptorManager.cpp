@@ -38,36 +38,39 @@ VkDescriptorSet* DescriptorManager::getSetPtr(Descriptor desc, i32 index)
     return &m_descriptors[desc].sets[index];
 }
 
-Descriptor DescriptorManager::beginBuild()
+Descriptor DescriptorManager::beginBuild(u32 maxSets)
 {
     m_descriptors.emplace_back();
+    m_descriptors.back().maxSets = maxSets;
     return m_descriptors.size() - 1;
 }
 
-u32 DescriptorManager::pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages,
+DescriptorBuf DescriptorManager::pushBinding(Descriptor desc, ShareType shareType, VkDescriptorType type, VkShaderStageFlags stages,
     u32 bindPoint, u32 descriptorCount, VkDescriptorBindingFlags bindingFlags)
 {
     auto& build = m_descriptors[desc];
 
     build.layoutBuildStages.push_back(DescriptorBindingBuild(type, stages, descriptorCount, bindingFlags, bindPoint));
 
-    if (bindingFlags != 0)
+    if (bindingFlags != 0) {
         build.isVariable = true;
+        build.maxVariableDescriptors = descriptorCount;
+    }
 
     return build.layoutBuildStages.size() - 1;
 }
 
-VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Descriptor desc, u32 maxSets, u32 maxVariableDescriptors)
+VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Descriptor desc)
 {
     ASSERT(desc < m_descriptors.size(),
         "Trying to access an uninitialized descriptor pack! desc: " << desc <<
         " size: " << m_descriptors.size());
 
-    createPool(context, desc, maxSets);
+    createPool(context, desc);
 
     createLayout(context, desc);
 
-    allocateSets(context, desc, maxSets, maxVariableDescriptors);
+    allocateSets(context, desc);
 
     return getLayout(desc);
 }
@@ -230,10 +233,10 @@ void DescriptorManager::clean(const Context& context)
     m_descriptors.clear();
 }
 
-void DescriptorManager::createPool(const Context& context, Descriptor desc, u32 maxSets)
+void DescriptorManager::createPool(const Context& context, Descriptor desc)
 {
-    auto& buildQueue = m_descriptors[desc].layoutBuildStages;
-    m_descriptors[desc].maxSets = maxSets;
+    auto& pack = m_descriptors[desc];
+    auto& buildQueue = pack.layoutBuildStages;
 
     std::vector<VkDescriptorPoolSize> poolSizes;
     poolSizes.reserve(buildQueue.size());
@@ -241,7 +244,7 @@ void DescriptorManager::createPool(const Context& context, Descriptor desc, u32 
     for (const DescriptorBindingBuild& build : buildQueue) {
         VkDescriptorPoolSize size = {
             .type = build.type,
-            .descriptorCount = build.descriptorCount * maxSets
+            .descriptorCount = build.descriptorCount * pack.maxSets
         };
 
         poolSizes.push_back(size);
@@ -251,9 +254,9 @@ void DescriptorManager::createPool(const Context& context, Descriptor desc, u32 
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<u32>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = maxSets;
+    poolInfo.maxSets = pack.maxSets;
 
-    ASSERT_V(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, &m_descriptors[desc].pool),
+    ASSERT_V(vkCreateDescriptorPool(context.device, &poolInfo, nullptr, &pack.pool),
         "failed to create descriptor pool!")
 }
 
@@ -296,8 +299,7 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
     }
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
-    flagsInfo.sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    flagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
     flagsInfo.bindingCount = flags.size();
     flagsInfo.pBindingFlags = flags.data();
 
@@ -311,37 +313,35 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
         "failed to create descriptor set layout!")
 }
 
-void DescriptorManager::allocateSets(const Context& context, Descriptor desc, u32 maxSets, u32 maxVariableDescriptors)
+void DescriptorManager::allocateSets(const Context& context, Descriptor desc)
 {
     auto& pack = m_descriptors[desc];
-    std::vector layouts(maxSets, pack.layout);
+    std::vector layouts(pack.maxSets, pack.layout);
 
     if (pack.isVariable) {
-        ASSERT(maxVariableDescriptors != 0,
+        ASSERT(pack.maxVariableDescriptors != 0,
             "A variable descriptor set must have a valid maxVariableDescriptors value!")
     }
     else {
-        ASSERT(maxVariableDescriptors == 0,
+        ASSERT(pack.maxVariableDescriptors == 0,
             "A static descriptor set must have a maxVariableDescriptors value of 0!")
     }
 
-    pack.sets.resize(maxSets);
+    pack.sets.resize(pack.maxSets);
     pack.setWrites.reserve(pack.maxTotalBuildStages);
     pack.setBuildStages.reserve(pack.maxTotalBuildStages);
-    pack.maxVariableDescriptors = maxVariableDescriptors;
 
-    std::vector sizes(maxSets, maxVariableDescriptors);
+    std::vector sizes(pack.maxSets, pack.maxVariableDescriptors);
 
     VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{};
-    countInfo.sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+    countInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
     countInfo.descriptorSetCount = sizes.size();
     countInfo.pDescriptorCounts = sizes.data();
 
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = pack.pool;
-    allocInfo.descriptorSetCount = maxSets;
+    allocInfo.descriptorSetCount = pack.maxSets;
     allocInfo.pSetLayouts = layouts.data();
 
     if (pack.isVariable)

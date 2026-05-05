@@ -296,23 +296,27 @@ void Renderer::selectDevice(const Window& window)
 
 void Renderer::initDescriptors()
 {
-    m_descriptor = m_descriptors.beginBuild();
+    m_descriptor = m_descriptors.beginBuild(m_maxInFlightFrames);
 
+    //RETURN BUFFER HANDLES PER BINDING
     //camera
-    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+    m_camBuf = m_descriptors.pushBinding(m_descriptor, eSHARED, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
     //per object data
-    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-    //directional lights
-    //m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+    m_objBuf = m_descriptors.pushBinding(m_descriptor, eSHARED, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     //texture
-    m_descriptors.pushBinding(m_descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 10,
+    m_texBuf = m_descriptors.pushBinding(m_descriptor, eEXCLUSIVE, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        VK_SHADER_STAGE_FRAGMENT_BIT, 10,
         MAX_TEXTURES, VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT);
 
-    m_descriptors.submitBuild(m_context, m_descriptor, m_maxInFlightFrames, MAX_TEXTURES);
+    //ALLOCATE BUFFERS HERE
+    m_descriptors.submitBuild(m_context, m_descriptor);
 }
 
 void Renderer::initDescriptorSets()
 {
+    //TODO: MOVE ALL THIS BUFFER CRAP FROM FRAMERESOURCE TO DESCRIPTOR MANAGER
     for (i32 i = 0; i < m_maxInFlightFrames; i++) {
         VkDescriptorBufferInfo cameraUBOInfo{};
         cameraUBOInfo.buffer = m_frameResources[i].cameraBuffer.buffer;

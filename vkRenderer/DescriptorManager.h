@@ -15,8 +15,14 @@
 namespace Plunksna {
 
 using Descriptor = u32;
-using DescriptorBufferHnd = u32;
+using DescriptorBuf = u32;
 constexpr Descriptor NULL_DESCRIPTOR = std::numeric_limits<Descriptor>::max();
+
+enum ShareType
+{
+    eSHARED,
+    eEXCLUSIVE
+};
 
 class DescriptorManager {
 private:
@@ -84,12 +90,12 @@ public:
     VkDescriptorSet* getSetPtr(Descriptor desc, i32 index);
 
     //start to build a descriptor pack, returns a handle to the current build queue
-    Descriptor beginBuild();
-    //add a binding, returns bind point
-    u32 pushBinding(Descriptor desc, VkDescriptorType type, VkShaderStageFlags stages,
+    Descriptor beginBuild(u32 maxSets);
+    //add a binding, returns index of binding
+    DescriptorBuf pushBinding(Descriptor desc, ShareType shareType, VkDescriptorType type, VkShaderStageFlags stages,
         u32 bindPoint = UINT32_MAX, u32 descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = 0);
     //submit the queue and build the pool and layout and allocates descriptor sets, returns finished layout
-    VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc, u32 maxSets, u32 maxVariableDescriptors = 0);
+    VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc);
 
     //push a buffer to the descriptor set queue build, returns the binding point
     u32 pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info);
@@ -105,9 +111,9 @@ public:
 
     void clean(const Context& context);
 private:
-    void createPool(const Context& context, Descriptor desc, u32 maxSets);
+    void createPool(const Context& context, Descriptor desc);
     void createLayout(const Context& context, Descriptor desc);
-    void allocateSets(const Context& context, Descriptor desc, u32 maxSets, u32 maxVariableDescriptors);
+    void allocateSets(const Context& context, Descriptor desc);
 
     static constexpr bool isBufferDescriptor(VkDescriptorType type);
     static constexpr bool isImageDescriptor(VkDescriptorType type);

@@ -168,6 +168,10 @@ private:
     i32 m_currentFrame = 0;
 
     bool m_hasResized = false;
+private:
+    DescriptorBuf m_camBuf = 0;
+    DescriptorBuf m_objBuf = 0;
+    DescriptorBuf m_texBuf = 0;
 
 private:
     //=======DEBUG=========
