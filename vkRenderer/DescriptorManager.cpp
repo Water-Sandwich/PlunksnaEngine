@@ -48,16 +48,18 @@ Descriptor DescriptorManager::beginBuild(u32 maxSets)
 DescriptorBuf DescriptorManager::pushBinding(Descriptor desc, ShareType shareType, VkDescriptorType type, VkShaderStageFlags stages,
     u32 bindPoint, u32 descriptorCount, VkDescriptorBindingFlags bindingFlags)
 {
-    auto& build = m_descriptors[desc];
+    auto& pack = m_descriptors[desc];
 
-    build.layoutBuildStages.push_back(DescriptorBindingBuild(type, stages, descriptorCount, bindingFlags, bindPoint));
+    pack.layoutBuildStages.push_back(LayoutStage(type, stages, shareType, descriptorCount, bindingFlags, bindPoint));
 
     if (bindingFlags != 0) {
-        build.isVariable = true;
-        build.maxVariableDescriptors = descriptorCount;
+        pack.isVariable = true;
+        pack.maxVariableDescriptors = descriptorCount;
     }
 
-    return build.layoutBuildStages.size() - 1;
+    pack.setBuffers.emplace_back(shareType == eSHARED ? pack.maxSets : 1);
+
+    return pack.setBuffers.size() - 1;
 }
 
 VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Descriptor desc)
@@ -73,6 +75,14 @@ VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Des
     allocateSets(context, desc);
 
     return getLayout(desc);
+}
+
+u32 DescriptorManager::setBufferInfo(Descriptor desc, DescriptorBuf buffer, u64 range)
+{
+    auto& pack = m_descriptors[desc];
+    auto& buffers = pack.setBuffers[buffer];
+
+    return 0;
 }
 
 u32 DescriptorManager::pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info)
@@ -92,7 +102,7 @@ u32 DescriptorManager::pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo in
             "Trying to bind a regular descriptor at the end of a variable descriptor set!")
     }
 
-    DescriptorSetBuild build{};
+    SetStage build{};
     build.type = eBUFFER;
     build.bufferInfo = info;
 
@@ -117,9 +127,9 @@ u32 DescriptorManager::pushImageInfo(Descriptor desc, VkDescriptorImageInfo info
             "Trying to bind a regular descriptor at the end of a variable descriptor set!")
     }
 
-    DescriptorSetBuild build{};
+    SetStage build{};
     build.type = eIMAGE;
-    build.imageInfo = info;
+    build.imageInfos[0] = info;
 
     pack.setBuildStages.push_back(build);
     return index;
@@ -149,10 +159,10 @@ u32 DescriptorManager::pushImageInfos(Descriptor desc, const std::vector<VkDescr
 
     pack.variableDescriptors += info.size();
 
-    DescriptorSetBuild build{};
+    SetStage build{};
     build.type = eVARIMAGE;
-    build.descriptorCount = info.size(); //TODO: std::move here?
-    build.imageInfos = info;
+    build.descriptorCount = info.size();
+    build.imageInfos = info; //TODO: std::move here?
 
     pack.setBuildStages.push_back(build);
     return index;
@@ -195,13 +205,11 @@ VkDescriptorSet DescriptorManager::pushSetWrite(Descriptor desc, i32 setNum)
         write.descriptorCount = setBuild.descriptorCount;
 
         switch (setBuild.type) {
-        case eIMAGE:
-            write.pImageInfo = &setBuild.imageInfo;
-            break;
         case eBUFFER:
             write.pBufferInfo = &setBuild.bufferInfo;
             break;
         case eVARIMAGE:
+        case eIMAGE:
             write.pImageInfo = setBuild.imageInfos.data();
             break;
         default:
@@ -241,7 +249,7 @@ void DescriptorManager::createPool(const Context& context, Descriptor desc)
     std::vector<VkDescriptorPoolSize> poolSizes;
     poolSizes.reserve(buildQueue.size());
 
-    for (const DescriptorBindingBuild& build : buildQueue) {
+    for (const LayoutStage& build : buildQueue) {
         VkDescriptorPoolSize size = {
             .type = build.type,
             .descriptorCount = build.descriptorCount * pack.maxSets

@@ -23,6 +23,7 @@ public:
     constexpr T at(std::size_t index);
     constexpr void set(std::size_t index, T value);
 
+    //unused
     template <typename... Args>
     constexpr void emplace(std::size_t index, Args&&... args);
 
@@ -30,7 +31,8 @@ public:
 
     bool valid(std::size_t index) const;
 
-    ~PaginatedVector();
+    ~PaginatedVector() = default;
+    PaginatedVector() = default;
 
 private:
     constexpr std::vector<T>& getOrCreatePage(std::size_t index);

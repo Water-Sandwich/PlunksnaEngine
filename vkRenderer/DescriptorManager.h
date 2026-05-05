@@ -41,21 +41,21 @@ private:
         eVARBUFFER
     };
 
-    struct DescriptorBindingBuild
+    struct LayoutStage
     {
         VkDescriptorType type;
         VkShaderStageFlags stages;
+        ShareType shareType;
         u32 descriptorCount;
         VkDescriptorBindingFlags bindingFlags;
         u32 bindPoint;
     };
 
-    struct DescriptorSetBuild
+    struct SetStage
     {
         u32 descriptorCount = 1;
         BindType type;
         VkDescriptorBufferInfo bufferInfo;
-        VkDescriptorImageInfo imageInfo;
         std::vector<VkDescriptorImageInfo> imageInfos;
     };
 
@@ -70,10 +70,11 @@ private:
         u32 maxVariableDescriptors;
         u32 variableDescriptors = 0;
 
-        std::vector<DescriptorBindingBuild> layoutBuildStages;
-        std::vector<DescriptorSetBuild> setBuildStages;
+        std::vector<LayoutStage> layoutBuildStages;
+        std::vector<SetStage> setBuildStages;
         std::vector<VkWriteDescriptorSet> setWrites;
-        std::vector<DescriptorBuffer> setBuffers; //maxSets * layoutBuildStages = setBuildStages
+
+        std::vector<std::vector<DescriptorBuffer>> setBuffers;
 
         bool isVariable = false;
     };
@@ -96,6 +97,11 @@ public:
         u32 bindPoint = UINT32_MAX, u32 descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = 0);
     //submit the queue and build the pool and layout and allocates descriptor sets, returns finished layout
     VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc);
+
+    //set data buffer properties
+    u32 setBufferInfo(Descriptor desc, DescriptorBuf buffer, u64 range);
+
+    u32 setImageInfo(Descriptor desc, DescriptorBuf buffer, const std::vector<VkDescriptorImageInfo>& info);
 
     //push a buffer to the descriptor set queue build, returns the binding point
     u32 pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info);
