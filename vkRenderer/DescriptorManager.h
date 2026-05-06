@@ -10,6 +10,7 @@
 
 #include "Buffer.h"
 #include "Context.h"
+#include "assetHandler/Texture.h"
 #include "utils/Types.h"
 
 namespace Plunksna {
@@ -117,6 +118,8 @@ public:
         VmaAllocationCreateFlagBits access = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void updateWriteQueue(const Context& context, Descriptor desc);
+
+    void pushImageWrite(Descriptor desc, DescriptorBuf buf, Texture* texture, VkSampler sampler, u32 index = 0);
 
     void* getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 index);
 

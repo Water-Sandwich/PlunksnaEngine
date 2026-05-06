@@ -20,6 +20,7 @@ struct Texture
     //device
     Image image;
     VkImageView fullView = VK_NULL_HANDLE;
+    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     i32 mipLevels = 1;
 
     bool isHostLoaded() const

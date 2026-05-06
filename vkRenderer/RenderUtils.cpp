@@ -147,6 +147,7 @@ void createTextureImage(const Context& context, Texture* texture)
 
     //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
     generateMipMaps(context, texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, texture->mipLevels);
+    texture->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     createTextureImageView(context, texture);
 }

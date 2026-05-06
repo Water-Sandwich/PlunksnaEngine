@@ -84,16 +84,16 @@ void DescriptorManager::allocateDescriptorBuffers(const Context& context, Descri
     VkDeviceSize size, VmaAllocationCreateFlagBits access)
 {
     auto& pack = m_descriptors[desc];
-    auto& des = pack.descriptors[buf];
+    auto& descriptor = pack.descriptors[buf];
 
-    ASSERT(des.type == eBUFFER,
+    ASSERT(descriptor.type == eBUFFER,
         "Trying to update a buffer on an image descriptor!")
 
     VkBufferUsageFlagBits usage = bufferTypeToUsage(pack.layoutStages[buf].type);
 
     //TODO: put all of these buffers into 1 megabuffer
-    for (int i = 0; i < des.bufferInfos.size(); i++) {
-        auto& bufferInfo = des.bufferInfos[i];
+    for (int i = 0; i < descriptor.bufferInfos.size(); i++) {
+        auto& bufferInfo = descriptor.bufferInfos[i];
         RenderUtils::createBuffer(context, bufferInfo.buffer, size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             access);
 
@@ -123,6 +123,35 @@ void DescriptorManager::updateWriteQueue(const Context& context, Descriptor desc
 
     vkUpdateDescriptorSets(context.device, pack.writeQueue.size(), pack.writeQueue.data(), 0, nullptr);
     pack.writeQueue.clear();
+}
+
+void DescriptorManager::pushImageWrite(Descriptor desc, DescriptorBuf buf, Texture* texture, VkSampler sampler, u32 index)
+{
+    auto& pack = m_descriptors[desc];
+    auto& descriptor = pack.descriptors[buf];
+
+    ASSERT(descriptor.type == eIMAGE,
+        "Attempting to push image info on a buffer descriptor!")
+
+    //TODO: figure out multiple descriptors on 1 stage
+
+    auto& imageInfo = descriptor.imageInfos[index];
+
+    imageInfo.vkImageInfo.imageLayout = texture->layout;
+    imageInfo.vkImageInfo.imageView = texture->fullView;
+    imageInfo.vkImageInfo.sampler = sampler;
+
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = getSet(desc, index);
+    write.dstArrayElement = 0;
+    write.dstBinding = pack.layoutStages[buf].bindPoint;
+    write.descriptorType = pack.layoutStages[buf].type;
+
+    write.descriptorCount = 1;
+    write.pImageInfo = &imageInfo.vkImageInfo;
+
+    pack.writeQueue.push_back(write);
 }
 
 void* DescriptorManager::getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 index)

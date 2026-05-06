@@ -296,7 +296,6 @@ void Renderer::initDescriptors()
 {
     m_descriptor = m_descriptors.beginBuild(m_maxInFlightFrames);
 
-    //RETURN BUFFER HANDLES PER BINDING
     //camera
     m_camBuf = m_descriptors.pushBinding(m_descriptor, eEXCLUSIVE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
@@ -308,7 +307,6 @@ void Renderer::initDescriptors()
         VK_SHADER_STAGE_FRAGMENT_BIT, 10,
         MAX_TEXTURES, VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT);
 
-    //ALLOCATE BUFFERS HERE
     m_descriptors.submitBuild(m_context, m_descriptor);
 
     m_descriptors.allocateDescriptorBuffers(m_context, m_descriptor, m_camBuf, SIZE(CameraSO));
