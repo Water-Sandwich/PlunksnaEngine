@@ -53,14 +53,31 @@ void createImage(const Context& context, Image& image, u32 width, u32 height, u3
 
 u32 getMipLevels(u32 width, u32 height);
 
-void createTextureImage(Texture* tex);
+void createTextureImage(const Context& context, Texture* tex);
 
-void createTextureImageView(Texture* tex);
+void createTextureImageView(const Context& context, Texture* tex);
+
+void copyBufferToImage(const Context& context, VkBuffer buffer, VkImage image, u32 width, u32 height);
+
+void generateMipMaps(const Context& context, VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels);
+
+void transitionImageLayout(const Context& context, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
+                           u32 mipLevels);
 
 //buffers
 void createBuffer(const Context& context, Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
     VmaAllocationCreateFlags flags = {});
 
+void copyBuffer(const Context& context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+//commands
+VkCommandBuffer beginSingleTimeCommands(const Context& context);
+
+void endSingleTimeCommands(const Context& context, VkCommandBuffer commandBuffer);
+
+Buffer beginStagingBuffer(const Context& context, VkDeviceSize bufferSize, void** data);
+
+void endStagingBuffer(const Context& context, Buffer& stagingBuffer);
 
 //extensions and layers
 std::vector<VkLayerProperties> getLayers();

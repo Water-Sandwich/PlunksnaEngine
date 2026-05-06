@@ -37,6 +37,7 @@ struct Context
     VkQueue presentQueue = VK_NULL_HANDLE;
 
     QueueFamilyIndices familyIndices;
+    VkCommandPool m_transientCommandPool = VK_NULL_HANDLE;
 
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
     VkBool32 sampleShading = VK_FALSE;

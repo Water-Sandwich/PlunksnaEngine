@@ -99,8 +99,6 @@ private:
     void updateObjectsBuffer(u32 currentImage);
 
     //textures
-    Asset createTextureImage(Asset tex);
-    void createTextureImageView(Asset textureAsset) const;
     void createTextureSampler();
 
     //asset
@@ -118,22 +116,6 @@ private:
     void endRenderPass(VkCommandBuffer commandBuffer);
     void bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const;
 
-
-    VkCommandBuffer beginSingleTimeCommands() const;
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer) const;
-
-    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const;
-    void copyBufferToImage(VkBuffer buffer, VkImage image, u32 width, u32 height) const;
-
-    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-                               u32 mipLevels) const;
-    //asset
-    void generateMipMaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels) const;
-
-    Buffer beginStagingBuffer(VkDeviceSize bufferSize, void** data) const;
-
-    void endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize) const;
-
 private:
     Context m_context;
     SwapChain m_swapChain;
@@ -143,7 +125,6 @@ private:
     GUI m_gui;
 
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
-    VkCommandPool m_transientCommandPool = VK_NULL_HANDLE;
 
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;

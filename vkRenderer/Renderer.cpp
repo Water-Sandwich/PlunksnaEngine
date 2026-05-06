@@ -130,7 +130,7 @@ VkInstance Renderer::init(const Window& window)
 void Renderer::uploadTextures(const std::vector<Asset>& textures)
 {
     for (i32 i = 0; i < textures.size(); i++) {
-        createTextureImage(textures[i]);
+        createTextureImage(m_context, m_assetHandler.getTexture(textures[i]));
         m_assetHandler.freeTextureHost(textures[i]);
         m_assetHandler.setTextureID(textures[i], i);
     }
@@ -230,7 +230,7 @@ void Renderer::clean()
     VK_DESTROY(m_pipelineLayout, m_context.device, vkDestroyPipelineLayout)
 
     VK_DESTROY(m_commandPool, m_context.device, vkDestroyCommandPool)
-    VK_DESTROY(m_transientCommandPool, m_context.device, vkDestroyCommandPool)
+    VK_DESTROY(m_context.m_transientCommandPool, m_context.device, vkDestroyCommandPool)
 
     m_descriptors.clean(m_context);
 
@@ -585,7 +585,7 @@ void Renderer::createCommandPool()
     poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = m_context.familyIndices.graphicsFamily.value();
 
-    ASSERT_V(vkCreateCommandPool(m_context.device, &poolInfo, nullptr, &m_transientCommandPool),
+    ASSERT_V(vkCreateCommandPool(m_context.device, &poolInfo, nullptr, &m_context.m_transientCommandPool),
         "failed to create command pool!")
 }
 
@@ -624,48 +624,6 @@ void Renderer::createSyncObjects()
     }
 }
 
-Asset Renderer::createTextureImage(Asset tex)
-{
-    Texture* texture = m_assetHandler.getTexture(tex);
-
-    u32 texWidth = texture->width();
-    u32 texHeight = texture->height();
-    VkDeviceSize imageSize = texture->getSize() * 4;
-
-    texture->mipLevels = getMipLevels(texWidth, texHeight);
-
-    void* data;
-    Buffer stagingBuffer = beginStagingBuffer(imageSize, &data);
-
-    std::memcpy(data, texture->pixels, imageSize);
-
-    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
-
-    //image layout is undefined
-    createImage(m_context, texture->image, texWidth, texHeight, texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-    //image layout to source
-    transitionImageLayout(texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture->mipLevels);
-
-    copyBufferToImage(stagingBuffer.buffer, texture->image.image, texWidth, texHeight);
-
-    stagingBuffer.destroy(m_context);
-
-    //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
-    generateMipMaps(texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, texture->mipLevels);
-
-    createTextureImageView(tex);
-
-    return tex;
-}
-
-void Renderer::createTextureImageView(Asset textureAsset) const
-{
-    Texture* texture = m_assetHandler.getTexture(textureAsset);
-    texture->fullView = createImageView(m_context, texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texture->mipLevels);
-}
 
 void Renderer::createTextureSampler()
 {
@@ -701,7 +659,7 @@ void Renderer::createVertexAndIndexBuffers(Asset meshHnd)
     VkDeviceSize bufferSize = mesh->verticesSize + mesh->indicesSize;
 
     void* data;
-    Buffer stagingBuffer = beginStagingBuffer(bufferSize, &data);
+    Buffer stagingBuffer = beginStagingBuffer(m_context, bufferSize, &data);
 
     memcpy(data, mesh->vertices.data(), mesh->verticesSize);
     memcpy(static_cast<u8*>(data) + mesh->verticesSize, mesh->indices.data(), mesh->indicesSize);
@@ -710,7 +668,8 @@ void Renderer::createVertexAndIndexBuffers(Asset meshHnd)
         | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
-    endAndCopyStagingBuffer(stagingBuffer, mesh->combinedBuffer, bufferSize);
+    copyBuffer(m_context, stagingBuffer.buffer, mesh->combinedBuffer.buffer, bufferSize);
+    endStagingBuffer(m_context, stagingBuffer);
 
     m_assetHandler.freeMeshHost(meshHnd);
 }
@@ -746,7 +705,7 @@ void Renderer::createProfilers()
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = m_transientCommandPool;
+    allocInfo.commandPool = m_context.m_transientCommandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
 
@@ -755,7 +714,7 @@ void Renderer::createProfilers()
 
     m_profiler = initProfiler(m_context, m_context.graphicsQueue, cmd);
 
-    vkFreeCommandBuffers(m_context.device, m_transientCommandPool, 1, &cmd);
+    vkFreeCommandBuffers(m_context.device, m_context.m_transientCommandPool, 1, &cmd);
 }
 
 void Renderer::createFrameResources()
@@ -914,250 +873,6 @@ void Renderer::bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const
     VkDeviceSize indexOffset = (mesh->verticesSize + 3) & ~3;
 
     vkCmdBindIndexBuffer(commandBuffer, mesh->combinedBuffer.buffer, indexOffset, VK_INDEX_TYPE_UINT32);
-}
-
-VkCommandBuffer Renderer::beginSingleTimeCommands() const
-{
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = m_transientCommandPool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(m_context.device, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    return commandBuffer;
-}
-
-void Renderer::endSingleTimeCommands(VkCommandBuffer commandBuffer) const
-{
-    vkEndCommandBuffer(commandBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    vkQueueSubmit(m_context.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(m_context.graphicsQueue);
-
-    vkFreeCommandBuffers(m_context.device, m_transientCommandPool, 1, &commandBuffer);
-}
-
-void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const
-{
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-    VkBufferCopy copyRegion{};
-    copyRegion.size = size;
-
-    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-    endSingleTimeCommands(commandBuffer);
-}
-
-void Renderer::copyBufferToImage(VkBuffer buffer, VkImage image, u32 width, u32 height) const
-{
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {
-        width,
-        height,
-        1
-    };
-
-    vkCmdCopyBufferToImage(
-        commandBuffer,
-        buffer,
-        image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &region
-    );
-
-    endSingleTimeCommands(commandBuffer);
-}
-
-void Renderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
-                                     u32 mipLevels) const
-{
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = mipLevels;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcAccessMask = 0; // TODO
-    barrier.dstAccessMask = 0; // TODO
-
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
-
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-        newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-    {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-    else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-        newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-    {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-    else {
-        THROW("unsupported layout transition!");
-    }
-
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        sourceStage, destinationStage,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
-
-    endSingleTimeCommands(commandBuffer);
-}
-
-void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight,
-                               u32 mipLevels) const
-{
-    // Check if image format supports linear blitting
-    VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(m_context.physicalDevice, imageFormat, &formatProperties);
-
-
-    ASSERT(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT,
-        "texture image format does not support linear blitting!")
-
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.image = image;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.subresourceRange.levelCount = 1;
-
-    i32 mipWidth = texWidth;
-    i32 mipHeight = texHeight;
-
-    for (u32 i = 1; i < mipLevels; i++) {
-        barrier.subresourceRange.baseMipLevel = i - 1;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-        vkCmdPipelineBarrier(commandBuffer,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-                             0, nullptr,
-                             0, nullptr,
-                             1, &barrier);
-
-        VkImageBlit blit{};
-        blit.srcOffsets[0] = {0, 0, 0};
-        blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
-        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        blit.srcSubresource.mipLevel = i - 1;
-        blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = 1;
-        blit.dstOffsets[0] = {0, 0, 0};
-        blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
-        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        blit.dstSubresource.mipLevel = i;
-        blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = 1;
-
-        vkCmdBlitImage(commandBuffer,
-                       image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                       image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                       1, &blit,
-                       VK_FILTER_LINEAR);
-
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        vkCmdPipelineBarrier(commandBuffer,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-                             0, nullptr,
-                             0, nullptr,
-                             1, &barrier);
-
-        if (mipWidth > 1) mipWidth /= 2;
-        if (mipHeight > 1) mipHeight /= 2;
-    }
-
-    barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    vkCmdPipelineBarrier(commandBuffer,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-                         0, nullptr,
-                         0, nullptr,
-                         1, &barrier);
-
-    endSingleTimeCommands(commandBuffer);
-}
-
-Buffer Renderer::beginStagingBuffer(VkDeviceSize bufferSize, void** data) const
-{
-    Buffer stagingBuffer;
-    createBuffer(m_context, stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, data);
-
-    return stagingBuffer;
-}
-
-void Renderer::endAndCopyStagingBuffer(Buffer& stagingBuffer, const Buffer& dst, VkDeviceSize bufferSize) const
-{
-    copyBuffer(stagingBuffer.buffer, dst.buffer, bufferSize);
-    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
-    stagingBuffer.destroy(m_context);
 }
 
 bool Renderer::isDeviceSuitable(VkPhysicalDevice device) const
