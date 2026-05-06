@@ -131,6 +131,7 @@ void Renderer::uploadTextures(const std::vector<Asset>& textures)
 {
     for (i32 i = 0; i < textures.size(); i++) {
         createTextureImage(textures[i]);
+        m_assetHandler.freeTextureHost(textures[i]);
         m_assetHandler.setTextureID(textures[i], i);
     }
 
@@ -300,56 +301,26 @@ void Renderer::initDescriptors()
 
     //RETURN BUFFER HANDLES PER BINDING
     //camera
-    m_camBuf = m_descriptors.pushBinding(m_descriptor, eSHARED, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    m_camBuf = m_descriptors.pushBinding(m_descriptor, eEXCLUSIVE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
     //per object data
-    m_objBuf = m_descriptors.pushBinding(m_descriptor, eSHARED, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    m_objBuf = m_descriptors.pushBinding(m_descriptor, eEXCLUSIVE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     //texture
-    m_texBuf = m_descriptors.pushBinding(m_descriptor, eEXCLUSIVE, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+    m_texBuf = m_descriptors.pushBinding(m_descriptor, eSHARED, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         VK_SHADER_STAGE_FRAGMENT_BIT, 10,
         MAX_TEXTURES, VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT);
 
     //ALLOCATE BUFFERS HERE
     m_descriptors.submitBuild(m_context, m_descriptor);
+
+    m_descriptors.allocateDescriptorBuffers(m_context, m_descriptor, m_camBuf, sizeof(CameraSO));
+    m_descriptors.allocateDescriptorBuffers(m_context, m_descriptor, m_objBuf, sizeof(PerObjectSO) * MAX_OBJECTS_SSBO);
 }
 
 void Renderer::initDescriptorSets()
 {
-    //TODO: MOVE ALL THIS BUFFER CRAP FROM FRAMERESOURCE TO DESCRIPTOR MANAGER
-    for (i32 i = 0; i < m_maxInFlightFrames; i++) {
-        VkDescriptorBufferInfo cameraUBOInfo{};
-        cameraUBOInfo.buffer = m_frameResources[i].cameraBuffer.buffer;
-        cameraUBOInfo.offset = 0;
-        cameraUBOInfo.range = sizeof(CameraSO);
 
-        m_descriptors.pushBufferInfo(m_descriptor, cameraUBOInfo);
-
-        VkDescriptorBufferInfo objsInfo{};
-        objsInfo.buffer = m_frameResources[i].objsBuffer.buffer;
-        objsInfo.offset = 0;
-        objsInfo.range = sizeof(PerObjectSO) * MAX_OBJECTS_SSBO;
-
-        m_descriptors.pushBufferInfo(m_descriptor, objsInfo);
-
-        auto imageHnds = m_assetHandler.getLoadedTextures();
-        std::vector<VkDescriptorImageInfo> images(imageHnds.size());
-
-        for (int j = 0; j < images.size(); j++) {
-            VkDescriptorImageInfo imageInfo{};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = m_assetHandler.getTexture(imageHnds[j])->fullView;
-            imageInfo.sampler = m_textureSampler;
-
-            images[j] = imageInfo;
-        }
-
-        m_descriptors.pushImageInfos(m_descriptor, images);
-
-        m_frameResources[i].descriptorSet = m_descriptors.pushSetWrite(m_descriptor, i);
-    }
-
-    m_descriptors.createDescriptorSets(m_context, m_descriptor);
 }
 
 void Renderer::createGraphicsPipeline()
@@ -670,8 +641,6 @@ Asset Renderer::createTextureImage(Asset tex)
 
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-    m_assetHandler.freeTextureHost(tex);
-
     //image layout is undefined
     createImage(m_context, texture->image, texWidth, texHeight, texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -737,7 +706,7 @@ void Renderer::createVertexAndIndexBuffers(Asset meshHnd)
     memcpy(data, mesh->vertices.data(), mesh->verticesSize);
     memcpy(static_cast<u8*>(data) + mesh->verticesSize, mesh->indices.data(), mesh->indicesSize);
 
-    createBuffer(mesh->combinedBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT
+    createBuffer(m_context, mesh->combinedBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT
         | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
          VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
 
@@ -752,7 +721,7 @@ void Renderer::createUniformBuffers()
     VkDeviceSize bufferSize = SIZE(CameraSO);
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
-        createBuffer(m_frameResources[i].cameraBuffer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        createBuffer(m_context, m_frameResources[i].cameraBuffer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
         vmaMapMemory(m_context.allocator, m_frameResources[i].cameraBuffer.allocation, &m_frameResources[i].cameraMap);
@@ -766,7 +735,7 @@ void Renderer::createSSBOs()
 
     for (size_t i = 0; i < m_maxInFlightFrames; i++) {
         //TODO: Could be sequential if using memcpy
-        createBuffer(m_frameResources[i].objsBuffer, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        createBuffer(m_context, m_frameResources[i].objsBuffer, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
         vmaMapMemory(m_context.allocator, m_frameResources[i].objsBuffer.allocation, &m_frameResources[i].objsMap);
@@ -945,32 +914,6 @@ void Renderer::bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const
     VkDeviceSize indexOffset = (mesh->verticesSize + 3) & ~3;
 
     vkCmdBindIndexBuffer(commandBuffer, mesh->combinedBuffer.buffer, indexOffset, VK_INDEX_TYPE_UINT32);
-}
-
-void Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
-                            VmaAllocationCreateFlags flags) const
-{
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.usage = memoryUsage;
-    allocInfo.flags = flags;
-
-    ASSERT_V(
-        vmaCreateBuffer(
-            m_context.allocator,
-            &bufferInfo,
-            &allocInfo,
-            &buffer.buffer,
-            &buffer.allocation,
-            nullptr
-        ),
-        "failed to create buffer!"
-    );
 }
 
 VkCommandBuffer Renderer::beginSingleTimeCommands() const
@@ -1202,7 +1145,7 @@ void Renderer::generateMipMaps(VkImage image, VkFormat imageFormat, i32 texWidth
 Buffer Renderer::beginStagingBuffer(VkDeviceSize bufferSize, void** data) const
 {
     Buffer stagingBuffer;
-    createBuffer(stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
+    createBuffer(m_context, stagingBuffer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     vmaMapMemory(m_context.allocator, stagingBuffer.allocation, data);

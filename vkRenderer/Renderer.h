@@ -119,9 +119,6 @@ private:
     void bindMesh(Mesh* mesh, VkCommandBuffer commandBuffer) const;
 
 
-    void createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
-        VmaAllocationCreateFlags flags = {}) const;
-
     VkCommandBuffer beginSingleTimeCommands() const;
     void endSingleTimeCommands(VkCommandBuffer commandBuffer) const;
 

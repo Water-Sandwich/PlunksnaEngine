@@ -26,19 +26,11 @@ enum ShareType
 
 class DescriptorManager {
 private:
-    struct DescriptorBuffer
-    {
-        Buffer buffer;
-        void* map = nullptr;
-    };
-
     enum BindType
     {
         eNONE = -1,
         eBUFFER = 0,
         eIMAGE,
-        eVARIMAGE,
-        eVARBUFFER
     };
 
     struct LayoutStage
@@ -51,12 +43,35 @@ private:
         u32 bindPoint;
     };
 
+    struct BufferInfo
+    {
+        VkDescriptorBufferInfo vkBufferInfo;
+        Buffer buffer;
+        void* map = nullptr;
+    };
+
+    struct ImageInfo
+    {
+        VkDescriptorImageInfo vkImageInfo;
+        //likely to add more here in the future
+    };
+
     struct SetStage
     {
-        u32 descriptorCount = 1;
+        SetStage(BindType typ, u32 size)
+        {
+            type = typ;
+
+            if (typ == eIMAGE)
+                imageInfos.resize(size);
+            else
+                bufferInfos.resize(size);
+        }
+
         BindType type;
-        VkDescriptorBufferInfo bufferInfo;
-        std::vector<VkDescriptorImageInfo> imageInfos;
+
+        std::vector<BufferInfo> bufferInfos;
+        std::vector<ImageInfo> imageInfos;
     };
 
     struct DescriptorPack
@@ -65,16 +80,14 @@ private:
         VkDescriptorSetLayout layout = VK_NULL_HANDLE;
         std::vector<VkDescriptorSet> sets;
 
-        u32 maxSets;
-        u32 maxTotalBuildStages;
-        u32 maxVariableDescriptors;
-        u32 variableDescriptors = 0;
+        u32 totalDescriptorSets;
 
         std::vector<LayoutStage> layoutBuildStages;
-        std::vector<SetStage> setBuildStages;
-        std::vector<VkWriteDescriptorSet> setWrites;
 
-        std::vector<std::vector<DescriptorBuffer>> setBuffers;
+        //hold all the descriptor info for a particular stage,
+        //setstages.size = layoutstages.size
+        //buffer/image infos.size = layoutstage.descriptorCount * (if exclusive) totalDescriptorSets
+        std::vector<SetStage> setStages;
 
         bool isVariable = false;
     };
@@ -92,28 +105,14 @@ public:
 
     //start to build a descriptor pack, returns a handle to the current build queue
     Descriptor beginBuild(u32 maxSets);
-    //add a binding, returns index of binding
+    //add a binding, returns index of binding/stage
     DescriptorBuf pushBinding(Descriptor desc, ShareType shareType, VkDescriptorType type, VkShaderStageFlags stages,
         u32 bindPoint = UINT32_MAX, u32 descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = 0);
     //submit the queue and build the pool and layout and allocates descriptor sets, returns finished layout
     VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc);
 
-    //set data buffer properties
-    u32 setBufferInfo(Descriptor desc, DescriptorBuf buffer, u64 range);
-
-    u32 setImageInfo(Descriptor desc, DescriptorBuf buffer, const std::vector<VkDescriptorImageInfo>& info);
-
-    //push a buffer to the descriptor set queue build, returns the binding point
-    u32 pushBufferInfo(Descriptor desc, VkDescriptorBufferInfo info);
-    //push an image to the descriptor set queue build, returns the binding point
-    u32 pushImageInfo(Descriptor desc, VkDescriptorImageInfo info);
-    //push a vector of images to the descriptor set queue build, returns the binding point, must be the last bind point
-    u32 pushImageInfos(Descriptor desc, const std::vector<VkDescriptorImageInfo>& info);
-    //prepare descriptor set writes
-    VkDescriptorSet pushSetWrite(Descriptor desc, i32 setNum);
-
-    //initialize all descriptor sets
-    void createDescriptorSets(const Context& context, Descriptor desc);
+    void allocateDescriptorBuffers(const Context& context, Descriptor desc, DescriptorBuf buf, VkDeviceSize size,
+        VmaAllocationCreateFlagBits access = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void clean(const Context& context);
 private:
@@ -123,6 +122,11 @@ private:
 
     static constexpr bool isBufferDescriptor(VkDescriptorType type);
     static constexpr bool isImageDescriptor(VkDescriptorType type);
+
+    static constexpr BindType vkTypeToBindType(VkDescriptorType type);
+    static constexpr u32 shareMult(ShareType type, u32 descriptorCount, u32 maxSets);
+
+    static constexpr VkBufferUsageFlagBits bufferTypeToUsage(VkDescriptorType type);
 
 private:
     //1 pool per layout, N sets

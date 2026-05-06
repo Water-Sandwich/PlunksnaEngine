@@ -13,6 +13,8 @@
 #include "engine/Window.h"
 #include "Image.h"
 #include "utils/Types.h"
+#include "Buffer.h"
+#include "assetHandler/Texture.h"
 
 namespace Plunksna::RenderUtils {
 
@@ -50,6 +52,15 @@ void createImage(const Context& context, Image& image, u32 width, u32 height, u3
                 VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
 
 u32 getMipLevels(u32 width, u32 height);
+
+void createTextureImage(Texture* tex);
+
+void createTextureImageView(Texture* tex);
+
+//buffers
+void createBuffer(const Context& context, Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+    VmaAllocationCreateFlags flags = {});
+
 
 //extensions and layers
 std::vector<VkLayerProperties> getLayers();

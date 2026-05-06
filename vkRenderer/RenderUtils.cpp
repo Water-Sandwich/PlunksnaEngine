@@ -3,6 +3,7 @@
 //
 
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <set>
 #include <SDL3/SDL_vulkan.h>
@@ -115,6 +116,65 @@ void createImage(const Context& context, Image& image, u32 width, u32 height, u3
 u32 getMipLevels(u32 width, u32 height)
 {
     return static_cast<u32>(std::floor(std::log2(std::max(width, height)))) + 1;
+}
+
+void createTextureImage(const Context& context, Texture* texture)
+{
+    // u32 texWidth = texture->width();
+    // u32 texHeight = texture->height();
+    // VkDeviceSize imageSize = texture->getSize() * 4;
+    //
+    // texture->mipLevels = getMipLevels(texWidth, texHeight);
+    //
+    // void* data;
+    // Buffer stagingBuffer = beginStagingBuffer(imageSize, &data);
+    //
+    // std::memcpy(data, texture->pixels, imageSize);
+    //
+    // vmaUnmapMemory(context.allocator, stagingBuffer.allocation);
+    //
+    // //image layout is undefined
+    // createImage(context, texture->image, texWidth, texHeight, texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+    //             VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+    //
+    // //image layout to source
+    // transitionImageLayout(texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+    //                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture->mipLevels);
+    //
+    // copyBufferToImage(stagingBuffer.buffer, texture->image.image, texWidth, texHeight);
+    //
+    // stagingBuffer.destroy(context);
+    //
+    // //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
+    // generateMipMaps(texture->image.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, texture->mipLevels);
+    //
+    // createTextureImageView(texture);
+}
+
+void createBuffer(const Context& context, Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+                  VmaAllocationCreateFlags flags)
+{
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = memoryUsage;
+    allocInfo.flags = flags;
+
+    ASSERT_V(
+        vmaCreateBuffer(
+            context.allocator,
+            &bufferInfo,
+            &allocInfo,
+            &buffer.buffer,
+            &buffer.allocation,
+            nullptr
+        ),
+        "failed to create buffer!"
+    );
 }
 
 u32 findMemoryType(const Context& context, u32 typeFilter, VkMemoryPropertyFlags properties)
