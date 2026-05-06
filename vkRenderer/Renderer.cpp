@@ -171,8 +171,8 @@ void Renderer::draw(const Window& window)
 
     vkResetCommandBuffer(currentFrame.commandBuffer, 0);
 
-    updateCameraBuffer(m_currentFrame);
-    updateObjectsBuffer(m_currentFrame);
+    updateCameraBuffer();
+    updateObjectsBuffer();
 
     recordCommandBuffer(currentFrame.commandBuffer, imageIndex);
 
@@ -216,9 +216,6 @@ void Renderer::clean()
 
     m_swapChain.clean();
     m_swapChain.cleanSurface();
-
-    for (auto& rec : m_frameResources)
-        rec.destroyBuffers(m_context);
 
     VK_DESTROY(m_textureSampler, m_context.device, vkDestroySampler)
 
@@ -314,13 +311,17 @@ void Renderer::initDescriptors()
     //ALLOCATE BUFFERS HERE
     m_descriptors.submitBuild(m_context, m_descriptor);
 
-    m_descriptors.allocateDescriptorBuffers(m_context, m_descriptor, m_camBuf, sizeof(CameraSO));
-    m_descriptors.allocateDescriptorBuffers(m_context, m_descriptor, m_objBuf, sizeof(PerObjectSO) * MAX_OBJECTS_SSBO);
+    m_descriptors.allocateDescriptorBuffers(m_context, m_descriptor, m_camBuf, SIZE(CameraSO));
+    m_descriptors.allocateDescriptorBuffers(m_context, m_descriptor, m_objBuf, SIZE(PerObjectSO) * MAX_OBJECTS_SSBO);
+
+    m_descriptors.updateWriteQueue(m_context, m_descriptor);
 }
 
 void Renderer::initDescriptorSets()
 {
-
+    for (int i = 0; i < m_maxInFlightFrames; i++) {
+        m_frameResources[i].descriptorSet = m_descriptors.getSet(m_descriptor, i);
+    }
 }
 
 void Renderer::createGraphicsPipeline()
@@ -674,33 +675,6 @@ void Renderer::createVertexAndIndexBuffers(Asset meshHnd)
     m_assetHandler.freeMeshHost(meshHnd);
 }
 
-void Renderer::createUniformBuffers()
-{
-    //TODO, suballocate UBOs
-    VkDeviceSize bufferSize = SIZE(CameraSO);
-
-    for (size_t i = 0; i < m_maxInFlightFrames; i++) {
-        createBuffer(m_context, m_frameResources[i].cameraBuffer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-        vmaMapMemory(m_context.allocator, m_frameResources[i].cameraBuffer.allocation, &m_frameResources[i].cameraMap);
-    }
-}
-
-void Renderer::createSSBOs()
-{
-    //TODO, suballocate UBOs
-    VkDeviceSize bufferSize = SIZE(PerObjectSO) * MAX_OBJECTS_SSBO;
-
-    for (size_t i = 0; i < m_maxInFlightFrames; i++) {
-        //TODO: Could be sequential if using memcpy
-        createBuffer(m_context, m_frameResources[i].objsBuffer, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
-
-        vmaMapMemory(m_context.allocator, m_frameResources[i].objsBuffer.allocation, &m_frameResources[i].objsMap);
-    }
-}
-
 void Renderer::createProfilers()
 {
     VkCommandBufferAllocateInfo allocInfo{};
@@ -721,15 +695,13 @@ void Renderer::createFrameResources()
 {
     m_frameResources.resize(m_maxInFlightFrames);
 
-    createUniformBuffers();
-    createSSBOs();
     createCommandBuffers();
     initDescriptorSets();
     createSyncObjects();
     createProfilers();
 }
 
-void Renderer::updateCameraBuffer(u32 currentImage)
+void Renderer::updateCameraBuffer()
 {
     m_camera.resize((f32)m_swapChain.width() / (f32)m_swapChain.height());
 
@@ -739,20 +711,20 @@ void Renderer::updateCameraBuffer(u32 currentImage)
         .pos = m_camera.m_position
     };
 
-    auto* buffer = static_cast<std::byte*>(
-        m_frameResources[currentImage].cameraMap
+    auto* buffer = static_cast<u8*>(
+        m_descriptors.getBufferWrite(m_descriptor, m_camBuf, m_currentFrame)
     );
 
     memcpy(buffer, &camUBO, sizeof(CameraSO));
 }
 
 //TODO: eventually only update those that change
-void Renderer::updateObjectsBuffer(u32 currentImage)
+void Renderer::updateObjectsBuffer()
 {
     ZoneScopedN("Update SSBO")
 
     auto* buffer = static_cast<u8*>(
-        m_frameResources[currentImage].objsMap
+        m_descriptors.getBufferWrite(m_descriptor, m_objBuf, m_currentFrame)
     );
 
     //m_drawSorter.cullFrustum(&m_camera);

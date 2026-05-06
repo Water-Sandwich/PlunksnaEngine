@@ -33,7 +33,7 @@ private:
         eIMAGE,
     };
 
-    struct LayoutStage
+    struct StageLayout
     {
         VkDescriptorType type;
         VkShaderStageFlags stages;
@@ -56,9 +56,9 @@ private:
         //likely to add more here in the future
     };
 
-    struct SetStage
+    struct StageDescriptor
     {
-        SetStage(BindType typ, u32 size)
+        StageDescriptor(BindType typ, u32 size)
         {
             type = typ;
 
@@ -82,12 +82,14 @@ private:
 
         u32 totalDescriptorSets;
 
-        std::vector<LayoutStage> layoutBuildStages;
+        std::vector<StageLayout> layoutStages;
 
         //hold all the descriptor info for a particular stage,
         //setstages.size = layoutstages.size
         //buffer/image infos.size = layoutstage.descriptorCount * (if exclusive) totalDescriptorSets
-        std::vector<SetStage> setStages;
+        std::vector<StageDescriptor> descriptors;
+
+        std::vector<VkWriteDescriptorSet> writeQueue;
 
         bool isVariable = false;
     };
@@ -113,6 +115,10 @@ public:
 
     void allocateDescriptorBuffers(const Context& context, Descriptor desc, DescriptorBuf buf, VkDeviceSize size,
         VmaAllocationCreateFlagBits access = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+
+    void updateWriteQueue(const Context& context, Descriptor desc);
+
+    void* getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 index);
 
     void clean(const Context& context);
 private:

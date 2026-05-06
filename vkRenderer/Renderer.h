@@ -91,12 +91,10 @@ private:
     void createFrameResources();
     void createCommandBuffers();
     void createSyncObjects();
-    void createUniformBuffers();
-    void createSSBOs();
     void createProfilers();
 
-    void updateCameraBuffer(u32 currentImage);
-    void updateObjectsBuffer(u32 currentImage);
+    void updateCameraBuffer();
+    void updateObjectsBuffer();
 
     //textures
     void createTextureSampler();

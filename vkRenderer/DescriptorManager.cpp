@@ -4,6 +4,8 @@
 
 #include "DescriptorManager.h"
 
+#include <glm/common.hpp>
+
 #include "RendererUtils.h"
 #include "engine/Exception.h"
 
@@ -52,15 +54,15 @@ DescriptorBuf DescriptorManager::pushBinding(Descriptor desc, ShareType shareTyp
     ASSERT(!pack.isVariable,
         "Descriptor [" << desc << "]" << " is already variable, attempting to add another binding at the end!");
 
-    pack.layoutBuildStages.push_back(LayoutStage(type, stages, shareType, descriptorCount, bindingFlags, bindPoint));
+    pack.layoutStages.push_back(StageLayout(type, stages, shareType, descriptorCount, bindingFlags, bindPoint));
 
     if (bindingFlags != 0) {
         pack.isVariable = true;
     }
 
-    pack.setStages.emplace_back(vkTypeToBindType(type), shareMult(shareType, descriptorCount, pack.totalDescriptorSets));
+    pack.descriptors.emplace_back(vkTypeToBindType(type), shareMult(shareType, descriptorCount, pack.totalDescriptorSets));
 
-    return pack.layoutBuildStages.size() - 1;
+    return pack.layoutStages.size() - 1;
 }
 
 VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Descriptor desc)
@@ -82,15 +84,16 @@ void DescriptorManager::allocateDescriptorBuffers(const Context& context, Descri
     VkDeviceSize size, VmaAllocationCreateFlagBits access)
 {
     auto& pack = m_descriptors[desc];
-    auto& setStage = pack.setStages[buf];
+    auto& des = pack.descriptors[buf];
 
-    ASSERT(setStage.type == eBUFFER,
+    ASSERT(des.type == eBUFFER,
         "Trying to update a buffer on an image descriptor!")
 
-    VkBufferUsageFlagBits usage = bufferTypeToUsage(pack.layoutBuildStages[buf].type);
+    VkBufferUsageFlagBits usage = bufferTypeToUsage(pack.layoutStages[buf].type);
 
     //TODO: put all of these buffers into 1 megabuffer
-    for (auto& bufferInfo : setStage.bufferInfos) {
+    for (int i = 0; i < des.bufferInfos.size(); i++) {
+        auto& bufferInfo = des.bufferInfos[i];
         RenderUtils::createBuffer(context, bufferInfo.buffer, size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             access);
 
@@ -99,7 +102,39 @@ void DescriptorManager::allocateDescriptorBuffers(const Context& context, Descri
         bufferInfo.vkBufferInfo.buffer = bufferInfo.buffer.buffer;
         bufferInfo.vkBufferInfo.range = size;
         bufferInfo.vkBufferInfo.offset = 0;
+
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = getSet(desc, i);
+        write.dstArrayElement = 0;
+        write.dstBinding = pack.layoutStages[buf].bindPoint;
+        write.descriptorType = pack.layoutStages[buf].type;
+
+        write.descriptorCount = 1;
+        write.pBufferInfo = &bufferInfo.vkBufferInfo;
+
+        pack.writeQueue.push_back(write);
     }
+}
+
+void DescriptorManager::updateWriteQueue(const Context& context, Descriptor desc)
+{
+    auto& pack = m_descriptors[desc];
+
+    vkUpdateDescriptorSets(context.device, pack.writeQueue.size(), pack.writeQueue.data(), 0, nullptr);
+    pack.writeQueue.clear();
+}
+
+void* DescriptorManager::getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 index)
+{
+    auto& pack = m_descriptors[desc];
+    auto& setStage = pack.descriptors[buf];
+
+    ASSERT(setStage.type == eBUFFER,
+        "Attempting to access a buffer on a non buffer object!")
+
+    index = glm::min(index, (u32)setStage.bufferInfos.size() - 1);
+    return setStage.bufferInfos[index].map;
 }
 
 void DescriptorManager::clean(const Context& context)
@@ -115,12 +150,12 @@ void DescriptorManager::clean(const Context& context)
 void DescriptorManager::createPool(const Context& context, Descriptor desc)
 {
     auto& pack = m_descriptors[desc];
-    auto& buildQueue = pack.layoutBuildStages;
+    auto& buildQueue = pack.layoutStages;
 
     std::vector<VkDescriptorPoolSize> poolSizes;
     poolSizes.reserve(buildQueue.size());
 
-    for (const LayoutStage& build : buildQueue) {
+    for (const StageLayout& build : buildQueue) {
         VkDescriptorPoolSize size = {
             .type = build.type,
             .descriptorCount = build.descriptorCount * pack.totalDescriptorSets
@@ -141,7 +176,7 @@ void DescriptorManager::createPool(const Context& context, Descriptor desc)
 
 void DescriptorManager::createLayout(const Context& context, Descriptor desc)
 {
-    auto& buildQueue = m_descriptors[desc].layoutBuildStages;
+    auto& buildQueue = m_descriptors[desc].layoutStages;
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     bindings.reserve(buildQueue.size());
@@ -150,7 +185,7 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
 
     u32 currentBinding = 0;
     for (u32 i = 0; i < buildQueue.size(); i++) {
-        auto& layoutBuild = m_descriptors[desc].layoutBuildStages[i];
+        auto& layoutBuild = m_descriptors[desc].layoutStages[i];
         flags[i] = buildQueue[i].bindingFlags;
 
         if (layoutBuild.bindPoint != UINT32_MAX) {
@@ -198,7 +233,7 @@ void DescriptorManager::allocateSets(const Context& context, Descriptor desc)
 
     pack.sets.resize(pack.totalDescriptorSets);
 
-    const auto& last = pack.layoutBuildStages.back();
+    const auto& last = pack.layoutStages.back();
 
     std::vector<u32> sizes(pack.totalDescriptorSets,
         shareMult(last.shareType, last.descriptorCount, pack.totalDescriptorSets));
