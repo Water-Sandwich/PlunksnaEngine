@@ -119,11 +119,13 @@ public:
 
     void updateWriteQueue(const Context& context, Descriptor desc);
 
-    void pushImageWrite(Descriptor desc, DescriptorBuf buf, Texture* texture, VkSampler sampler, u32 index = 0);
+    //TODO: descriptor index tba latter whenever i need multiple descriptors for images
+    void pushImageWrite(Descriptor desc, DescriptorBuf buf, Texture* texture, VkSampler sampler, u32 arrayIndex = 0);
 
     void* getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 index);
 
     void clean(const Context& context);
+    void cleanDescriptor(const Context& context, Descriptor descriptor, DescriptorBuf descBuf);
 private:
     void createPool(const Context& context, Descriptor desc);
     void createLayout(const Context& context, Descriptor desc);

@@ -129,13 +129,18 @@ VkInstance Renderer::init(const Window& window)
 
 void Renderer::uploadTextures(const std::vector<Asset>& textures)
 {
+    createTextureSampler();
+
     for (i32 i = 0; i < textures.size(); i++) {
-        createTextureImage(m_context, m_assetHandler.getTexture(textures[i]));
+        Texture* tex = m_assetHandler.getTexture(textures[i]);
+        createTextureImage(m_context, tex);
         m_assetHandler.freeTextureHost(textures[i]);
         m_assetHandler.setTextureID(textures[i], i);
+
+        m_descriptors.pushImageWrite(m_descriptor, m_texBuf, tex, m_textureSampler, i);
     }
 
-    createTextureSampler();
+    m_descriptors.updateWriteQueue(m_context, m_descriptor);
 }
 
 void Renderer::uploadMeshes(const std::vector<Asset>& meshes)

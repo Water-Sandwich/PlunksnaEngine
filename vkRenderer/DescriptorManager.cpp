@@ -125,7 +125,7 @@ void DescriptorManager::updateWriteQueue(const Context& context, Descriptor desc
     pack.writeQueue.clear();
 }
 
-void DescriptorManager::pushImageWrite(Descriptor desc, DescriptorBuf buf, Texture* texture, VkSampler sampler, u32 index)
+void DescriptorManager::pushImageWrite(Descriptor desc, DescriptorBuf buf, Texture* texture, VkSampler sampler, u32 arrayIndex)
 {
     auto& pack = m_descriptors[desc];
     auto& descriptor = pack.descriptors[buf];
@@ -133,25 +133,25 @@ void DescriptorManager::pushImageWrite(Descriptor desc, DescriptorBuf buf, Textu
     ASSERT(descriptor.type == eIMAGE,
         "Attempting to push image info on a buffer descriptor!")
 
-    //TODO: figure out multiple descriptors on 1 stage
-
-    auto& imageInfo = descriptor.imageInfos[index];
+    auto& imageInfo = descriptor.imageInfos[arrayIndex];
 
     imageInfo.vkImageInfo.imageLayout = texture->layout;
     imageInfo.vkImageInfo.imageView = texture->fullView;
     imageInfo.vkImageInfo.sampler = sampler;
 
-    VkWriteDescriptorSet write{};
-    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstSet = getSet(desc, index);
-    write.dstArrayElement = 0;
-    write.dstBinding = pack.layoutStages[buf].bindPoint;
-    write.descriptorType = pack.layoutStages[buf].type;
+    for (u32 i = 0; i < pack.sets.size(); i++) {
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = getSet(desc, i);
+        write.dstArrayElement = arrayIndex;
+        write.dstBinding = pack.layoutStages[buf].bindPoint;
+        write.descriptorType = pack.layoutStages[buf].type;
 
-    write.descriptorCount = 1;
-    write.pImageInfo = &imageInfo.vkImageInfo;
+        write.descriptorCount = 1;
+        write.pImageInfo = &imageInfo.vkImageInfo;
 
-    pack.writeQueue.push_back(write);
+        pack.writeQueue.push_back(write);
+    }
 }
 
 void* DescriptorManager::getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 index)
@@ -168,12 +168,33 @@ void* DescriptorManager::getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 
 
 void DescriptorManager::clean(const Context& context)
 {
-    for (auto& pack : m_descriptors) {
+    for (u32 i = 0; i < m_descriptors.size(); i++) {
+        auto& pack = m_descriptors[i];
         VK_DESTROY(pack.pool, context.device, vkDestroyDescriptorPool)
         VK_DESTROY(pack.layout, context.device, vkDestroyDescriptorSetLayout)
+
+        for (u32 j = 0; j < pack.descriptors.size(); j++) {
+            cleanDescriptor(context, i, j);
+        }
     }
 
     m_descriptors.clear();
+}
+
+void DescriptorManager::cleanDescriptor(const Context& context, Descriptor descriptor, DescriptorBuf descBuf)
+{
+    auto& pack = m_descriptors[descriptor];
+    auto& desc = pack.descriptors[descBuf];
+
+    //images owned outside for now
+    if (desc.type == eIMAGE)
+        return;
+
+    for (u32 i = 0; i < desc.bufferInfos.size(); i++) {
+        desc.bufferInfos[i].buffer.destroy(context);
+        desc.bufferInfos[i].map = nullptr;
+        desc.bufferInfos[i].vkBufferInfo = VkDescriptorBufferInfo();
+    }
 }
 
 void DescriptorManager::createPool(const Context& context, Descriptor desc)
