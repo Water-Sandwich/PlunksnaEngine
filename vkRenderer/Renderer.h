@@ -128,7 +128,7 @@ private:
     VkPipeline m_graphicsPipeline = VK_NULL_HANDLE;
 
     std::vector<FrameResource> m_frameResources;
-    Descriptor m_descriptor;
+    DescriptorSet m_descriptor;
 
     Camera m_camera;
 
@@ -145,9 +145,9 @@ private:
 
     bool m_hasResized = false;
 private:
-    DescriptorBuf m_camBuf = 0;
-    DescriptorBuf m_objBuf = 0;
-    DescriptorBuf m_texBuf = 0;
+    Descriptor m_camBuf = 0;
+    Descriptor m_objBuf = 0;
+    Descriptor m_texBuf = 0;
 
 private:
     //=======DEBUG=========

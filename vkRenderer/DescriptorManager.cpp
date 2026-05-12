@@ -10,49 +10,49 @@
 #include "engine/Exception.h"
 
 namespace Plunksna {
-VkDescriptorPool DescriptorManager::getPool(Descriptor desc) const
+VkDescriptorPool DescriptorManager::getPool(DescriptorSet desc) const
 {
     return m_descriptors[desc].pool;
 }
 
-VkDescriptorSetLayout DescriptorManager::getLayout(Descriptor desc) const
+VkDescriptorSetLayout DescriptorManager::getLayout(DescriptorSet desc) const
 {
     return m_descriptors[desc].layout;
 }
 
-VkDescriptorSet DescriptorManager::getSet(Descriptor desc, i32 index) const
+VkDescriptorSet DescriptorManager::getSet(DescriptorSet desc, i32 index) const
 {
     return m_descriptors[desc].sets[index];
 }
 
-VkDescriptorPool* DescriptorManager::getPoolPtr(Descriptor desc)
+VkDescriptorPool* DescriptorManager::getPoolPtr(DescriptorSet desc)
 {
     return &m_descriptors[desc].pool;
 }
 
-VkDescriptorSetLayout* DescriptorManager::getLayoutPtr(Descriptor desc)
+VkDescriptorSetLayout* DescriptorManager::getLayoutPtr(DescriptorSet desc)
 {
     return &m_descriptors[desc].layout;
 }
 
-VkDescriptorSet* DescriptorManager::getSetPtr(Descriptor desc, i32 index)
+VkDescriptorSet* DescriptorManager::getSetPtr(DescriptorSet desc, i32 index)
 {
     return &m_descriptors[desc].sets[index];
 }
 
-Descriptor DescriptorManager::beginBuild(u32 maxSets)
+DescriptorSet DescriptorManager::beginBuild(u32 maxSets)
 {
     m_descriptors.emplace_back();
     m_descriptors.back().totalDescriptorSets = maxSets;
     return m_descriptors.size() - 1;
 }
 
-DescriptorBuf DescriptorManager::pushBinding(Descriptor desc, ShareType shareType, VkDescriptorType type, VkShaderStageFlags stages,
+Descriptor DescriptorManager::pushBinding(DescriptorSet desc, ShareType shareType, VkDescriptorType type, VkShaderStageFlags stages,
     u32 bindPoint, u32 descriptorCount, VkDescriptorBindingFlags bindingFlags)
 {
     auto& pack = m_descriptors[desc];
     ASSERT(!pack.isVariable,
-        "Descriptor [" << desc << "]" << " is already variable, attempting to add another binding at the end!");
+        "DescriptorSet [" << desc << "]" << " is already variable, attempting to add another binding at the end!");
 
     pack.layoutStages.push_back(StageLayout(type, stages, shareType, descriptorCount, bindingFlags, bindPoint));
 
@@ -65,7 +65,7 @@ DescriptorBuf DescriptorManager::pushBinding(Descriptor desc, ShareType shareTyp
     return pack.layoutStages.size() - 1;
 }
 
-VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Descriptor desc)
+VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, DescriptorSet desc)
 {
     ASSERT(desc < m_descriptors.size(),
         "Trying to access an uninitialized descriptor pack! desc: " << desc <<
@@ -80,7 +80,7 @@ VkDescriptorSetLayout DescriptorManager::submitBuild(const Context& context, Des
     return getLayout(desc);
 }
 
-void DescriptorManager::allocateDescriptorBuffers(const Context& context, Descriptor desc, DescriptorBuf buf,
+void DescriptorManager::allocateDescriptorBuffers(const Context& context, DescriptorSet desc, Descriptor buf,
     VkDeviceSize size, VmaAllocationCreateFlagBits access)
 {
     auto& pack = m_descriptors[desc];
@@ -117,7 +117,7 @@ void DescriptorManager::allocateDescriptorBuffers(const Context& context, Descri
     }
 }
 
-void DescriptorManager::updateWriteQueue(const Context& context, Descriptor desc)
+void DescriptorManager::updateWriteQueue(const Context& context, DescriptorSet desc)
 {
     auto& pack = m_descriptors[desc];
 
@@ -125,7 +125,7 @@ void DescriptorManager::updateWriteQueue(const Context& context, Descriptor desc
     pack.writeQueue.clear();
 }
 
-void DescriptorManager::pushImageWrite(Descriptor desc, DescriptorBuf buf, Texture* texture, VkSampler sampler, u32 arrayIndex)
+void DescriptorManager::pushImageWrite(DescriptorSet desc, Descriptor buf, Texture* texture, VkSampler sampler, u32 arrayIndex)
 {
     auto& pack = m_descriptors[desc];
     auto& descriptor = pack.descriptors[buf];
@@ -154,7 +154,7 @@ void DescriptorManager::pushImageWrite(Descriptor desc, DescriptorBuf buf, Textu
     }
 }
 
-void* DescriptorManager::getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 index)
+void* DescriptorManager::getBufferWrite(DescriptorSet desc, Descriptor buf, u32 index)
 {
     auto& pack = m_descriptors[desc];
     auto& setStage = pack.descriptors[buf];
@@ -181,7 +181,7 @@ void DescriptorManager::clean(const Context& context)
     m_descriptors.clear();
 }
 
-void DescriptorManager::cleanDescriptor(const Context& context, Descriptor descriptor, DescriptorBuf descBuf)
+void DescriptorManager::cleanDescriptor(const Context& context, DescriptorSet descriptor, Descriptor descBuf)
 {
     auto& pack = m_descriptors[descriptor];
     auto& desc = pack.descriptors[descBuf];
@@ -190,14 +190,15 @@ void DescriptorManager::cleanDescriptor(const Context& context, Descriptor descr
     if (desc.type == eIMAGE)
         return;
 
-    for (u32 i = 0; i < desc.bufferInfos.size(); i++) {
-        desc.bufferInfos[i].buffer.destroy(context);
-        desc.bufferInfos[i].map = nullptr;
-        desc.bufferInfos[i].vkBufferInfo = VkDescriptorBufferInfo();
+    for (auto& bufferInfo : desc.bufferInfos) {
+        vmaUnmapMemory(context.allocator, bufferInfo.buffer.allocation);
+        bufferInfo.buffer.destroy(context);
+        bufferInfo.map = nullptr;
+        bufferInfo.vkBufferInfo = VkDescriptorBufferInfo();
     }
 }
 
-void DescriptorManager::createPool(const Context& context, Descriptor desc)
+void DescriptorManager::createPool(const Context& context, DescriptorSet desc)
 {
     auto& pack = m_descriptors[desc];
     auto& buildQueue = pack.layoutStages;
@@ -224,7 +225,7 @@ void DescriptorManager::createPool(const Context& context, Descriptor desc)
         "failed to create descriptor pool!")
 }
 
-void DescriptorManager::createLayout(const Context& context, Descriptor desc)
+void DescriptorManager::createLayout(const Context& context, DescriptorSet desc)
 {
     auto& buildQueue = m_descriptors[desc].layoutStages;
 
@@ -276,7 +277,7 @@ void DescriptorManager::createLayout(const Context& context, Descriptor desc)
         "failed to create descriptor set layout!")
 }
 
-void DescriptorManager::allocateSets(const Context& context, Descriptor desc)
+void DescriptorManager::allocateSets(const Context& context, DescriptorSet desc)
 {
     auto& pack = m_descriptors[desc];
     std::vector layouts(pack.totalDescriptorSets, pack.layout);

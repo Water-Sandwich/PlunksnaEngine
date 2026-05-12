@@ -15,9 +15,9 @@
 
 namespace Plunksna {
 
+using DescriptorSet = u32;
 using Descriptor = u32;
-using DescriptorBuf = u32;
-constexpr Descriptor NULL_DESCRIPTOR = std::numeric_limits<Descriptor>::max();
+constexpr DescriptorSet NULL_DESCRIPTOR = std::numeric_limits<DescriptorSet>::max();
 
 enum ShareType
 {
@@ -98,38 +98,38 @@ private:
 public:
     DescriptorManager() = default;
 
-    VkDescriptorPool getPool(Descriptor desc) const;
-    VkDescriptorSetLayout getLayout(Descriptor desc) const;
-    VkDescriptorSet getSet(Descriptor desc, i32 index) const;
+    VkDescriptorPool getPool(DescriptorSet desc) const;
+    VkDescriptorSetLayout getLayout(DescriptorSet desc) const;
+    VkDescriptorSet getSet(DescriptorSet desc, i32 index) const;
 
-    VkDescriptorPool* getPoolPtr(Descriptor desc);
-    VkDescriptorSetLayout* getLayoutPtr(Descriptor desc);
-    VkDescriptorSet* getSetPtr(Descriptor desc, i32 index);
+    VkDescriptorPool* getPoolPtr(DescriptorSet desc);
+    VkDescriptorSetLayout* getLayoutPtr(DescriptorSet desc);
+    VkDescriptorSet* getSetPtr(DescriptorSet desc, i32 index);
 
     //start to build a descriptor pack, returns a handle to the current build queue
-    Descriptor beginBuild(u32 maxSets);
+    DescriptorSet beginBuild(u32 maxSets);
     //add a binding, returns index of binding/stage
-    DescriptorBuf pushBinding(Descriptor desc, ShareType shareType, VkDescriptorType type, VkShaderStageFlags stages,
+    Descriptor pushBinding(DescriptorSet desc, ShareType shareType, VkDescriptorType type, VkShaderStageFlags stages,
         u32 bindPoint = UINT32_MAX, u32 descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = 0);
     //submit the queue and build the pool and layout and allocates descriptor sets, returns finished layout
-    VkDescriptorSetLayout submitBuild(const Context& context, Descriptor desc);
+    VkDescriptorSetLayout submitBuild(const Context& context, DescriptorSet desc);
 
-    void allocateDescriptorBuffers(const Context& context, Descriptor desc, DescriptorBuf buf, VkDeviceSize size,
+    void allocateDescriptorBuffers(const Context& context, DescriptorSet desc, Descriptor buf, VkDeviceSize size,
         VmaAllocationCreateFlagBits access = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
-    void updateWriteQueue(const Context& context, Descriptor desc);
+    void updateWriteQueue(const Context& context, DescriptorSet desc);
 
     //TODO: descriptor index tba latter whenever i need multiple descriptors for images
-    void pushImageWrite(Descriptor desc, DescriptorBuf buf, Texture* texture, VkSampler sampler, u32 arrayIndex = 0);
+    void pushImageWrite(DescriptorSet desc, Descriptor buf, Texture* texture, VkSampler sampler, u32 arrayIndex = 0);
 
-    void* getBufferWrite(Descriptor desc, DescriptorBuf buf, u32 index);
+    void* getBufferWrite(DescriptorSet desc, Descriptor buf, u32 index);
 
     void clean(const Context& context);
-    void cleanDescriptor(const Context& context, Descriptor descriptor, DescriptorBuf descBuf);
+    void cleanDescriptor(const Context& context, DescriptorSet descriptor, Descriptor descBuf);
 private:
-    void createPool(const Context& context, Descriptor desc);
-    void createLayout(const Context& context, Descriptor desc);
-    void allocateSets(const Context& context, Descriptor desc);
+    void createPool(const Context& context, DescriptorSet desc);
+    void createLayout(const Context& context, DescriptorSet desc);
+    void allocateSets(const Context& context, DescriptorSet desc);
 
     static constexpr bool isBufferDescriptor(VkDescriptorType type);
     static constexpr bool isImageDescriptor(VkDescriptorType type);
